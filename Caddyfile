@@ -1,0 +1,23 @@
+# Automatic HTTPS via Let's Encrypt. Caddy obtains + renews certs on its own.
+# {$DOMAIN} and {$ACME_EMAIL} are substituted from the container environment
+# (set in .env → passed through by docker-compose.prod.yml).
+{
+	email {$ACME_EMAIL}
+}
+
+# Admin panel (Next.js).
+{$DOMAIN} {
+	encode zstd gzip
+	# Warehouse photos can be large; allow generous uploads.
+	request_body {
+		max_size 25MB
+	}
+	reverse_proxy web:3000
+}
+
+# Telegram webhooks. Set WEBHOOK_BASE_URL=https://bot.{$DOMAIN} in .env so the
+# onboarding flow points each bot here (CLAUDE.md rule 2).
+bot.{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy bot:8443
+}

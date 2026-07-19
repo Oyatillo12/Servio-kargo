@@ -1,0 +1,31 @@
+# Reinstalled inside the image — never ship the host's node_modules.
+**/node_modules
+.pnpm-store
+
+# Build artifacts (regenerated in the image)
+**/.next
+**/dist
+**/build
+**/out
+**/*.tsbuildinfo
+**/coverage
+
+# Secrets & local data — must never enter an image layer
+.env
+.env.*
+!.env.example
+data/uploads
+
+# VCS / editor / OS noise
+.git
+.gitignore
+.idea
+.vscode
+**/*.log
+.DS_Store
+Thumbs.db
+
+# Docs & deploy scaffolding not needed at build time
+DEPLOY.md
+*.md
+!README.md

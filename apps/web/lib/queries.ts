@@ -1125,6 +1125,16 @@ export interface ImportResult {
  * Every status change on an attached, non-deleted track enqueues a notification
  * (§4.2). New (unclaimed) tracks never notify.
  */
+/** Rows per bulk INSERT / ids per bulk UPDATE — stays far under the Postgres
+ * 65535-bind-parameter cap even with every track column bound. */
+const IMPORT_CHUNK = 1000;
+
+function chunked<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
 export async function applyImport(
   tenantId: string,
   status: TrackStatus,
@@ -1136,91 +1146,132 @@ export async function applyImport(
   const result: ImportResult = { created: 0, updated: 0, queued: 0 };
   if (codes.length === 0) return result;
 
-  // Preload existing rows for this batch in one query.
-  const existingRows = await db
-    .select({
-      id: tracks.id,
-      codeNormalized: tracks.codeNormalized,
-      currentStatus: tracks.currentStatus,
-      customerId: tracks.customerId,
-      deletedAt: tracks.deletedAt,
-    })
-    .from(tracks)
-    .where(
-      and(
-        eq(tracks.tenantId, tenantId),
-        inArray(
-          tracks.codeNormalized,
-          codes.map((c) => c.normalized),
+  // Enqueued only AFTER the transaction commits: pg-boss writes through its own
+  // connection, so a job sent mid-transaction would survive a rollback and
+  // notify about rows that were never written.
+  const toNotify: Array<{ trackId: string; customerId: string }> = [];
+
+  // All writes in one transaction — an import either fully applies or not at all.
+  await db.transaction(async (tx) => {
+    // Preload existing rows for this batch in one query.
+    const existingRows = await tx
+      .select({
+        id: tracks.id,
+        codeNormalized: tracks.codeNormalized,
+        currentStatus: tracks.currentStatus,
+        customerId: tracks.customerId,
+        deletedAt: tracks.deletedAt,
+      })
+      .from(tracks)
+      .where(
+        and(
+          eq(tracks.tenantId, tenantId),
+          inArray(
+            tracks.codeNormalized,
+            codes.map((c) => c.normalized),
+          ),
         ),
-      ),
+      );
+    const existingByCode = new Map(
+      existingRows.map((r) => [r.codeNormalized, r]),
     );
-  const existingByCode = new Map(existingRows.map((r) => [r.codeNormalized, r]));
 
-  for (const code of codes) {
-    const existing = existingByCode.get(code.normalized);
-
-    if (!existing) {
-      const [track] = await db
+    // New codes → bulk insert. ON CONFLICT DO NOTHING absorbs a concurrent
+    // import racing on the same (tenant, code): the loser's row silently skips
+    // (not created, not updated this run) instead of aborting the whole import.
+    const newCodes = codes.filter((c) => !existingByCode.has(c.normalized));
+    for (const chunk of chunked(newCodes, IMPORT_CHUNK)) {
+      const inserted = await tx
         .insert(tracks)
-        .values({
-          tenantId,
-          codeNormalized: code.normalized,
-          codeOriginal: code.original,
-          currentStatus: status,
-          batchId,
+        .values(
+          chunk.map((code) => ({
+            tenantId,
+            codeNormalized: code.normalized,
+            codeOriginal: code.original,
+            currentStatus: status,
+            batchId,
+          })),
+        )
+        .onConflictDoNothing({
+          target: [tracks.tenantId, tracks.codeNormalized],
         })
         .returning({ id: tracks.id });
-      if (track) {
-        await db.insert(trackEvents).values({
-          trackId: track.id,
+      if (inserted.length > 0) {
+        await tx.insert(trackEvents).values(
+          inserted.map((t) => ({
+            trackId: t.id,
+            status,
+            meta: { source: 'import' },
+            createdBy,
+          })),
+        );
+      }
+      result.created += inserted.length;
+      // new tracks are unclaimed → no notification
+    }
+
+    // Existing codes → plan each row, then group ids by identical SET so every
+    // group is one bulk UPDATE instead of a per-row round trip.
+    const writeIds: string[] = []; // status change and/or revive
+    const batchOnlyIds: string[] = []; // §7.2 batch attach on a §2 no-op row
+    const eventIds: string[] = [];
+
+    for (const code of codes) {
+      const existing = existingByCode.get(code.normalized);
+      if (!existing) continue;
+
+      const plan = planStatusChange({
+        previousStatus: existing.currentStatus,
+        newStatus: status,
+        customerId: existing.customerId,
+        wasDeleted: existing.deletedAt != null,
+      });
+      // §7.2: a selected batch attaches to ALL rows, even ones whose status is
+      // a §2 no-op. Skip only when there is nothing at all to write.
+      if (plan.willWrite) writeIds.push(existing.id);
+      else if (batchId != null) batchOnlyIds.push(existing.id);
+      else continue;
+
+      // §2: only a real status change appends an event.
+      if (plan.willEvent) eventIds.push(existing.id);
+      result.updated += 1;
+
+      if (plan.willNotify) {
+        toNotify.push({ trackId: existing.id, customerId: existing.customerId! });
+      }
+    }
+
+    const writeSet: Partial<typeof tracks.$inferInsert> = {
+      currentStatus: status,
+      deletedAt: null,
+    };
+    if (batchId != null) writeSet.batchId = batchId;
+    for (const chunk of chunked(writeIds, IMPORT_CHUNK)) {
+      await tx.update(tracks).set(writeSet).where(inArray(tracks.id, chunk));
+    }
+    for (const chunk of chunked(batchOnlyIds, IMPORT_CHUNK)) {
+      await tx.update(tracks).set({ batchId }).where(inArray(tracks.id, chunk));
+    }
+    for (const chunk of chunked(eventIds, IMPORT_CHUNK)) {
+      await tx.insert(trackEvents).values(
+        chunk.map((trackId) => ({
+          trackId,
           status,
           meta: { source: 'import' },
           createdBy,
-        });
-        result.created += 1;
-      }
-      continue; // new tracks are unclaimed → no notification
+        })),
+      );
     }
+  });
 
-    const plan = planStatusChange({
-      previousStatus: existing.currentStatus,
-      newStatus: status,
-      customerId: existing.customerId,
-      wasDeleted: existing.deletedAt != null,
+  for (const n of toNotify) {
+    await enqueueNotification({
+      tenantId,
+      trackId: n.trackId,
+      customerId: n.customerId,
+      status,
     });
-    // §7.2: a selected batch attaches to ALL rows, even ones whose status is a
-    // §2 no-op. Skip only when there is nothing at all to write.
-    if (!plan.willWrite && batchId == null) continue;
-
-    const set: Partial<typeof tracks.$inferInsert> = {};
-    if (plan.willWrite) {
-      set.currentStatus = status;
-      set.deletedAt = null;
-    }
-    if (batchId != null) set.batchId = batchId;
-    await db.update(tracks).set(set).where(eq(tracks.id, existing.id));
-
-    // §2: only a real status change appends an event.
-    if (plan.willEvent) {
-      await db.insert(trackEvents).values({
-        trackId: existing.id,
-        status,
-        meta: { source: 'import' },
-        createdBy,
-      });
-    }
-    result.updated += 1;
-
-    if (plan.willNotify) {
-      await enqueueNotification({
-        tenantId,
-        trackId: existing.id,
-        customerId: existing.customerId!,
-        status,
-      });
-      result.queued += 1;
-    }
+    result.queued += 1;
   }
 
   return result;

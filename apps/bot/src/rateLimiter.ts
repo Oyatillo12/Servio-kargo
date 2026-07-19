@@ -1,7 +1,9 @@
 /**
  * Telegram send throttle (SPEC §8, CLAUDE.md rule 3): ≤25 msg/sec globally and
- * ≤1 msg/sec per chat. A single sequential worker calls {@link acquire} before
- * each send; it reserves the next global + per-chat slot and sleeps until then.
+ * ≤1 msg/sec per chat. Each sender calls {@link acquire} before a send; it
+ * reserves the next global + per-chat slot and sleeps until then. One instance
+ * is shared by ALL queue workers (notify, reminder, broadcast), so slots are
+ * reserved synchronously up front — concurrent acquires each get a distinct slot.
  *
  * A same-chat burst serializes at 1/sec (acceptable at MVP scale); other chats
  * are still bounded only by the 40ms global spacing.
@@ -27,12 +29,14 @@ export class TelegramRateLimiter {
     const chatReady = this.chatNext.get(chatId) ?? 0;
     const at = Math.max(now, this.globalNext, chatReady);
 
-    const wait = at - now;
-    if (wait > 0) await sleep(wait);
-
+    // Reserve BEFORE sleeping: while one caller awaits its slot, a concurrent
+    // acquire must already see the advanced marks, or both would book `at`.
     this.globalNext = at + this.globalGapMs;
     this.chatNext.set(chatId, at + this.chatGapMs);
-    this.prune(at);
+    this.prune(now);
+
+    const wait = at - now;
+    if (wait > 0) await sleep(wait);
   }
 
   /** Drop per-chat entries whose window has fully elapsed, to bound memory. */

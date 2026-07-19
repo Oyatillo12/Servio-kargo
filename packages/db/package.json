@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx --env-file=.env src/seed.ts"
+    "db:seed": "tsx --env-file=.env src/seed.ts",
+    "db:demo-import": "tsx --env-file=.env scripts/demo-import.ts"
   },
   "dependencies": {
     "@kargotrack/shared": "workspace:*",

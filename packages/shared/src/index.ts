@@ -117,9 +117,11 @@ export {
   parseImportText,
   classifyImportCandidates,
   splitAgainstExisting,
+  extractTrackCodesFromChannel,
   type ImportCode,
   type ImportParseResult,
   type ImportSplit,
+  type ChannelExtractResult,
 } from './services/import';
 export {
   NOTIFY_QUEUE,
