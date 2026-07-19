@@ -37,6 +37,18 @@ export interface InfoCardVars {
   address?: string;
   hours?: string;
   phone?: string;
+  /** Free-text info block (prohibited goods, rules, FAQ) — §3.5 point 4. */
+  infoText?: string;
+}
+
+export interface CalcResultVars {
+  tariffName: string;
+  /** Formatted kg, e.g. "3.2". */
+  kg: string;
+  /** Formatted so'm (no suffix), e.g. "176 000". */
+  som: string;
+  /** Formatted USD amount incl. `$` (e.g. "3.5$"), present only in USD mode. */
+  usd?: string;
 }
 
 export interface LookupCardVars {
@@ -77,7 +89,9 @@ export interface Strings {
   // --- §3.1 main menu labels (reply keyboard) ---
   menuAddTrack: string;
   menuMyTracks: string;
+  menuCalculator: string;
   menuBalance: string;
+  menuChinaAddress: string;
   menuInfo: string;
   menuLang: string;
 
@@ -109,6 +123,17 @@ export interface Strings {
   // --- §3.6 free-text lookup ---
   lookupCard(v: LookupCardVars): string;
   lookupNotFound(code: string): string;
+
+  // --- §3.9 calculator (§4.5) ---
+  calcChooseTariff: string;
+  calcAskKg: string;
+  calcResult(v: CalcResultVars): string;
+  calcInvalid: string;
+
+  // --- §3.10 China warehouse address (§4.5) ---
+  chinaAddrHeader: string;
+  chinaAddrFooter(clientCode: string): string;
+  chinaAddrMissing(contactPhone: string): string;
 
   // --- §3.7 language switch ---
   langSwitched: string;

@@ -55,6 +55,8 @@ export interface SettingsInitial {
   workingHours: string;
   contactPhone: string;
   staffIds: number[];
+  chinaAddressTemplate: string;
+  infoText: string;
   weeklyEnabled: boolean;
   weekday: string;
   hour: string;
@@ -138,6 +140,43 @@ export function SettingsForm({ initial: init }: { initial: SettingsInitial }) {
             />
           </div>
         </div>
+      </div>
+
+      {/* 🇨🇳 China warehouse address template (SPEC §3.10 / §5.9) */}
+      <div className="space-y-2 rounded-xl border border-border bg-white p-3.5">
+        <h2 className="text-[13.5px] font-semibold">
+          🇨🇳 Xitoy ombori manzili
+        </h2>
+        <textarea
+          name="chinaAddressTemplate"
+          defaultValue={init.chinaAddressTemplate}
+          rows={5}
+          placeholder={
+            'Ism: {client_code}\nTel: +86 ...\nManzil: Guangzhou, ...'
+          }
+          className="w-full resize-y rounded-lg border border-input bg-white px-3 py-2.5 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        <p className="text-[11.5px] text-muted-foreground">
+          <code className="rounded bg-secondary px-1 py-0.5">
+            {'{client_code}'}
+          </code>{' '}
+          — mijoz kodi o&apos;rniga qo&apos;yiladi.
+        </p>
+      </div>
+
+      {/* Info text (SPEC §3.5 / §5.9) */}
+      <div className="space-y-2 rounded-xl border border-border bg-white p-3.5">
+        <h2 className="text-[13.5px] font-semibold">Ma&apos;lumot matni</h2>
+        <textarea
+          name="infoText"
+          defaultValue={init.infoText}
+          rows={5}
+          placeholder="Taqiqlangan yuklar, qoidalar, tez-tez so'raladigan savollar…"
+          className="w-full resize-y rounded-lg border border-input bg-white px-3 py-2.5 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        <p className="text-[11.5px] text-muted-foreground">
+          Botda ℹ️ Ma&apos;lumot bo&apos;limida ko&apos;rsatiladi.
+        </p>
       </div>
 
       {/* Staff Telegram IDs */}

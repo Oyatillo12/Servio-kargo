@@ -28,6 +28,8 @@ const schema = z.object({
   workingHours: z.string().max(100).optional(),
   contactPhone: z.string().max(50).optional(),
   staffIds: z.string().max(2000).optional(),
+  chinaAddressTemplate: z.string().max(2000).optional(),
+  infoText: z.string().max(4000).optional(),
   weeklyEnabled: z.string().optional(), // 'on' when the switch is on
   weekday: z.coerce.number().int().min(1).max(7),
   hour: z.coerce.number().int().min(0).max(23),
@@ -50,6 +52,8 @@ export async function updateSettingsAction(
     workingHours: formData.get('workingHours') ?? undefined,
     contactPhone: formData.get('contactPhone') ?? undefined,
     staffIds: formData.get('staffIds') ?? undefined,
+    chinaAddressTemplate: formData.get('chinaAddressTemplate') ?? undefined,
+    infoText: formData.get('infoText') ?? undefined,
     weeklyEnabled: formData.get('weeklyEnabled') ?? undefined,
     weekday: formData.get('weekday'),
     hour: formData.get('hour'),
@@ -67,6 +71,9 @@ export async function updateSettingsAction(
     ),
   );
 
+  const chinaTemplate = parsed.data.chinaAddressTemplate?.trim();
+  const infoText = parsed.data.infoText?.trim();
+
   const settings: TenantSettings = {
     staff_tg_ids: staffTgIds,
     reminders: {
@@ -74,6 +81,8 @@ export async function updateSettingsAction(
       weekday: parsed.data.weekday,
       hour: parsed.data.hour,
     },
+    china_address_template: chinaTemplate || undefined,
+    info_text: infoText || undefined,
   };
 
   await updateTenantSettings({

@@ -9,7 +9,7 @@ export const metadata = { title: 'Kirish — KargoTrack' };
 
 export default async function LoginPage() {
   // Already signed in → straight to the panel.
-  if (await getSessionAdmin()) redirect('/tracks');
+  if (await getSessionAdmin()) redirect('/dashboard');
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-7 px-5 py-10">

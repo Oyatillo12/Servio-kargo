@@ -3,11 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  LayoutDashboard,
   Package,
   Users,
   Wallet,
   Import,
   Truck,
+  Megaphone,
   Settings,
   type LucideIcon,
 } from 'lucide-react';
@@ -21,11 +23,13 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { href: '/dashboard', label: 'Bosh sahifa', icon: LayoutDashboard },
   { href: '/tracks', label: 'Treklar', icon: Package },
   { href: '/customers', label: 'Mijozlar', icon: Users },
   { href: '/debtors', label: 'Qarzdorlar', icon: Wallet },
   { href: '/batches', label: 'Reyslar', icon: Truck },
   { href: '/import', label: 'Import', icon: Import },
+  { href: '/broadcast', label: 'Xabarnoma', icon: Megaphone },
   { href: '/settings', label: 'Sozlamalar', icon: Settings },
 ];
 

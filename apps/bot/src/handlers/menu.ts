@@ -130,6 +130,7 @@ export async function showInfo(ctx: KargoContext): Promise<void> {
       address: tn.pickupAddress ?? undefined,
       hours: tn.workingHours ?? undefined,
       phone: tn.contactPhone ?? undefined,
+      infoText: tn.settings.info_text?.trim() || undefined,
     }),
   );
 }

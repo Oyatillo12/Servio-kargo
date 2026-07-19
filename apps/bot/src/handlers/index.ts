@@ -7,6 +7,7 @@
 import type { Bot } from 'grammy';
 
 import type { KargoContext } from '../context';
+import { calcTariffCallback } from './calculator';
 import { contactHandler, langCallback, startCommand } from './start';
 import { myTracksPageCallback } from './menu';
 import { staffPhotoHandler } from './staffPhoto';
@@ -17,6 +18,7 @@ export function registerHandlers(bot: Bot<KargoContext>): void {
 
   bot.callbackQuery(/^lang:(uz|ru)$/, langCallback);
   bot.callbackQuery(/^mytracks:(\d+)$/, myTracksPageCallback);
+  bot.callbackQuery(/^calc:(.+)$/, calcTariffCallback);
 
   bot.on('message:contact', contactHandler);
   bot.on('message:photo', staffPhotoHandler);

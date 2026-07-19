@@ -20,12 +20,14 @@ import { randomUUID } from 'node:crypto';
 import PgBoss from 'pg-boss';
 
 import {
+  BROADCAST_QUEUE,
   NOTIFY_QUEUE,
   REMINDER_QUEUE,
   REMINDER_SWEEP_CRON,
   REMINDER_SWEEP_QUEUE,
   REMINDER_TZ,
   notifyDedupeKey,
+  type BroadcastJob,
   type NotifyJob,
   type ReminderJob,
 } from '@kargotrack/shared';
@@ -70,6 +72,15 @@ export function getBoss(): Promise<PgBoss> {
         await boss.createQueue(name, { name, policy });
         await boss.updateQueue(name, { name, policy });
       }
+      // Broadcasts: 'standard' — one job per recipient, no dedupe (§7.11).
+      await boss.createQueue(BROADCAST_QUEUE, {
+        name: BROADCAST_QUEUE,
+        policy: 'standard',
+      });
+      await boss.updateQueue(BROADCAST_QUEUE, {
+        name: BROADCAST_QUEUE,
+        policy: 'standard',
+      });
       return boss;
     })().catch((err) => {
       // Allow a later call to retry a failed startup.
@@ -204,6 +215,46 @@ export function scheduleReminderSweep(): Promise<void> {
     boss.schedule(REMINDER_SWEEP_QUEUE, REMINDER_SWEEP_CRON, undefined, {
       tz: REMINDER_TZ,
     }),
+  );
+}
+
+// --- Broadcasts (SPEC §5.8, §7.11) -----------------------------------------
+
+/**
+ * Enqueue one broadcast delivery. No `singletonKey`: under the 'standard' policy
+ * keys are ignored, so every recipient's job is kept (a broadcast fans out to
+ * one job per customer, all through this throttled queue).
+ */
+export function enqueueBroadcast(job: BroadcastJob): Promise<string | null> {
+  return getBoss().then((boss) =>
+    boss.send(BROADCAST_QUEUE, job, {
+      retryLimit: RETRY_LIMIT,
+      retryBackoff: RETRY_BACKOFF,
+    }),
+  );
+}
+
+export type BroadcastJobHandler = (
+  job: BroadcastJob,
+  meta: JobMeta,
+) => Promise<void>;
+
+/** Register the per-customer broadcast worker (mirrors {@link workReminders}). */
+export function workBroadcasts(handler: BroadcastJobHandler): Promise<string> {
+  return getBoss().then((boss) =>
+    boss.work<BroadcastJob>(
+      BROADCAST_QUEUE,
+      { batchSize: 1, includeMetadata: true, pollingIntervalSeconds: 1 },
+      async (jobs) => {
+        for (const job of jobs) {
+          await handler(job.data, {
+            id: job.id,
+            retryCount: job.retryCount,
+            retryLimit: job.retryLimit,
+          });
+        }
+      },
+    ),
   );
 }
 

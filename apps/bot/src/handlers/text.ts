@@ -8,26 +8,41 @@
 import type { KargoContext } from '../context';
 import { langKeyboard } from '../keyboards';
 import { handleAddTracks } from './addTrack';
+import { handleCalcWeight, showCalculator } from './calculator';
+import { showChinaAddress } from './china';
 import { matchMenuAction } from './common';
 import { handleLookup } from './lookup';
 import { showBalance, showInfo, showMyTracks } from './menu';
+
+/** Clear every pending multi-step flow's session state. */
+function resetFlows(ctx: KargoContext): void {
+  ctx.session.step = undefined;
+  ctx.session.calcTariffId = undefined;
+  ctx.session.calcRetried = undefined;
+}
 
 export async function textRouter(ctx: KargoContext): Promise<void> {
   const text = ctx.message?.text ?? '';
 
   const action = matchMenuAction(text);
   if (action) {
-    // A menu tap ends any pending "awaiting tracks" prompt.
-    if (action !== 'addTrack') ctx.session.step = undefined;
+    // A menu tap ends any pending prompt — except tapping the button that owns
+    // that prompt (add-track / calculator start their own flow below).
+    if (action !== 'addTrack' && action !== 'calculator') resetFlows(ctx);
     switch (action) {
       case 'addTrack':
+        resetFlows(ctx);
         ctx.session.step = 'awaiting_tracks';
         await ctx.reply(ctx.s.askTracks);
         return;
       case 'myTracks':
         return showMyTracks(ctx);
+      case 'calculator':
+        return showCalculator(ctx);
       case 'balance':
         return showBalance(ctx);
+      case 'chinaAddress':
+        return showChinaAddress(ctx);
       case 'info':
         return showInfo(ctx);
       case 'lang':
@@ -36,6 +51,11 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
         });
         return;
     }
+  }
+
+  if (ctx.session.step === 'awaiting_calc_kg') {
+    // Consumed → done; not consumed (second bad number) → fall through to lookup.
+    if (await handleCalcWeight(ctx, text)) return;
   }
 
   if (ctx.session.step === 'awaiting_tracks') {

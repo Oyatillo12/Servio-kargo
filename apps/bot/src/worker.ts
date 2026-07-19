@@ -15,6 +15,7 @@ import { Api, GrammyError, InputFile } from 'grammy';
 import {
   enqueueReminder,
   scheduleReminderSweep,
+  workBroadcasts,
   workNotifications,
   workReminderSweeps,
   workReminders,
@@ -29,6 +30,7 @@ import {
   t,
   tashkentSchedule,
   weeklyReminderDedupeKey,
+  type BroadcastJob,
   type NotifyJob,
   type ReminderJob,
 } from '@kargotrack/shared';
@@ -40,6 +42,7 @@ import {
   getCustomerById,
   getTenantById,
   getTrackById,
+  incrementBroadcastSent,
   listCustomerPayments,
   listCustomerTracks,
   listTenantDebtorIds,
@@ -253,4 +256,59 @@ export async function startReminderWorker(): Promise<void> {
   await workReminderSweeps(handleSweepJob);
   await scheduleReminderSweep();
   logger.info('reminder worker started');
+}
+
+// --- Broadcasts (SPEC §5.8, §7.11) -----------------------------------------
+
+/**
+ * Send one broadcast delivery. Sent through the same rate limiter as every other
+ * outbound message; on success it bumps `broadcasts.sent_count` so the row
+ * records the final delivered count (§7.11). Blocked/invalid chats are dropped
+ * (no count), transient errors re-throw for pg-boss retry.
+ */
+async function handleBroadcastJob(
+  job: BroadcastJob,
+  meta: JobMeta,
+): Promise<void> {
+  const tenant = await getTenantById(job.tenantId);
+  if (!tenant) {
+    logger.warn({ job }, 'broadcast: tenant gone, dropping');
+    return;
+  }
+
+  const customer = await getCustomerById(job.tenantId, job.customerId);
+  if (!customer?.tgUserId) {
+    logger.warn(
+      { customerId: job.customerId },
+      'broadcast: no telegram id, dropping',
+    );
+    return;
+  }
+
+  const api = apiFor(tenant.botToken);
+  const chatId = customer.tgUserId;
+
+  await limiter.acquire(chatId);
+  try {
+    await api.sendMessage(chatId, job.text);
+    await incrementBroadcastSent(job.tenantId, job.broadcastId);
+  } catch (err) {
+    if (isPermanentSendError(err)) {
+      logger.warn(
+        { err: err instanceof GrammyError ? err.description : err, chatId },
+        'broadcast: permanent send error, dropping',
+      );
+      return;
+    }
+    if (meta.retryCount >= meta.retryLimit) {
+      logger.error({ jobId: meta.id, chatId, err }, 'broadcast: failed after retries');
+    }
+    throw err; // transient → let pg-boss retry with backoff
+  }
+}
+
+/** Start consuming broadcast jobs. */
+export async function startBroadcastWorker(): Promise<void> {
+  await workBroadcasts(handleBroadcastJob);
+  logger.info('broadcast worker started');
 }

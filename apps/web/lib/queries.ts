@@ -6,12 +6,31 @@
 
 import 'server-only';
 
-import { and, asc, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  sum,
+} from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
-import { enqueueNotification, enqueueReminder } from '@kargotrack/db/queue';
+import {
+  enqueueBroadcast,
+  enqueueNotification,
+  enqueueReminder,
+} from '@kargotrack/db/queue';
 import {
   batches,
+  broadcasts,
   customers,
   payments,
   tariffs,
@@ -19,6 +38,7 @@ import {
   trackEvents,
   tracks,
   type Batch,
+  type Broadcast,
   type Currency,
   type Customer,
   type Payment,
@@ -29,18 +49,24 @@ import {
   type Transport,
 } from '@kargotrack/db/schema';
 import {
+  bucketDailyTushum,
   computeDebtTiyin,
   computeTrackPrice,
+  lastNDays,
   normalizeCode,
+  periodRange,
   planBatchPropagation,
   planCreateTariff,
   planDelete,
   planSetActive,
   planStatusChange,
+  TUSHUM_CHART_DAYS,
   type BatchStatus,
+  type DashboardPeriod,
   type DebtTrack,
   type ImportCode,
   type TrackStatus,
+  type TushumPoint,
 } from '@kargotrack/shared';
 
 export const TRACKS_PAGE_SIZE = 20;
@@ -785,6 +811,56 @@ export async function queueReminder(
   await enqueueReminder({ tenantId, customerId, reason: 'manual' });
 }
 
+// --- Broadcast / Xabarnoma (SPEC §5.8, §7.11) -------------------------------
+
+/** Ids of a tenant's customers reachable on Telegram (broadcast recipients). */
+export async function listCustomerIdsWithTelegram(
+  tenantId: string,
+): Promise<string[]> {
+  const rows = await getDb()
+    .select({ id: customers.id })
+    .from(customers)
+    .where(and(eq(customers.tenantId, tenantId), isNotNull(customers.tgUserId)));
+  return rows.map((r) => r.id);
+}
+
+/** Insert a broadcast record (sent_count starts at 0). Returns its id (§5.8). */
+export async function createBroadcast(
+  tenantId: string,
+  text: string,
+): Promise<string> {
+  const [row] = await getDb()
+    .insert(broadcasts)
+    .values({ tenantId, text })
+    .returning({ id: broadcasts.id });
+  return row!.id;
+}
+
+/**
+ * Create a broadcast and fan it out to one throttled-queue job per reachable
+ * customer (SPEC §7.11). Returns how many recipients were enqueued.
+ */
+export async function sendBroadcast(
+  tenantId: string,
+  text: string,
+): Promise<number> {
+  const recipientIds = await listCustomerIdsWithTelegram(tenantId);
+  const broadcastId = await createBroadcast(tenantId, text);
+  for (const customerId of recipientIds) {
+    await enqueueBroadcast({ tenantId, broadcastId, customerId, text });
+  }
+  return recipientIds.length;
+}
+
+/** Past broadcasts, newest first (SPEC §5.8 history). Tenant-scoped. */
+export async function listBroadcasts(tenantId: string): Promise<Broadcast[]> {
+  return getDb()
+    .select()
+    .from(broadcasts)
+    .where(eq(broadcasts.tenantId, tenantId))
+    .orderBy(desc(broadcasts.createdAt));
+}
+
 // --- Batches / Reyslar (SPEC §5.7, §7.10) -----------------------------------
 
 export interface BatchListRow {
@@ -1148,4 +1224,145 @@ export async function applyImport(
   }
 
   return result;
+}
+
+// --- Owner dashboard (SPEC §5.10) -------------------------------------------
+
+export interface DashboardStats {
+  /** CHINA_WAREHOUSE events in the period. */
+  chinaReceived: number;
+  /** TASHKENT_WAREHOUSE events in the period. */
+  tashkentArrived: number;
+  /** DELIVERED events in the period, with the summed weight/price of the tracks. */
+  delivered: { count: number; weightGrams: number; priceTiyin: number };
+  /** Payments received in the period (tiyin). */
+  tushumTiyin: number;
+  /** Customers who registered in the period. */
+  newCustomers: number;
+  /** Current net debt across all debtors (tiyin) — NOT period-based. */
+  debtTiyin: number;
+  /** Current number of customers with net debt > 0 — NOT period-based. */
+  debtorCount: number;
+}
+
+/**
+ * The six §5.10 stat cards for `period`, via single tenant-scoped aggregate
+ * queries (no N+1). Period windows are Asia/Tashkent calendar days resolved by
+ * the tested `periodRange` (§7.9). Event-count and delivered cards join
+ * `track_events → tracks` (events carry no tenant_id) and exclude soft-deleted
+ * tracks (§7.8). Debt is current, not period-scoped, and reuses `listDebtors`
+ * (the tested `computeDebtTiyin` service).
+ */
+export async function getDashboardStats(
+  tenantId: string,
+  period: DashboardPeriod,
+  now: Date = new Date(),
+): Promise<DashboardStats> {
+  const db = getDb();
+  const { startUtc, endUtc } = periodRange(now, period);
+
+  const eventCount = async (status: TrackStatus): Promise<number> => {
+    const [row] = await db
+      .select({ value: count() })
+      .from(trackEvents)
+      .innerJoin(tracks, eq(trackEvents.trackId, tracks.id))
+      .where(
+        and(
+          eq(tracks.tenantId, tenantId),
+          isNull(tracks.deletedAt),
+          eq(trackEvents.status, status),
+          gte(trackEvents.createdAt, startUtc),
+          lt(trackEvents.createdAt, endUtc),
+        ),
+      );
+    return row?.value ?? 0;
+  };
+
+  const [chinaReceived, tashkentArrived, deliveredRow, tushumRow, custRow, debtors] =
+    await Promise.all([
+      eventCount('CHINA_WAREHOUSE'),
+      eventCount('TASHKENT_WAREHOUSE'),
+      db
+        .select({
+          count: count(),
+          weightGrams: sum(tracks.weightGrams),
+          priceTiyin: sum(tracks.priceTiyin),
+        })
+        .from(trackEvents)
+        .innerJoin(tracks, eq(trackEvents.trackId, tracks.id))
+        .where(
+          and(
+            eq(tracks.tenantId, tenantId),
+            isNull(tracks.deletedAt),
+            eq(trackEvents.status, 'DELIVERED'),
+            gte(trackEvents.createdAt, startUtc),
+            lt(trackEvents.createdAt, endUtc),
+          ),
+        )
+        .then((rows) => rows[0]),
+      db
+        .select({ value: sum(payments.amountTiyin) })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.tenantId, tenantId),
+            gte(payments.createdAt, startUtc),
+            lt(payments.createdAt, endUtc),
+          ),
+        )
+        .then((rows) => rows[0]),
+      db
+        .select({ value: count() })
+        .from(customers)
+        .where(
+          and(
+            eq(customers.tenantId, tenantId),
+            gte(customers.createdAt, startUtc),
+            lt(customers.createdAt, endUtc),
+          ),
+        )
+        .then((rows) => rows[0]),
+      listDebtors(tenantId),
+    ]);
+
+  return {
+    chinaReceived,
+    tashkentArrived,
+    delivered: {
+      count: deliveredRow?.count ?? 0,
+      weightGrams: Number(deliveredRow?.weightGrams ?? 0),
+      priceTiyin: Number(deliveredRow?.priceTiyin ?? 0),
+    },
+    tushumTiyin: Number(tushumRow?.value ?? 0),
+    newCustomers: custRow?.value ?? 0,
+    debtTiyin: debtors.reduce((s, c) => s + c.debtTiyin, 0),
+    debtorCount: debtors.length,
+  };
+}
+
+/**
+ * Daily tushum for the last 14 Tashkent days (§5.10 chart). One tenant-scoped
+ * payments query over the whole window; buckets are assigned by the tested
+ * `bucketDailyTushum`. Returns 14 points, oldest first, zero-filled.
+ */
+export async function getDailyTushum(
+  tenantId: string,
+  now: Date = new Date(),
+): Promise<TushumPoint[]> {
+  const buckets = lastNDays(now, TUSHUM_CHART_DAYS);
+  const windowStart = buckets[0]!.startUtc;
+  const windowEnd = buckets[buckets.length - 1]!.endUtc;
+
+  const rows = await getDb()
+    .select({ amountTiyin: payments.amountTiyin, createdAt: payments.createdAt })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.tenantId, tenantId),
+        gte(payments.createdAt, windowStart),
+        lt(payments.createdAt, windowEnd),
+      ),
+    );
+
+  return bucketDailyTushum(buckets, rows);
 }

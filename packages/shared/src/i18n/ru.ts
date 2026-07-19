@@ -23,7 +23,9 @@ export const ru: Strings = {
   // --- §3.1 menu labels ---
   menuAddTrack: '➕ Добавить трек',
   menuMyTracks: '📦 Мои посылки',
+  menuCalculator: '🧮 Калькулятор',
   menuBalance: '💰 Баланс',
+  menuChinaAddress: '🇨🇳 Адрес склада',
   menuInfo: 'ℹ️ Информация',
   menuLang: '🌐 Til / Язык',
 
@@ -55,19 +57,20 @@ export const ru: Strings = {
   },
 
   // --- §3.5 info ---
-  infoCard: ({ tariffLines, usdRateSom, address, hours, phone }) => {
+  infoCard: ({ tariffLines, usdRateSom, address, hours, phone, infoText }) => {
     const lines = ['ℹ️ Информация'];
     if (tariffLines.length > 0) {
       lines.push('', '💵 Тарифы:');
       for (const line of tariffLines) lines.push(line);
-      if (usdRateSom) lines.push(`Курс: 1$ = ${usdRateSom} so'm`);
     }
+    if (usdRateSom) lines.push('', `Курс: 1$ = ${usdRateSom} so'm`);
     if (address || hours || phone) {
       lines.push('');
       if (address) lines.push(`📍 Адрес: ${address}`);
       if (hours) lines.push(`🕘 Часы работы: ${hours}`);
       if (phone) lines.push(`📞 Контакт: ${phone}`);
     }
+    if (infoText) lines.push('', infoText);
     return lines.join('\n');
   },
 
@@ -99,6 +102,21 @@ export const ru: Strings = {
     return lines.join('\n');
   },
   lookupNotFound: (code) => `🔍 ${code} — трек не найден.`,
+
+  // --- §3.9 calculator (§4.5) ---
+  calcChooseTariff: 'Выберите тариф:',
+  calcAskKg: 'Введите вес (кг), например: 3.2',
+  calcResult: ({ tariffName, kg, som, usd }) =>
+    `🧮 ${tariffName}\n${kg} kg ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nТочная сумма рассчитывается при взвешивании.`,
+  calcInvalid: 'Введите число, например: 2.5',
+
+  // --- §3.10 China warehouse address (§4.5) ---
+  chinaAddrHeader:
+    '🇨🇳 Адрес склада в Китае — отправьте это продавцу (поставщику):',
+  chinaAddrFooter: (clientCode) =>
+    `❗️ Не забудьте попросить написать этот код на каждой коробке: ${clientCode}`,
+  chinaAddrMissing: (contactPhone) =>
+    `Адрес пока не указан. Свяжитесь с администратором: ${contactPhone}`,
 
   // --- §3.7 ---
   langSwitched: 'Язык изменён ✅',

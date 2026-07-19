@@ -4,11 +4,12 @@
  * decisions/formatting to `@kargotrack/shared`, so they stay thin.
  */
 
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import {
   batches,
+  broadcasts,
   customers,
   payments,
   tariffs,
@@ -357,6 +358,19 @@ export async function getActiveTariffs(tenantId: string): Promise<Tariff[]> {
     .from(tariffs)
     .where(and(eq(tariffs.tenantId, tenantId), eq(tariffs.active, true)))
     .orderBy(desc(tariffs.isDefault), asc(tariffs.sort), asc(tariffs.name));
+}
+
+/** Bump a broadcast's delivered count by one (SPEC §5.8 / §7.11). Tenant-scoped. */
+export async function incrementBroadcastSent(
+  tenantId: string,
+  broadcastId: string,
+): Promise<void> {
+  await getDb()
+    .update(broadcasts)
+    .set({ sentCount: sql`${broadcasts.sentCount} + 1` })
+    .where(
+      and(eq(broadcasts.tenantId, tenantId), eq(broadcasts.id, broadcastId)),
+    );
 }
 
 /** A batch by id (tenant-scoped) — for the §3.6 ETA line + §4.2 notification. */

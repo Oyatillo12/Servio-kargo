@@ -73,6 +73,14 @@ export type TenantSettings = {
     /** Hour of day in Asia/Tashkent, 0–23. */
     hour: number;
   };
+  /**
+   * China-warehouse address template rendered in the bot (SPEC 3.10 / 5.9).
+   * `{client_code}` is substituted with the customer's code. Optional — older
+   * rows and freshly onboarded tenants may not have it set yet.
+   */
+  china_address_template?: string;
+  /** Free-text info block shown in the bot Info card (SPEC 3.5 / 5.9). */
+  info_text?: string;
 };
 
 // --- Tables ----------------------------------------------------------------
@@ -261,6 +269,23 @@ export const payments = pgTable('payments', {
     .defaultNow(),
 });
 
+/**
+ * Broadcast history (SPEC §5.8, §7.11). One row per admin broadcast; `sent_count`
+ * is bumped by the bot worker as each recipient's message is delivered, so it
+ * records the final delivered count.
+ */
+export const broadcasts = pgTable('broadcasts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  text: text('text').notNull(),
+  sentCount: integer('sent_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // --- Relations (for typed relational queries) ------------------------------
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
@@ -270,6 +295,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   payments: many(payments),
   tariffs: many(tariffs),
   batches: many(batches),
+  broadcasts: many(broadcasts),
 }));
 
 export const tariffsRelations = relations(tariffs, ({ one, many }) => ({
@@ -326,6 +352,13 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   }),
 }));
 
+export const broadcastsRelations = relations(broadcasts, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [broadcasts.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 // --- Inferred types --------------------------------------------------------
 
 export type Tenant = typeof tenants.$inferSelect;
@@ -344,6 +377,8 @@ export type TrackEvent = typeof trackEvents.$inferSelect;
 export type NewTrackEvent = typeof trackEvents.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
+export type Broadcast = typeof broadcasts.$inferSelect;
+export type NewBroadcast = typeof broadcasts.$inferInsert;
 
 export type TrackStatus = (typeof trackStatus.enumValues)[number];
 export type Currency = (typeof currency.enumValues)[number];

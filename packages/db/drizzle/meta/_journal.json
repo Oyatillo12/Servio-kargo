@@ -29,6 +29,13 @@
       "when": 1784487863760,
       "tag": "0003_drop_tenant_price_per_kg",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784490254416,
+      "tag": "0004_careless_korg",
+      "breakpoints": true
     }
   ]
 }

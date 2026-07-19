@@ -83,11 +83,18 @@ set, photo if exists. Otherwise → short help text pointing to the menu.
 ### 3.7 Language switch
 `🌐` button toggles and persists `customers.lang`. Re-render menu.
 
-### 3.8 Staff photo mode
-If `from.id` ∈ `tenant.settings.staff_tg_ids`: a photo with caption = track
-code → download to `/data/uploads/{tenantId}/{trackId}.jpg`, link to track,
-confirm. Unknown code → error listing the normalized code it tried. Staff
-users still have the normal customer menu below this behavior.
+### 3.8 Staff mode (photo + weighing)
+If `from.id` ∈ `tenant.settings.staff_tg_ids`, two extra behaviors on top of
+the normal customer menu:
+1. **Photo**: a photo with caption = track code → download to
+   `/data/uploads/{tenantId}/{trackId}.jpg`, link to track, confirm.
+2. **Weighing**: caption or plain text of the form `CODE 3.2` (weight in kg,
+   dot or comma) → set weight_grams, compute price per 7.4, and link the
+   photo when present. If the track was in CREATED → move it to
+   CHINA_WAREHOUSE (event + customer notification). Unknown code → CREATE
+   the track unattached (customer_id NULL) with the given weight and status
+   CHINA_WAREHOUSE so the client can claim it later; tell staff it is new.
+   Replies per 4.5 staff strings.
 
 ### 3.9 Calculator
 `🧮` → inline buttons of ACTIVE tariffs (name only) → ask weight
@@ -156,6 +163,10 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
 - china_addr_header — uz: `🇨🇳 Xitoy ombori manzili — sotuvchiga (постовщик) shuni yuboring:`
 - china_addr_footer — uz: `❗️ Har bir qutiga shu kodni yozdirishni unutmang: {client_code}`
 - china_addr_missing — uz: `Manzil hali kiritilmagan. Administrator bilan bog'laning: {contact_phone}`
+- staff_saved — uz: `✅ {code}: {kg} kg → {price} so'm`
+- staff_saved_new — uz: `🆕 {code}: yangi trek yaratildi ({kg} kg → {price} so'm). Mijoz hali biriktirilmagan.`
+- staff_photo_ok — uz: `📷 {code}: rasm biriktirildi.`
+- staff_not_found — uz: `❓ {code} topilmadi. Vazn bilan yuborsangiz, yangi trek sifatida yarataman, masalan: {code} 3.2`
 - Broadcast messages have no wrapper — admin's text is sent as-is.
 - ru variants for all of the above.
 
@@ -207,6 +218,14 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
   - Haftalik avto-eslatma (toggle + kun + soat, default Dushanba 10:00).
   - Bot username (read-only), webhook holati indikatori + `Webhookni qayta
     o'rnatish` button.
+- **5.10 /dashboard (Bosh sahifa)** — the post-login landing page. Period
+  toggle: `Bugun / 7 kun / 30 kun` (Asia/Tashkent day boundaries — careful
+  with the UTC offset). Six stat cards: 📦 Xitoyda qabul qilingan
+  (CHINA_WAREHOUSE events in period), 🇺🇿 Toshkentga kelgan, 🎉 Topshirilgan
+  (count + jami kg + jami summa), 💰 Tushum (payments sum in period),
+  👥 Yangi mijozlar, 🔴 Jami qarzdorlik (current total, not period-based)
+  + qarzdorlar soni. Below the cards: one bar chart — daily tushum for the
+  last 14 days. Read-only; single tenant-scoped aggregate queries, no N+1.
 
 ## 6. Super-admin (`/sa`, guarded by SUPERADMIN_TOKEN env)
 
@@ -282,6 +301,7 @@ default tariff + owner.
 Auto volumetric pricing from dimensions (L×W×H input and per-m³ tariffs —
 manual override covers this for now), regional delivery module (BTS/pochta
 to viloyatlar), courier module, camera-based QR scanning (USB scanners
-already work via search input), owner analytics dashboard, photo/media
-broadcasts, online payment collection (Click/Payme merchant), SMS channel,
-China-warehouse scanning mini-app, multi-branch tenants, English locale.
+already work via search input), photo/media broadcasts, online payment
+collection (Click/Payme merchant), SMS channel, full China-warehouse web
+mini-panel (bot staff mode 3.8 covers weighing + photos for now),
+multi-branch tenants, English locale.

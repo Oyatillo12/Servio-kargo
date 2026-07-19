@@ -23,7 +23,9 @@ export const uz: Strings = {
   // --- §3.1 menu labels ---
   menuAddTrack: "➕ Trek qo'shish",
   menuMyTracks: '📦 Mening yuklarim',
+  menuCalculator: '🧮 Kalkulyator',
   menuBalance: '💰 Balans',
+  menuChinaAddress: '🇨🇳 Ombor manzili',
   menuInfo: "ℹ️ Ma'lumot",
   menuLang: '🌐 Til / Язык',
 
@@ -55,19 +57,20 @@ export const uz: Strings = {
   },
 
   // --- §3.5 info ---
-  infoCard: ({ tariffLines, usdRateSom, address, hours, phone }) => {
+  infoCard: ({ tariffLines, usdRateSom, address, hours, phone, infoText }) => {
     const lines = ["ℹ️ Ma'lumot"];
     if (tariffLines.length > 0) {
       lines.push('', '💵 Tariflar:');
       for (const line of tariffLines) lines.push(line);
-      if (usdRateSom) lines.push(`Kurs: 1$ = ${usdRateSom} so'm`);
     }
+    if (usdRateSom) lines.push('', `Kurs: 1$ = ${usdRateSom} so'm`);
     if (address || hours || phone) {
       lines.push('');
       if (address) lines.push(`📍 Manzil: ${address}`);
       if (hours) lines.push(`🕘 Ish vaqti: ${hours}`);
       if (phone) lines.push(`📞 Aloqa: ${phone}`);
     }
+    if (infoText) lines.push('', infoText);
     return lines.join('\n');
   },
 
@@ -99,6 +102,21 @@ export const uz: Strings = {
     return lines.join('\n');
   },
   lookupNotFound: (code) => `🔍 ${code} — bunday trek topilmadi.`,
+
+  // --- §3.9 calculator (§4.5) ---
+  calcChooseTariff: 'Tarifni tanlang:',
+  calcAskKg: "Og'irlikni kiriting (kg), masalan: 3.2",
+  calcResult: ({ tariffName, kg, som, usd }) =>
+    `🧮 ${tariffName}\n${kg} kg ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nAniq summa yuk tortilganda hisoblanadi.`,
+  calcInvalid: 'Raqam kiriting, masalan: 2.5',
+
+  // --- §3.10 China warehouse address (§4.5) ---
+  chinaAddrHeader:
+    '🇨🇳 Xitoy ombori manzili — sotuvchiga (постовщик) shuni yuboring:',
+  chinaAddrFooter: (clientCode) =>
+    `❗️ Har bir qutiga shu kodni yozdirishni unutmang: ${clientCode}`,
+  chinaAddrMissing: (contactPhone) =>
+    `Manzil hali kiritilmagan. Administrator bilan bog'laning: ${contactPhone}`,
 
   // --- §3.7 ---
   langSwitched: "Til o'zgartirildi ✅",

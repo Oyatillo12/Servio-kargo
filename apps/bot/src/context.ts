@@ -9,12 +9,16 @@ import type { Context, SessionFlavor } from 'grammy';
 import type { Customer, Tenant } from '@kargotrack/db/schema';
 import type { Lang, Strings } from '@kargotrack/shared';
 
-/** Transient per-chat state for the two multi-step flows. */
+/** Transient per-chat state for the multi-step flows. */
 export interface SessionData {
   /** Language chosen during /start, before a customer row exists. */
   lang?: Lang;
-  /** Which prompt we're waiting on: phone (post-language) or track codes. */
-  step?: 'awaiting_phone' | 'awaiting_tracks';
+  /** Which prompt we're waiting on. */
+  step?: 'awaiting_phone' | 'awaiting_tracks' | 'awaiting_calc_kg';
+  /** Calculator (§3.9): the tariff chosen before entering a weight. */
+  calcTariffId?: string;
+  /** Calculator: whether we've already re-asked once after a bad number (§3.9). */
+  calcRetried?: boolean;
 }
 
 /** Fields the loading middleware guarantees on every handled update. */

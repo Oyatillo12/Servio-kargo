@@ -17,7 +17,11 @@ import { logger } from './logger';
 import { listTenants } from './queries';
 import { BotRegistry } from './registry';
 import { startServer } from './server';
-import { startNotificationWorker, startReminderWorker } from './worker';
+import {
+  startBroadcastWorker,
+  startNotificationWorker,
+  startReminderWorker,
+} from './worker';
 
 async function startPolling(pollingToken?: string): Promise<void> {
   const tenants = await listTenants();
@@ -72,6 +76,11 @@ async function main(): Promise<void> {
   // start must not crash the bot process.
   startReminderWorker().catch((err) =>
     logger.error({ err }, 'failed to start reminder worker'),
+  );
+
+  // Broadcasts (admin → all customers). Same rule 8 guarantee.
+  startBroadcastWorker().catch((err) =>
+    logger.error({ err }, 'failed to start broadcast worker'),
   );
 
   if (config.polling) {

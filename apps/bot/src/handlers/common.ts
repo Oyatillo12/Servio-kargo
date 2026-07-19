@@ -10,12 +10,21 @@ import type { KargoContext } from '../context';
 import { langKeyboard } from '../keyboards';
 
 /** Menu action keys, mapped to their i18n label getters. */
-export type MenuAction = 'addTrack' | 'myTracks' | 'balance' | 'info' | 'lang';
+export type MenuAction =
+  | 'addTrack'
+  | 'myTracks'
+  | 'calculator'
+  | 'balance'
+  | 'chinaAddress'
+  | 'info'
+  | 'lang';
 
 const MENU_LABEL: Record<MenuAction, (d: typeof uz) => string> = {
   addTrack: (d) => d.menuAddTrack,
   myTracks: (d) => d.menuMyTracks,
+  calculator: (d) => d.menuCalculator,
   balance: (d) => d.menuBalance,
+  chinaAddress: (d) => d.menuChinaAddress,
   info: (d) => d.menuInfo,
   lang: (d) => d.menuLang,
 };

@@ -52,6 +52,8 @@ export default async function SettingsPage() {
           workingHours: tenant.workingHours ?? '',
           contactPhone: tenant.contactPhone ?? '',
           staffIds: settings.staff_tg_ids ?? [],
+          chinaAddressTemplate: settings.china_address_template ?? '',
+          infoText: settings.info_text ?? '',
           weeklyEnabled: settings.reminders?.weekly_enabled ?? false,
           weekday: String(settings.reminders?.weekday ?? 1),
           hour: String(settings.reminders?.hour ?? 10),

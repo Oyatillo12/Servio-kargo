@@ -62,7 +62,7 @@ export async function loginAction(
     maxAge: MAX_AGE_SECONDS,
   });
 
-  redirect('/tracks');
+  redirect('/dashboard');
 }
 
 export async function logoutAction(): Promise<void> {
