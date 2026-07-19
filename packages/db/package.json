@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema.ts"
+    "./schema": "./src/schema.ts",
+    "./queue": "./src/queue.ts"
   },
   "scripts": {
     "lint": "eslint . --ext .ts",
@@ -20,6 +21,7 @@
     "@kargotrack/shared": "workspace:*",
     "@node-rs/argon2": "^2.0.2",
     "drizzle-orm": "^0.36.4",
+    "pg-boss": "^10.1.5",
     "postgres": "^3.4.5"
   },
   "devDependencies": {

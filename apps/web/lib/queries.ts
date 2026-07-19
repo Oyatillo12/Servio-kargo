@@ -6,9 +6,10 @@
 
 import 'server-only';
 
-import { and, asc, count, desc, eq, ilike, isNull, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
+import { enqueueNotification } from '@kargotrack/db/queue';
 import {
   customers,
   payments,
@@ -21,7 +22,9 @@ import {
 import {
   computeDebtTiyin,
   normalizeCode,
+  shouldEnqueueNotification,
   type DebtTrack,
+  type ImportCode,
   type TrackStatus,
 } from '@kargotrack/shared';
 
@@ -295,4 +298,136 @@ export async function listCustomersWithDebt(
       paymentsByCustomer.get(c.id) ?? [],
     ),
   }));
+}
+
+// --- Import (SPEC §5.4, §7.2) -----------------------------------------------
+
+/**
+ * Which of `normalizedCodes` already exist for this tenant. Includes
+ * soft-deleted rows because the (tenant_id, code_normalized) unique index does
+ * — so the preview split matches what upsert can actually do (§7.2).
+ */
+export async function getExistingNormalizedCodes(
+  tenantId: string,
+  normalizedCodes: string[],
+): Promise<Set<string>> {
+  if (normalizedCodes.length === 0) return new Set();
+  const rows = await getDb()
+    .select({ code: tracks.codeNormalized })
+    .from(tracks)
+    .where(
+      and(
+        eq(tracks.tenantId, tenantId),
+        inArray(tracks.codeNormalized, normalizedCodes),
+      ),
+    );
+  return new Set(rows.map((r) => r.code));
+}
+
+export interface ImportResult {
+  created: number;
+  updated: number;
+  queued: number;
+}
+
+/**
+ * Apply an import: upsert each code to `status` and append audit events (§7.2).
+ * Existing rows only change (+ event + notify) when the status actually differs
+ * or the row was soft-deleted (revived); same-status rows are no-ops (§2).
+ * Every status change on an attached, non-deleted track enqueues a notification
+ * (§4.2). New (unclaimed) tracks never notify.
+ */
+export async function applyImport(
+  tenantId: string,
+  status: TrackStatus,
+  codes: ImportCode[],
+  createdBy: string,
+): Promise<ImportResult> {
+  const db = getDb();
+  const result: ImportResult = { created: 0, updated: 0, queued: 0 };
+  if (codes.length === 0) return result;
+
+  // Preload existing rows for this batch in one query.
+  const existingRows = await db
+    .select({
+      id: tracks.id,
+      codeNormalized: tracks.codeNormalized,
+      currentStatus: tracks.currentStatus,
+      customerId: tracks.customerId,
+      deletedAt: tracks.deletedAt,
+    })
+    .from(tracks)
+    .where(
+      and(
+        eq(tracks.tenantId, tenantId),
+        inArray(
+          tracks.codeNormalized,
+          codes.map((c) => c.normalized),
+        ),
+      ),
+    );
+  const existingByCode = new Map(existingRows.map((r) => [r.codeNormalized, r]));
+
+  for (const code of codes) {
+    const existing = existingByCode.get(code.normalized);
+
+    if (!existing) {
+      const [track] = await db
+        .insert(tracks)
+        .values({
+          tenantId,
+          codeNormalized: code.normalized,
+          codeOriginal: code.original,
+          currentStatus: status,
+        })
+        .returning({ id: tracks.id });
+      if (track) {
+        await db.insert(trackEvents).values({
+          trackId: track.id,
+          status,
+          meta: { source: 'import' },
+          createdBy,
+        });
+        result.created += 1;
+      }
+      continue; // new tracks are unclaimed → no notification
+    }
+
+    const statusChanged = existing.currentStatus !== status;
+    const revived = existing.deletedAt != null;
+    if (!statusChanged && !revived) continue; // §2 no-op
+
+    await db
+      .update(tracks)
+      .set({ currentStatus: status, deletedAt: null })
+      .where(eq(tracks.id, existing.id));
+    // §2: only a real status change appends an event.
+    if (statusChanged) {
+      await db.insert(trackEvents).values({
+        trackId: existing.id,
+        status,
+        meta: { source: 'import' },
+        createdBy,
+      });
+    }
+    result.updated += 1;
+
+    if (
+      shouldEnqueueNotification({
+        previousStatus: existing.currentStatus,
+        newStatus: status,
+        customerId: existing.customerId,
+      })
+    ) {
+      await enqueueNotification({
+        tenantId,
+        trackId: existing.id,
+        customerId: existing.customerId!,
+        status,
+      });
+      result.queued += 1;
+    }
+  }
+
+  return result;
 }

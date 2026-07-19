@@ -178,6 +178,34 @@ export async function listCustomerPayments(
     .orderBy(desc(payments.createdAt));
 }
 
+/** A single track by id (tenant-scoped), including soft-deleted rows. */
+export async function getTrackById(
+  tenantId: string,
+  trackId: string,
+): Promise<Track | undefined> {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(tracks)
+    .where(and(eq(tracks.tenantId, tenantId), eq(tracks.id, trackId)))
+    .limit(1);
+  return row;
+}
+
+/** A single customer by id (tenant-scoped). */
+export async function getCustomerById(
+  tenantId: string,
+  customerId: string,
+): Promise<Customer | undefined> {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(customers)
+    .where(and(eq(customers.tenantId, tenantId), eq(customers.id, customerId)))
+    .limit(1);
+  return row;
+}
+
 /** Find a (non-deleted) track by normalized code within a tenant. */
 export async function findTrackByCode(
   tenantId: string,

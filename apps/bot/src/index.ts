@@ -17,6 +17,7 @@ import { logger } from './logger';
 import { listTenants } from './queries';
 import { BotRegistry } from './registry';
 import { startServer } from './server';
+import { startNotificationWorker } from './worker';
 
 async function startPolling(pollingToken?: string): Promise<void> {
   const tenants = await listTenants();
@@ -60,6 +61,12 @@ async function main(): Promise<void> {
 
   // Health (+ webhook, in webhook mode) HTTP server runs in both modes.
   startServer(config, registry);
+
+  // Outbound notification worker (pg-boss). Failing to start must not crash the
+  // bot process (CLAUDE.md rule 8) — log and keep serving updates.
+  startNotificationWorker().catch((err) =>
+    logger.error({ err }, 'failed to start notification worker'),
+  );
 
   if (config.polling) {
     logger.info(`${APP_NAME} bot starting in POLLING mode`);

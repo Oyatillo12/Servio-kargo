@@ -52,6 +52,22 @@ export {
   type ExistingTrack,
   type AddGroups,
 } from './services/addTrack';
+export {
+  parseImportText,
+  classifyImportCandidates,
+  splitAgainstExisting,
+  type ImportCode,
+  type ImportParseResult,
+  type ImportSplit,
+} from './services/import';
+export {
+  NOTIFY_QUEUE,
+  notifyDedupeKey,
+  isNotifiableStatus,
+  shouldEnqueueNotification,
+  type NotifyJob,
+  type StatusChangeInput,
+} from './services/notify';
 
 // i18n (SPEC §4)
 export {

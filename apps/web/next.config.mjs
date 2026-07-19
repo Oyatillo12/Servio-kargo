@@ -6,8 +6,10 @@ const nextConfig = {
   experimental: {
     // Enables instrumentation.ts register() hook on server startup (Next 14).
     instrumentationHook: true,
-    // Native addon (argon2) — must stay a runtime require, not webpack-bundled.
-    serverComponentsExternalPackages: ['@node-rs/argon2'],
+    // Keep these as runtime requires, not webpack-bundled: argon2 is a native
+    // addon; pg-boss + xlsx pull in Node built-ins/optional deps that break
+    // bundling.
+    serverComponentsExternalPackages: ['@node-rs/argon2', 'pg-boss', 'xlsx'],
   },
 };
 
