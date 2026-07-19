@@ -55,23 +55,45 @@ export const uz: Strings = {
   },
 
   // --- §3.5 info ---
-  infoCard: ({ address, hours, pricePerKgSom, phone }) =>
-    [
-      "ℹ️ Ma'lumot",
-      '',
-      `📍 Manzil: ${address}`,
-      `🕘 Ish vaqti: ${hours}`,
-      `💵 Narx: ${pricePerKgSom} so'm/kg`,
-      `📞 Aloqa: ${phone}`,
-    ].join('\n'),
+  infoCard: ({ tariffLines, usdRateSom, address, hours, phone }) => {
+    const lines = ["ℹ️ Ma'lumot"];
+    if (tariffLines.length > 0) {
+      lines.push('', '💵 Tariflar:');
+      for (const line of tariffLines) lines.push(line);
+      if (usdRateSom) lines.push(`Kurs: 1$ = ${usdRateSom} so'm`);
+    }
+    if (address || hours || phone) {
+      lines.push('');
+      if (address) lines.push(`📍 Manzil: ${address}`);
+      if (hours) lines.push(`🕘 Ish vaqti: ${hours}`);
+      if (phone) lines.push(`📞 Aloqa: ${phone}`);
+    }
+    return lines.join('\n');
+  },
 
   // --- §3.6 lookup ---
-  lookupCard: ({ code, statusEmoji, statusLabel, date, kg, som }) => {
+  lookupCard: ({
+    code,
+    statusEmoji,
+    statusLabel,
+    date,
+    batchName,
+    batchEta,
+    kg,
+    som,
+  }) => {
     const lines = [
       `🔍 ${code}`,
       `Holat: ${statusEmoji} ${statusLabel}`,
       `Sanasi: ${date}`,
     ];
+    if (batchName) {
+      lines.push(
+        batchEta
+          ? `🚚 Reys: ${batchName} · Taxminan: ${batchEta}`
+          : `🚚 Reys: ${batchName}`,
+      );
+    }
     if (kg != null) lines.push(`⚖️ Og'irligi: ${kg} kg`);
     if (som != null) lines.push(`💵 To'lov: ${som} so'm`);
     return lines.join('\n');
@@ -94,7 +116,9 @@ export const uz: Strings = {
   // --- §4.2 notifications ---
   notifChinaWarehouse: (code) =>
     `📦 ${code} — yukingiz Xitoy omboriga qabul qilindi.`,
-  notifInTransit: (code) => `🚚 ${code} — yukingiz yo'lga chiqdi.`,
+  notifInTransit: (code, eta) =>
+    `🚚 ${code} — yukingiz yo'lga chiqdi.` +
+    (eta ? `\n📅 Taxminiy yetib kelishi: ${eta}` : ''),
   notifTashkentWarehouse: (code) =>
     `🇺🇿 ${code} — yukingiz Toshkentga yetib keldi. Tez orada olib ketishga tayyor bo'ladi.`,
   notifReadyForPickup: ({ code, kg, som, pickupAddress, workingHours }) => {

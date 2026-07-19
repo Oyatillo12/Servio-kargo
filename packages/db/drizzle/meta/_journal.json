@@ -15,6 +15,20 @@
       "when": 1784471364088,
       "tag": "0001_long_vanisher",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784487837392,
+      "tag": "0002_add_tariffs_batches_currency",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784487863760,
+      "tag": "0003_drop_tenant_price_per_kg",
+      "breakpoints": true
     }
   ]
 }

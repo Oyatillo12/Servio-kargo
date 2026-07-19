@@ -37,6 +37,20 @@ export function formatKg(grams: number): string {
     .replace(/\.$/, '');
 }
 
+/**
+ * Format an integer USD-cents amount as `$` with one decimal when needed
+ * (SPEC §4 formatting): `350` → `"3.5$"`, `300` → `"3$"`, `355` → `"3.55$"`.
+ * Trailing zeros are trimmed to at most 2 decimals.
+ */
+export function formatUsd(cents: number): string {
+  const dollars = cents / 100;
+  const text = dollars
+    .toFixed(2)
+    .replace(/\.?0+$/, '')
+    .replace(/\.$/, '');
+  return `${text}$`;
+}
+
 /** Format a Date as `DD.MM.YYYY` in the Asia/Tashkent display timezone. */
 export function formatDate(date: Date): string {
   const parts = new Intl.DateTimeFormat('en-GB', {

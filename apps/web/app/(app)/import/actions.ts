@@ -81,6 +81,7 @@ export async function previewImportAction(
 
 const applySchema = z.object({
   status: statusSchema,
+  batchId: z.string().uuid().nullable().optional(),
   codes: z
     .array(z.object({ original: z.string(), normalized: z.string() }))
     .max(50000),
@@ -94,9 +95,10 @@ export interface ApplyResult {
   queued?: number;
 }
 
-/** Step 3: upsert + append events + enqueue notifications. */
+/** Step 3: upsert + append events + enqueue notifications; optional Reys (§7.2). */
 export async function applyImportAction(input: {
   status: TrackStatus;
+  batchId?: string | null;
   codes: ImportCode[];
 }): Promise<ApplyResult> {
   const { tenant, admin } = await requireAdmin();
@@ -114,7 +116,13 @@ export async function applyImportAction(input: {
     codes.push({ original: c.original.trim(), normalized });
   }
 
-  const result = await applyImport(tenant.id, parsed.data.status, codes, admin.id);
+  const result = await applyImport(
+    tenant.id,
+    parsed.data.status,
+    codes,
+    admin.id,
+    parsed.data.batchId ?? null,
+  );
   revalidatePath('/tracks');
 
   return { ok: true, ...result };

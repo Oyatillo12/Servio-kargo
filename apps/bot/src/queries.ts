@@ -4,17 +4,21 @@
  * decisions/formatting to `@kargotrack/shared`, so they stay thin.
  */
 
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import {
+  batches,
   customers,
   payments,
+  tariffs,
   tenants,
   trackEvents,
   tracks,
+  type Batch,
   type Customer,
   type Payment,
+  type Tariff,
   type Tenant,
   type Track,
 } from '@kargotrack/db/schema';
@@ -343,6 +347,30 @@ export async function setTrackPhoto(
     .update(tracks)
     .set({ photoPath })
     .where(and(eq(tracks.tenantId, tenantId), eq(tracks.id, trackId)));
+}
+
+/** Active tariffs for a tenant, default first (SPEC §3.5 info card). */
+export async function getActiveTariffs(tenantId: string): Promise<Tariff[]> {
+  const db = getDb();
+  return db
+    .select()
+    .from(tariffs)
+    .where(and(eq(tariffs.tenantId, tenantId), eq(tariffs.active, true)))
+    .orderBy(desc(tariffs.isDefault), asc(tariffs.sort), asc(tariffs.name));
+}
+
+/** A batch by id (tenant-scoped) — for the §3.6 ETA line + §4.2 notification. */
+export async function getBatchById(
+  tenantId: string,
+  batchId: string,
+): Promise<Batch | undefined> {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(batches)
+    .where(and(eq(batches.tenantId, tenantId), eq(batches.id, batchId)))
+    .limit(1);
+  return row;
 }
 
 /** Timestamp of the most recent audit event for a track (SPEC §3.6). */

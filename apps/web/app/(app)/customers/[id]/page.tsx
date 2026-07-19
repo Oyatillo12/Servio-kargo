@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 
 import { formatDate, formatSom, t } from '@kargotrack/shared';
 
@@ -28,108 +29,137 @@ export default async function CustomerDetailPage({
 
   const { customer, tracks, payments, debtTiyin } = detail;
 
+  const deliveredCount = tracks.filter(
+    (tr) => tr.currentStatus === 'DELIVERED',
+  ).length;
+  const initials = (customer.fullName ?? '')
+    .split(' ')
+    .map((p) => p.charAt(0))
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-md space-y-3">
       <Link
         href="/customers"
-        className="inline-block text-sm text-slate-500 hover:text-slate-800"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
-        ← Mijozlar
+        <ArrowLeft className="h-4 w-4" />
+        Mijozlar
       </Link>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-bold text-slate-900">
-          {customer.fullName ?? customer.clientCode}
-        </h1>
-        <span className="font-mono text-sm text-slate-500">
-          {customer.clientCode}
-        </span>
+      {/* Header + stats */}
+      <div className="rounded-xl border border-border bg-white p-3.5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-accent text-sm font-bold text-primary">
+            {initials || '—'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-bold text-foreground">
+              {customer.fullName ?? 'Ismi yo‘q'}
+            </p>
+            <p className="truncate font-mono text-[12.5px] text-muted-foreground">
+              {customer.clientCode}
+              {customer.phone ? ` · ${customer.phone}` : ''}
+            </p>
+          </div>
+        </div>
+        <div className="mt-2.5 flex border-t border-[#eef0f4] pt-2.5 text-center">
+          <div className="flex-1">
+            <p className="font-mono text-base font-semibold">{tracks.length}</p>
+            <p className="text-[11.5px] text-muted-foreground">trek</p>
+          </div>
+          <div className="flex-1 border-l border-[#eef0f4]">
+            <p className="font-mono text-base font-semibold">
+              {deliveredCount}
+            </p>
+            <p className="text-[11.5px] text-muted-foreground">topshirildi</p>
+          </div>
+          <div className="flex-1 border-l border-[#eef0f4]">
+            <div className="text-[13px]">
+              <DebtCell tiyin={debtTiyin} />
+            </div>
+            <p className="text-[11.5px] text-muted-foreground">qarz</p>
+          </div>
+        </div>
       </div>
 
-      {/* Info + debt */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <dl className="space-y-1 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-slate-500">Telefon</dt>
-            <dd className="text-slate-800">{customer.phone ?? '—'}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-slate-500">Treklar</dt>
-            <dd className="text-slate-800">{tracks.length}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-slate-500">Qarz</dt>
-            <dd>
-              <DebtCell tiyin={debtTiyin} />
-            </dd>
-          </div>
-        </dl>
-        {debtTiyin > 0 ? (
-          <div className="mt-3 border-t border-slate-100 pt-3">
-            <ReminderButton action={sendReminderAction.bind(null, customer.id)} />
-          </div>
-        ) : null}
-      </section>
-
-      {/* Record a payment */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">
-          To'lov qo'shish
-        </h2>
-        <PaymentForm customerId={customer.id} />
-      </section>
-
       {/* Payment history */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">
-          To'lovlar tarixi
+      <div className="rounded-xl border border-border bg-white p-3.5">
+        <h2 className="mb-2 text-[13.5px] font-semibold text-foreground">
+          To&apos;lovlar tarixi
         </h2>
         {payments.length === 0 ? (
-          <p className="text-sm text-slate-400">To'lovlar yo'q.</p>
+          <p className="text-sm text-muted-foreground">To&apos;lovlar yo&apos;q.</p>
         ) : (
-          <ul className="divide-y divide-slate-100 text-sm">
+          <ul>
             {payments.map((p) => (
-              <li key={p.id} className="flex items-center justify-between py-2">
+              <li
+                key={p.id}
+                className="flex items-center justify-between border-t border-[#eef0f4] py-2.5 first:border-0"
+              >
                 <div className="min-w-0">
-                  <span className="font-medium tabular-nums text-slate-800">
-                    {formatSom(p.amountTiyin)} so'm
-                  </span>
-                  <span className="ml-2 text-slate-500">
+                  <p className="text-[13.5px] font-semibold text-foreground">
                     {methodLabel[p.method]}
-                  </span>
-                  {p.note ? (
-                    <p className="truncate text-xs text-slate-400">{p.note}</p>
-                  ) : null}
+                  </p>
+                  <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
+                    {formatDate(p.createdAt)}
+                    {p.note ? ` · ${p.note}` : ''}
+                  </p>
                 </div>
-                <span className="whitespace-nowrap text-xs text-slate-500">
-                  {formatDate(p.createdAt)}
+                <span className="font-mono text-[14px] font-semibold text-[#177338]">
+                  {formatSom(p.amountTiyin)} so&apos;m
                 </span>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </div>
+
+      {/* Add a payment */}
+      <div className="rounded-xl border border-border bg-white p-3.5">
+        <h2 className="mb-3 text-[13.5px] font-semibold text-foreground">
+          To&apos;lov qo&apos;shish
+        </h2>
+        <PaymentForm customerId={customer.id} />
+      </div>
+
+      {debtTiyin > 0 ? (
+        <ReminderButton
+          action={sendReminderAction.bind(null, customer.id)}
+          label="Eslatma yuborish"
+          variant="outline"
+          size="lg"
+          className="w-full"
+        />
+      ) : null}
 
       {/* Tracks */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Treklar</h2>
+      <div className="rounded-xl border border-border bg-white p-3.5">
+        <h2 className="mb-2 text-[13.5px] font-semibold text-foreground">
+          Treklar
+        </h2>
         {tracks.length === 0 ? (
-          <p className="text-sm text-slate-400">Treklar yo'q.</p>
+          <p className="text-sm text-muted-foreground">Treklar yo&apos;q.</p>
         ) : (
-          <ul className="divide-y divide-slate-100 text-sm">
+          <ul>
             {tracks.map((tr) => (
-              <li key={tr.id} className="py-2">
+              <li
+                key={tr.id}
+                className="border-t border-[#eef0f4] py-2.5 first:border-0"
+              >
                 <Link
                   href={`/tracks/${tr.id}`}
-                  className="flex items-center justify-between gap-3 hover:opacity-80"
+                  className="flex items-center justify-between gap-3"
                 >
-                  <span className="truncate font-mono text-slate-800">
+                  <span className="truncate font-mono text-[13px] font-semibold text-foreground">
                     {tr.codeOriginal}
                   </span>
-                  <span className="flex items-center gap-3">
+                  <span className="flex flex-none items-center gap-3">
                     {tr.priceTiyin != null ? (
-                      <span className="whitespace-nowrap tabular-nums text-slate-600">
-                        {formatSom(tr.priceTiyin)} so'm
+                      <span className="whitespace-nowrap font-mono text-[12.5px] text-slate-600">
+                        {formatSom(tr.priceTiyin)} so&apos;m
                       </span>
                     ) : null}
                     <StatusBadge status={tr.currentStatus} />
@@ -139,7 +169,7 @@ export default async function CustomerDetailPage({
             ))}
           </ul>
         )}
-      </section>
+      </div>
     </div>
   );
 }

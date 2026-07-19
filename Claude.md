@@ -53,20 +53,32 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
    update must not crash the process. Log and continue.
 
 ## Data Model (core tables)
-- `tenants` — id, name, bot_token (unique), bot_username, price_per_kg_tiyin,
-  pickup_address, settings jsonb (reminder toggles, staff_tg_ids[]), created_at
+- `tenants` — id, name, bot_token (unique), bot_username, currency ('UZS'|'USD'),
+  usd_rate_tiyin (som per 1 USD, in tiyin; used when currency=USD),
+  pickup_address, settings jsonb (reminder toggles, staff_tg_ids[],
+  china_address_template, info_text, working_hours, contact_phone), created_at
+- `tariffs` — id, tenant_id, name, price_per_kg_minor (tiyin if tenant is UZS,
+  cents if USD), is_default, active, sort. Every tenant always has exactly one
+  active default tariff.
+- `batches` — id, tenant_id, name, transport ('avia'|'avto'|'train'),
+  eta_date (nullable), status (CHINA_WAREHOUSE|IN_TRANSIT|TASHKENT_WAREHOUSE),
+  created_at
 - `admin_users` — id, tenant_id, phone, password_hash (argon2), role ('owner'|'staff')
 - `customers` — id, tenant_id, tg_user_id, phone, full_name, client_code
   (e.g. "DK-1042" = tenant prefix + sequence), lang ('uz'|'ru'), created_at
 - `tracks` — id, tenant_id, customer_id (nullable — codes can arrive before a customer
-  claims them), code_normalized, code_original, current_status, weight_grams (nullable),
-  price_tiyin (nullable), photo_path (nullable), created_at
+  claims them), batch_id (nullable), tariff_id (nullable), code_normalized,
+  code_original, current_status, weight_grams (nullable), price_tiyin (nullable),
+  price_usd_cents (nullable), usd_rate_used (nullable), price_manual (bool,
+  default false), photo_path (nullable), deleted_at (nullable), created_at
   - UNIQUE index on (tenant_id, code_normalized)
 - `track_events` — id, track_id, status, meta jsonb, created_by, created_at
 - `payments` — id, tenant_id, customer_id, amount_tiyin, method
   ('cash'|'click'|'payme'|'other'), note, created_at
-- Debt per customer = SUM(price of tracks in READY_FOR_PICKUP or DELIVERED)
-  − SUM(payments). Implement as a service function with tests, not scattered SQL.
+- `broadcasts` — id, tenant_id, text, sent_count, created_at
+- Debt per customer = SUM(price_tiyin of tracks in READY_FOR_PICKUP or DELIVERED,
+  excluding soft-deleted) − SUM(payments). Always in som. Implement as a service
+  function with tests, not scattered SQL. Full pricing rules live in SPEC.md 7.4.
 
 ## Commands
 - `pnpm dev` — run web (:3000) + bot (:8443) in dev
@@ -85,7 +97,7 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
   Uzbek labels in the UI.
 
 ## Definition of Done (every task)
-1. `pnpm typecheck && pnpm lint` all pass
+1. `pnpm typecheck && pnpm lint && pnpm test` all pass
 2. Migrations run cleanly on a fresh database
 3. Happy path manually verified — list the exact steps you ran
 4. All new user-facing strings exist in BOTH uz and ru

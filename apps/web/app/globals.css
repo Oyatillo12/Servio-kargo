@@ -2,11 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Neutral, dense admin surface. Admins work from phones (mobile-first). */
-:root {
-  color-scheme: light;
+/*
+ * KargoTrack admin theme — brand indigo (#27357e) on a light neutral surface,
+ * mapped onto shadcn/ui design tokens. Admins work from phones (mobile-first).
+ */
+@layer base {
+  :root {
+    color-scheme: light;
+
+    --background: 220 20% 97%; /* #f4f5f7 page */
+    --foreground: 225 34% 15%; /* #1a2035 text */
+
+    --card: 0 0% 100%;
+    --card-foreground: 225 34% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 34% 15%;
+
+    --primary: 230 53% 32%; /* #27357e */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 20% 96%;
+    --secondary-foreground: 225 34% 15%;
+
+    --muted: 220 16% 95%;
+    --muted-foreground: 219 12% 41%; /* #5b6474 */
+
+    --accent: 226 48% 95%; /* #eef0f9 */
+    --accent-foreground: 230 53% 32%;
+
+    --destructive: 3 71% 41%; /* #b3261e */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 16% 91%; /* #e4e7ec */
+    --input: 221 17% 86%; /* #d5dae3 */
+    --ring: 230 53% 32%;
+
+    --radius: 0.625rem; /* 10px */
+  }
 }
 
-body {
-  @apply bg-slate-100 text-slate-900 antialiased;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+}
+
+@keyframes sk {
+  0% {
+    background-position: -300px 0;
+  }
+  100% {
+    background-position: 300px 0;
+  }
 }

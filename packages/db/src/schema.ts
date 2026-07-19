@@ -15,6 +15,8 @@
 import { relations } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -51,6 +53,12 @@ export const paymentMethod = pgEnum('payment_method', [
 
 export const lang = pgEnum('lang', ['uz', 'ru']);
 
+/** Tenant billing currency (SPEC §5.9 / §7.4). */
+export const currency = pgEnum('currency', ['UZS', 'USD']);
+
+/** Batch transport mode (SPEC §5.7). */
+export const transport = pgEnum('transport', ['avia', 'avto', 'train']);
+
 // --- Shared shapes ---------------------------------------------------------
 
 /** Tenant-level configuration stored in `tenants.settings`. */
@@ -77,11 +85,56 @@ export const tenants = pgTable('tenants', {
   codePrefix: text('code_prefix').notNull(),
   botToken: text('bot_token').notNull().unique(),
   botUsername: text('bot_username'),
-  pricePerKgTiyin: bigint('price_per_kg_tiyin', { mode: 'number' }).notNull(),
+  // Billing currency + USD rate (SPEC §5.9 / §7.4). Per-kg prices live on
+  // `tariffs`, not here. `usd_rate_tiyin` = som per 1 USD, in tiyin; used only
+  // when currency = 'USD'.
+  currency: currency('currency').notNull().default('UZS'),
+  usdRateTiyin: bigint('usd_rate_tiyin', { mode: 'number' }),
   pickupAddress: text('pickup_address'),
   workingHours: text('working_hours'),
   contactPhone: text('contact_phone'),
   settings: jsonb('settings').$type<TenantSettings>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Per-tenant pricing tariffs (SPEC §5.9, §7.4). A tenant always has exactly one
+ * active default tariff (enforced in the service layer, not the DB).
+ * `price_per_kg_minor` is tiyin when the tenant is UZS, cents when USD.
+ */
+export const tariffs = pgTable('tariffs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  pricePerKgMinor: bigint('price_per_kg_minor', { mode: 'number' }).notNull(),
+  isDefault: boolean('is_default').notNull().default(false),
+  active: boolean('active').notNull().default(true),
+  sort: integer('sort').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Shipment batches ("Reyslar", SPEC §5.7, §7.10). Tracks optionally reference a
+ * batch; a batch status change propagates to its non-terminal member tracks. A
+ * batch's own status is limited to CHINA_WAREHOUSE | IN_TRANSIT |
+ * TASHKENT_WAREHOUSE (enforced in the service layer).
+ */
+export const batches = pgTable('batches', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  transport: transport('transport').notNull(),
+  // Estimated arrival (date only). Shown in bot cards + IN_TRANSIT notifications.
+  etaDate: date('eta_date'),
+  status: trackStatus('status').notNull().default('CHINA_WAREHOUSE'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -141,11 +194,25 @@ export const tracks = pgTable(
     customerId: uuid('customer_id').references(() => customers.id, {
       onDelete: 'set null',
     }),
+    // Pricing tariff (SPEC §7.4); set to the tenant's default when first weighed.
+    tariffId: uuid('tariff_id').references(() => tariffs.id, {
+      onDelete: 'set null',
+    }),
+    // Shipment batch (SPEC §7.10), optional.
+    batchId: uuid('batch_id').references(() => batches.id, {
+      onDelete: 'set null',
+    }),
     codeNormalized: text('code_normalized').notNull(),
     codeOriginal: text('code_original').notNull(),
     currentStatus: trackStatus('current_status').notNull().default('CREATED'),
     weightGrams: integer('weight_grams'),
+    // Som price, always populated once weighed (frozen for USD tenants, §7.4).
     priceTiyin: bigint('price_tiyin', { mode: 'number' }),
+    // USD-mode extras: price in cents + the som-per-USD rate used at weighing.
+    priceUsdCents: bigint('price_usd_cents', { mode: 'number' }),
+    usdRateUsed: bigint('usd_rate_used', { mode: 'number' }),
+    // Manual override (§7.4): admin typed a som price; suspends auto-recompute.
+    priceManual: boolean('price_manual').notNull().default(false),
     photoPath: text('photo_path'),
     // SPEC 7.8 soft delete.
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -160,6 +227,7 @@ export const tracks = pgTable(
       t.codeNormalized,
     ),
     customerIdx: index('tracks_customer_idx').on(t.customerId),
+    batchIdx: index('tracks_batch_idx').on(t.batchId),
   }),
 );
 
@@ -200,6 +268,18 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   customers: many(customers),
   tracks: many(tracks),
   payments: many(payments),
+  tariffs: many(tariffs),
+  batches: many(batches),
+}));
+
+export const tariffsRelations = relations(tariffs, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [tariffs.tenantId], references: [tenants.id] }),
+  tracks: many(tracks),
+}));
+
+export const batchesRelations = relations(batches, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [batches.tenantId], references: [tenants.id] }),
+  tracks: many(tracks),
 }));
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -216,6 +296,14 @@ export const tracksRelations = relations(tracks, ({ one, many }) => ({
   customer: one(customers, {
     fields: [tracks.customerId],
     references: [customers.id],
+  }),
+  tariff: one(tariffs, {
+    fields: [tracks.tariffId],
+    references: [tariffs.id],
+  }),
+  batch: one(batches, {
+    fields: [tracks.batchId],
+    references: [batches.id],
   }),
   events: many(trackEvents),
 }));
@@ -242,6 +330,10 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
 
 export type Tenant = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
+export type Tariff = typeof tariffs.$inferSelect;
+export type NewTariff = typeof tariffs.$inferInsert;
+export type Batch = typeof batches.$inferSelect;
+export type NewBatch = typeof batches.$inferInsert;
 export type AdminUser = typeof adminUsers.$inferSelect;
 export type NewAdminUser = typeof adminUsers.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
@@ -254,3 +346,5 @@ export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
 
 export type TrackStatus = (typeof trackStatus.enumValues)[number];
+export type Currency = (typeof currency.enumValues)[number];
+export type Transport = (typeof transport.enumValues)[number];

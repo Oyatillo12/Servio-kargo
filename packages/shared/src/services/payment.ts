@@ -22,3 +22,19 @@ export function parseSomToTiyin(input: string): number | null {
   if (!Number.isSafeInteger(som) || som <= 0) return null;
   return som * 100;
 }
+
+/**
+ * Parse a user-entered USD amount (dollars, up to 2 decimals) into integer
+ * cents — used for USD-tenant tariff prices (SPEC §7.4). Accepts `.`/`,` as the
+ * decimal mark and thousands separators. Only a positive amount is valid.
+ *
+ * Examples: `"3.5"` → `350`; `"12"` → `1200`; `"3,55"` → `355`;
+ * `"0"` / `"-1"` / `"1.234"` / `"abc"` → `null`.
+ */
+export function parseUsdToCents(input: string): number | null {
+  const cleaned = input.replace(/[\s'_]/g, '').replace(',', '.');
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  const dollars = Number(cleaned);
+  if (!Number.isFinite(dollars) || dollars <= 0) return null;
+  return Math.round(dollars * 100);
+}

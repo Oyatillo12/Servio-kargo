@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseSomToTiyin } from './payment';
+import { parseSomToTiyin, parseUsdToCents } from './payment';
 
 describe('parseSomToTiyin (SPEC §5.5, CLAUDE.md rule 6)', () => {
   it('converts a whole so’m amount to tiyin (×100)', () => {
@@ -32,5 +32,26 @@ describe('parseSomToTiyin (SPEC §5.5, CLAUDE.md rule 6)', () => {
 
   it('rejects an unsafe magnitude', () => {
     expect(parseSomToTiyin('9'.repeat(20))).toBeNull();
+  });
+});
+
+describe('parseUsdToCents (SPEC §7.4 USD tariffs)', () => {
+  it('converts dollars (up to 2 decimals) to cents', () => {
+    expect(parseUsdToCents('3')).toBe(300);
+    expect(parseUsdToCents('3.5')).toBe(350);
+    expect(parseUsdToCents('3.55')).toBe(355);
+  });
+
+  it('accepts a comma decimal mark and separators', () => {
+    expect(parseUsdToCents('3,55')).toBe(355);
+    expect(parseUsdToCents('1 200')).toBe(120_000);
+  });
+
+  it('rejects >2 decimals, zero, negatives and non-numeric', () => {
+    expect(parseUsdToCents('1.234')).toBeNull();
+    expect(parseUsdToCents('0')).toBeNull();
+    expect(parseUsdToCents('-1')).toBeNull();
+    expect(parseUsdToCents('abc')).toBeNull();
+    expect(parseUsdToCents('')).toBeNull();
   });
 });

@@ -20,8 +20,14 @@ import {
 
 import { getConfig } from '../config';
 import type { KargoContext } from '../context';
-import { findTrackByCode, getLastEventAt } from '../queries';
+import { findTrackByCode, getBatchById, getLastEventAt } from '../queries';
 import { logger } from '../logger';
+
+/** Reformat a stored `YYYY-MM-DD` date to display `DD.MM.YYYY` (§4 formatting). */
+function formatIsoDate(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return d && m && y ? `${d}.${m}.${y}` : iso;
+}
 
 export async function handleLookup(
   ctx: KargoContext,
@@ -44,11 +50,28 @@ export async function handleLookup(
 
   const meta = STATUS_META[track.currentStatus];
   const lastAt = (await getLastEventAt(track.id)) ?? track.createdAt;
+
+  // §3.6: show the batch line only while the batch hasn't reached Tashkent yet.
+  let batchName: string | undefined;
+  let batchEta: string | undefined;
+  if (track.batchId) {
+    const batch = await getBatchById(ctx.tenant.id, track.batchId);
+    if (
+      batch &&
+      (batch.status === 'CHINA_WAREHOUSE' || batch.status === 'IN_TRANSIT')
+    ) {
+      batchName = batch.name;
+      batchEta = batch.etaDate ? formatIsoDate(batch.etaDate) : undefined;
+    }
+  }
+
   const card = s.lookupCard({
     code: track.codeOriginal,
     statusEmoji: meta.emoji,
     statusLabel: meta[ctx.lang],
     date: formatDate(lastAt),
+    batchName,
+    batchEta,
     kg: track.weightGrams != null ? formatKg(track.weightGrams) : undefined,
     som: track.priceTiyin != null ? formatSom(track.priceTiyin) : undefined,
   });

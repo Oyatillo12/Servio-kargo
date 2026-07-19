@@ -8,13 +8,18 @@ import {
   computeDebtTiyin,
   formatDate,
   formatSom,
+  formatUsd,
   paginate,
   sortForDisplay,
 } from '@kargotrack/shared';
 
 import type { KargoContext } from '../context';
 import { paginationKeyboard } from '../keyboards';
-import { listCustomerPayments, listCustomerTracks } from '../queries';
+import {
+  getActiveTariffs,
+  listCustomerPayments,
+  listCustomerTracks,
+} from '../queries';
 import { ensureRegistered, renderTrackLine } from './common';
 
 /** Build the text + pagination keyboard for a My-tracks page. */
@@ -102,15 +107,29 @@ export async function showBalance(ctx: KargoContext): Promise<void> {
   await ctx.reply(lines.join('\n'));
 }
 
-/** ℹ️ Ma'lumot — static tenant info card (§3.5). */
+/** ℹ️ Ma'lumot — tenant info card: tariffs, kurs, office info (§3.5). */
 export async function showInfo(ctx: KargoContext): Promise<void> {
   const tn = ctx.tenant;
+  const isUsd = tn.currency === 'USD';
+
+  const activeTariffs = await getActiveTariffs(tn.id);
+  // In USD mode show both `3.5$ / 44 300 so'm`; else just so'm/kg.
+  const tariffLines = activeTariffs.map((tf) => {
+    if (isUsd && tn.usdRateTiyin != null) {
+      const somPerKg = Math.round((tf.pricePerKgMinor * tn.usdRateTiyin) / 100);
+      return `• ${tf.name} — ${formatUsd(tf.pricePerKgMinor)} / ${formatSom(somPerKg)} so'm`;
+    }
+    return `• ${tf.name} — ${formatSom(tf.pricePerKgMinor)} so'm/kg`;
+  });
+
   await ctx.reply(
     ctx.s.infoCard({
-      address: tn.pickupAddress ?? '—',
-      hours: tn.workingHours ?? '—',
-      pricePerKgSom: formatSom(tn.pricePerKgTiyin),
-      phone: tn.contactPhone ?? '—',
+      tariffLines,
+      usdRateSom:
+        isUsd && tn.usdRateTiyin != null ? formatSom(tn.usdRateTiyin) : undefined,
+      address: tn.pickupAddress ?? undefined,
+      hours: tn.workingHours ?? undefined,
+      phone: tn.contactPhone ?? undefined,
     }),
   );
 }

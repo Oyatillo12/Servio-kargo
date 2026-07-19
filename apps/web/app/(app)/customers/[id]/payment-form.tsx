@@ -1,7 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 import { recordPaymentAction, type PaymentState } from './actions';
 
@@ -17,89 +23,73 @@ const METHODS: { value: string; label: string }[] = [
 function SaveButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-    >
-      {pending ? 'Saqlanmoqda…' : "To'lov qo'shish"}
-    </button>
+    <Button type="submit" disabled={pending} className="w-full">
+      {pending ? 'Saqlanmoqda…' : "To'lovni saqlash"}
+    </Button>
   );
 }
 
-/** Record-a-payment form (SPEC §5.5): amount in so'm, method, optional note. */
+/** Record-a-payment form (SPEC §5.5): amount in so'm, method chips, optional note. */
 export function PaymentForm({ customerId }: { customerId: string }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [method, setMethod] = useState('cash');
   const [state, formAction] = useFormState(recordPaymentAction, initial);
 
-  // Clear the inputs after a successful save.
   useEffect(() => {
-    if (state.ok) formRef.current?.reset();
+    if (state.ok) {
+      toast.success("To'lov saqlandi");
+      formRef.current?.reset();
+      setMethod('cash');
+    }
+    if (state.error) toast.error(state.error);
   }, [state]);
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-3">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="customerId" value={customerId} />
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <label
-            htmlFor="amount"
-            className="mb-1 block text-sm font-medium text-slate-700"
-          >
-            Summa (so'm)
-          </label>
-          <input
-            id="amount"
-            name="amount"
-            inputMode="numeric"
-            placeholder="0"
-            className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="method"
-            className="mb-1 block text-sm font-medium text-slate-700"
-          >
-            Usul
-          </label>
-          <select
-            id="method"
-            name="method"
-            defaultValue="cash"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-          >
-            {METHODS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div>
-        <label
-          htmlFor="note"
-          className="mb-1 block text-sm font-medium text-slate-700"
-        >
-          Izoh (ixtiyoriy)
-        </label>
-        <input
-          id="note"
-          name="note"
-          maxLength={255}
-          placeholder="Izoh"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+      <input type="hidden" name="method" value={method} />
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="amount">Summa (so&apos;m)</Label>
+        <Input
+          id="amount"
+          name="amount"
+          inputMode="numeric"
+          placeholder="0"
+          className="font-mono text-[16px] font-semibold"
         />
       </div>
 
-      <div className="flex items-center gap-3">
-        <SaveButton />
-        {state.error ? (
-          <p className="text-sm text-red-600">{state.error}</p>
-        ) : null}
-        {state.ok ? <p className="text-sm text-green-600">Saqlandi ✓</p> : null}
+      <div className="flex flex-col gap-1.5">
+        <Label>Usul</Label>
+        <div className="flex gap-1.5">
+          {METHODS.map((m) => {
+            const active = method === m.value;
+            return (
+              <button
+                type="button"
+                key={m.value}
+                onClick={() => setMethod(m.value)}
+                className={cn(
+                  'flex-1 rounded-lg border py-2.5 text-[13px] font-semibold transition-colors',
+                  active
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-input bg-white text-slate-600 hover:bg-secondary',
+                )}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="note">Izoh (ixtiyoriy)</Label>
+        <Input id="note" name="note" maxLength={255} placeholder="Izoh" />
+      </div>
+
+      <SaveButton />
     </form>
   );
 }

@@ -20,16 +20,44 @@ export {
 export {
   TRACK_STATUSES,
   PIPELINE_ORDER,
+  TERMINAL_STATUSES,
+  isTerminalStatus,
   STATUS_META,
   statusSortIndex,
   type TrackStatus,
 } from './status';
 
 // Display formatters (SPEC §4 / §7.9)
-export { formatSom, formatKg, formatDate } from './format';
+export { formatSom, formatKg, formatUsd, formatDate } from './format';
 
 // Pure services
-export { priceForGrams } from './services/price';
+export {
+  priceForGrams,
+  computeTrackPrice,
+  type Currency,
+  type TrackPriceInput,
+  type TrackPrice,
+} from './services/price';
+export {
+  resolveDefaultId,
+  planCreateTariff,
+  planSetDefault,
+  planSetActive,
+  planDelete,
+  type TariffRow,
+  type CreatePlan,
+  type SetDefaultPlan,
+  type MutationResult,
+} from './services/tariffs';
+export {
+  BATCH_STATUSES,
+  isBatchStatus,
+  planBatchPropagation,
+  type BatchStatus,
+  type BatchMemberTrack,
+  type BatchPropagationItem,
+  type BatchPropagationPlan,
+} from './services/batches';
 export { nextClientCode, CLIENT_CODE_SEQ_BASE } from './services/clientCode';
 export {
   computeDebtTiyin,
@@ -39,7 +67,7 @@ export {
   type DebtKind,
   type DebtSummary,
 } from './services/debt';
-export { parseSomToTiyin } from './services/payment';
+export { parseSomToTiyin, parseUsdToCents } from './services/payment';
 export {
   REMINDER_QUEUE,
   REMINDER_SWEEP_QUEUE,
@@ -82,6 +110,11 @@ export {
   type NotifyJob,
   type StatusChangeInput,
 } from './services/notify';
+export {
+  planStatusChange,
+  type StatusTransitionInput,
+  type StatusTransitionPlan,
+} from './services/statusChange';
 
 // i18n (SPEC §4)
 export {

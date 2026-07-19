@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatDate, formatKg, formatSom } from './format';
+import { formatDate, formatKg, formatSom, formatUsd } from './format';
 
 describe("formatSom (tiyin → grouped so'm)", () => {
   it('groups thousands with spaces', () => {
@@ -34,6 +34,18 @@ describe('formatKg (grams → kg, ≤2 decimals)', () => {
 
   it('formats zero', () => {
     expect(formatKg(0)).toBe('0');
+  });
+});
+
+describe('formatUsd (cents → $, one decimal when needed)', () => {
+  it('drops decimals for whole dollars', () => {
+    expect(formatUsd(300)).toBe('3$');
+  });
+  it('shows one decimal when needed', () => {
+    expect(formatUsd(350)).toBe('3.5$');
+  });
+  it('keeps up to two decimals', () => {
+    expect(formatUsd(355)).toBe('3.55$');
   });
 });
 

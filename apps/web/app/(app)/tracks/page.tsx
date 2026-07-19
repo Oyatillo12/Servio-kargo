@@ -10,9 +10,13 @@ import {
 } from '@kargotrack/shared';
 
 import { requireAdmin } from '@/lib/auth';
-import { listTracks } from '@/lib/queries';
+import { listBatches, listTracks } from '@/lib/queries';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 import { TracksTable, type TrackRowView } from './tracks-table';
+import { BatchFilter } from './batch-filter';
+import type { BatchOption } from './batch-assign-dialog';
 
 export const metadata = { title: 'Treklar — KargoTrack' };
 
@@ -23,6 +27,7 @@ function isStatus(v: string | undefined): v is TrackStatus {
 interface SearchParams {
   q?: string;
   status?: string;
+  batch?: string;
   page?: string;
 }
 
@@ -37,90 +42,129 @@ export default async function TracksPage({
   const status = isStatus(searchParams.status) ? searchParams.status : undefined;
   const page = Math.max(1, Number(searchParams.page) || 1);
 
-  const result = await listTracks({ tenantId: tenant.id, q, status, page });
+  const batchRows = await listBatches(tenant.id);
+  const batchId = batchRows.some((b) => b.id === searchParams.batch)
+    ? searchParams.batch
+    : undefined;
+
+  const result = await listTracks({ tenantId: tenant.id, q, status, batchId, page });
+
+  const batchOptions: BatchOption[] = batchRows.map((b) => ({
+    id: b.id,
+    label: b.name,
+  }));
 
   const rows: TrackRowView[] = result.rows.map((r) => ({
     id: r.id,
     code: r.codeOriginal,
     status: r.currentStatus,
+    customerId: r.customerId,
     customerLabel:
       r.clientCode || r.customerName
         ? `${r.clientCode ?? ''}${r.clientCode && r.customerName ? ' · ' : ''}${
             r.customerName ?? ''
           }`
         : null,
+    batchName: r.batchName,
     weightText: r.weightGrams != null ? `${formatKg(r.weightGrams)} kg` : '—',
     priceText: r.priceTiyin != null ? `${formatSom(r.priceTiyin)} so'm` : '—',
     dateText: formatDate(r.createdAt),
   }));
 
-  // Preserve filters across pagination links.
-  const buildHref = (targetPage: number) => {
+  // Filter chip link, preserving the search term + batch filter.
+  const chipHref = (target?: TrackStatus) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (batchId) params.set('batch', batchId);
+    if (target) params.set('status', target);
+    const qs = params.toString();
+    return qs ? `/tracks?${qs}` : '/tracks';
+  };
+
+  // Pagination link, preserving filters.
+  const pageHref = (targetPage: number) => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (status) params.set('status', status);
+    if (batchId) params.set('batch', batchId);
     if (targetPage > 1) params.set('page', String(targetPage));
     const qs = params.toString();
     return qs ? `/tracks?${qs}` : '/tracks';
   };
 
+  const chip = (label: string, target: TrackStatus | undefined, active: boolean) => (
+    <Link
+      key={label}
+      href={chipHref(target)}
+      className={cn(
+        'flex-none rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+        active
+          ? 'border-primary bg-primary text-white'
+          : 'border-input bg-white text-slate-600 hover:bg-secondary',
+      )}
+    >
+      {label}
+    </Link>
+  );
+
   return (
     <div>
       <div className="mb-3 flex items-baseline justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Treklar</h1>
-        <span className="text-sm text-slate-500">{result.total} ta</span>
+        <h1 className="text-xl font-bold text-foreground">Treklar</h1>
+        <span className="text-xs text-muted-foreground">
+          jami <span className="font-mono font-semibold">{result.total}</span>
+        </span>
       </div>
 
-      <form method="get" className="mb-4 flex flex-col gap-2 sm:flex-row">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Kod, ism yoki telefon bo'yicha qidirish"
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-        />
-        <select
-          name="status"
-          defaultValue={status ?? ''}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-        >
-          <option value="">Barcha statuslar</option>
-          {TRACK_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_META[s].emoji} {STATUS_META[s].uz}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-        >
-          Qidirish
-        </button>
-      </form>
+      <div className="mb-3 flex gap-2">
+        <form method="get" className="flex-1">
+          <input type="hidden" name="status" value={status ?? ''} />
+          {batchId ? <input type="hidden" name="batch" value={batchId} /> : null}
+          <Input
+            name="q"
+            defaultValue={q}
+            placeholder="Trek kodi yoki mijoz qidirish"
+            className="h-11 bg-[#f7f8fa]"
+          />
+        </form>
+        {batchRows.length > 0 ? (
+          <BatchFilter
+            batches={batchRows.map((b) => ({ id: b.id, name: b.name }))}
+            current={batchId}
+            q={q}
+            status={status}
+          />
+        ) : null}
+      </div>
 
-      <TracksTable rows={rows} />
+      <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {chip('Barchasi', undefined, !status)}
+        {TRACK_STATUSES.map((s) => chip(STATUS_META[s].uz, s, status === s))}
+      </div>
+
+      <TracksTable rows={rows} batches={batchOptions} />
 
       {result.pages > 1 ? (
         <div className="mt-4 flex items-center justify-between text-sm">
           {result.page > 1 ? (
             <Link
-              href={buildHref(result.page - 1)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
+              href={pageHref(result.page - 1)}
+              className="rounded-lg border border-input bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-secondary"
             >
-              ◀️ Oldingi
+              ← Oldingi
             </Link>
           ) : (
             <span />
           )}
-          <span className="text-slate-500">
+          <span className="font-mono text-muted-foreground">
             {result.page} / {result.pages}
           </span>
           {result.page < result.pages ? (
             <Link
-              href={buildHref(result.page + 1)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
+              href={pageHref(result.page + 1)}
+              className="rounded-lg border border-input bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-secondary"
             >
-              Keyingi ▶️
+              Keyingi →
             </Link>
           ) : (
             <span />

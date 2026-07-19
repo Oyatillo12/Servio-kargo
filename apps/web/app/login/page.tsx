@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 
-import { APP_NAME } from '@kargotrack/shared';
-
 import { getSessionAdmin } from '@/lib/auth';
+import { RouteDots, Wordmark } from '@/components/brand';
 
 import { LoginForm } from './login-form';
 
@@ -13,14 +12,20 @@ export default async function LoginPage() {
   if (await getSessionAdmin()) redirect('/tracks');
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-bold text-slate-900">{APP_NAME}</h1>
-          <p className="mt-1 text-sm text-slate-500">Admin panelga kirish</p>
-        </div>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-7 px-5 py-10">
+      <div className="flex flex-col items-center gap-2.5 text-center">
+        <Wordmark className="text-2xl" />
+        <RouteDots />
+        <p className="text-[13px] text-muted-foreground">
+          Xitoy → O&apos;zbekiston kargo boshqaruvi
+        </p>
+      </div>
+
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-5 shadow-sm">
         <LoginForm />
       </div>
+
+      <p className="text-[11px] text-muted-foreground">KargoTrack admin panel</p>
     </main>
   );
 }

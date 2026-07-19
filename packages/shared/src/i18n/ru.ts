@@ -55,23 +55,45 @@ export const ru: Strings = {
   },
 
   // --- §3.5 info ---
-  infoCard: ({ address, hours, pricePerKgSom, phone }) =>
-    [
-      'ℹ️ Информация',
-      '',
-      `📍 Адрес: ${address}`,
-      `🕘 Часы работы: ${hours}`,
-      `💵 Цена: ${pricePerKgSom} so'm/kg`,
-      `📞 Контакт: ${phone}`,
-    ].join('\n'),
+  infoCard: ({ tariffLines, usdRateSom, address, hours, phone }) => {
+    const lines = ['ℹ️ Информация'];
+    if (tariffLines.length > 0) {
+      lines.push('', '💵 Тарифы:');
+      for (const line of tariffLines) lines.push(line);
+      if (usdRateSom) lines.push(`Курс: 1$ = ${usdRateSom} so'm`);
+    }
+    if (address || hours || phone) {
+      lines.push('');
+      if (address) lines.push(`📍 Адрес: ${address}`);
+      if (hours) lines.push(`🕘 Часы работы: ${hours}`);
+      if (phone) lines.push(`📞 Контакт: ${phone}`);
+    }
+    return lines.join('\n');
+  },
 
   // --- §3.6 lookup ---
-  lookupCard: ({ code, statusEmoji, statusLabel, date, kg, som }) => {
+  lookupCard: ({
+    code,
+    statusEmoji,
+    statusLabel,
+    date,
+    batchName,
+    batchEta,
+    kg,
+    som,
+  }) => {
     const lines = [
       `🔍 ${code}`,
       `Статус: ${statusEmoji} ${statusLabel}`,
       `Дата: ${date}`,
     ];
+    if (batchName) {
+      lines.push(
+        batchEta
+          ? `🚚 Рейс: ${batchName} · Ожидается: ${batchEta}`
+          : `🚚 Рейс: ${batchName}`,
+      );
+    }
     if (kg != null) lines.push(`⚖️ Вес: ${kg} kg`);
     if (som != null) lines.push(`💵 К оплате: ${som} so'm`);
     return lines.join('\n');
@@ -94,7 +116,9 @@ export const ru: Strings = {
   // --- §4.2 notifications ---
   notifChinaWarehouse: (code) =>
     `📦 ${code} — ваша посылка принята на складе в Китае.`,
-  notifInTransit: (code) => `🚚 ${code} — ваша посылка в пути.`,
+  notifInTransit: (code, eta) =>
+    `🚚 ${code} — ваша посылка в пути.` +
+    (eta ? `\n📅 Ожидаемое прибытие: ${eta}` : ''),
   notifTashkentWarehouse: (code) =>
     `🇺🇿 ${code} — ваша посылка прибыла в Ташкент. Скоро будет готова к выдаче.`,
   notifReadyForPickup: ({ code, kg, som, pickupAddress, workingHours }) => {

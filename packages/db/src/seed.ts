@@ -16,8 +16,10 @@ import { sql } from 'drizzle-orm';
 import { getDb } from './index';
 import {
   adminUsers,
+  batches,
   customers,
   payments,
+  tariffs,
   tenants,
   trackEvents,
   tracks,
@@ -78,7 +80,7 @@ async function main() {
 
   // Clean slate (FK-safe order). RESTART IDENTITY not needed (uuid PKs).
   await db.execute(
-    sql`TRUNCATE TABLE ${payments}, ${trackEvents}, ${tracks}, ${customers}, ${adminUsers}, ${tenants} RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE TABLE ${payments}, ${trackEvents}, ${tracks}, ${batches}, ${tariffs}, ${customers}, ${adminUsers}, ${tenants} RESTART IDENTITY CASCADE`,
   );
 
   // --- Tenant --------------------------------------------------------------
@@ -89,7 +91,8 @@ async function main() {
       codePrefix: 'DK',
       botToken: '8872793732:AAEp7wq-ayj5nT_uinYQovAjETp2QoLfw1o',
       botUsername: 'kargo_track_test_bot',
-      pricePerKgTiyin: PRICE_PER_KG_TIYIN,
+      currency: 'UZS',
+      usdRateTiyin: null,
       pickupAddress: "Toshkent sh., Chilonzor t., Bunyodkor ko'chasi 1",
       workingHours: 'Dushanba–Shanba, 09:00–18:00',
       contactPhone: '+998901112233',
@@ -101,6 +104,44 @@ async function main() {
     })
     .returning();
   if (!tenant) throw new Error('failed to insert tenant');
+
+  // --- Tariffs (one active default) ----------------------------------------
+  const [defaultTariff] = await db
+    .insert(tariffs)
+    .values({
+      tenantId: tenant.id,
+      name: 'Asosiy',
+      pricePerKgMinor: PRICE_PER_KG_TIYIN,
+      isDefault: true,
+      active: true,
+    })
+    .returning();
+  if (!defaultTariff) throw new Error('failed to insert tariff');
+
+  // --- Batches (Reyslar) ---------------------------------------------------
+  const isoDaysFromNow = (days: number) =>
+    new Date(NOW + days * DAY_MS).toISOString().slice(0, 10);
+  const insertedBatches = await db
+    .insert(batches)
+    .values([
+      {
+        tenantId: tenant.id,
+        name: 'AVIA-01',
+        transport: 'avia',
+        etaDate: isoDaysFromNow(3),
+        status: 'IN_TRANSIT',
+        createdAt: daysAgo(6),
+      },
+      {
+        tenantId: tenant.id,
+        name: 'AVTO-01',
+        transport: 'avto',
+        etaDate: isoDaysFromNow(10),
+        status: 'CHINA_WAREHOUSE',
+        createdAt: daysAgo(3),
+      },
+    ])
+    .returning();
 
   // --- Admin (owner) -------------------------------------------------------
   const passwordHash = await hash('demo123');
@@ -167,12 +208,22 @@ async function main() {
     const weightGrams = weighed ? randInt(300, 25_000) : null;
     const priceTiyin = weightGrams != null ? priceForGrams(weightGrams) : null;
 
+    // Assign in-transit / china-warehouse tracks to the matching demo batch.
+    const batchId =
+      status === 'IN_TRANSIT'
+        ? (insertedBatches[0]?.id ?? null)
+        : status === 'CHINA_WAREHOUSE'
+          ? (insertedBatches[1]?.id ?? null)
+          : null;
+
     const code = makeCode(i);
     const [track] = await db
       .insert(tracks)
       .values({
         tenantId: tenant.id,
         customerId,
+        tariffId: weightGrams != null ? defaultTariff.id : null,
+        batchId,
         codeNormalized: code,
         codeOriginal: code,
         currentStatus: status,

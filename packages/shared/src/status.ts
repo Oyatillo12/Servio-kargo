@@ -31,6 +31,22 @@ export const PIPELINE_ORDER = [
   'DELIVERED',
 ] as const satisfies readonly TrackStatus[];
 
+/**
+ * Terminal statuses (SPEC §7.10): a track here is "done" and is skipped by batch
+ * status propagation. DELIVERED is a completed pickup; LOST/RETURNED are the
+ * side-states.
+ */
+export const TERMINAL_STATUSES = new Set<TrackStatus>([
+  'DELIVERED',
+  'LOST',
+  'RETURNED',
+]);
+
+/** Whether a status is terminal (see {@link TERMINAL_STATUSES}). */
+export function isTerminalStatus(status: TrackStatus): boolean {
+  return TERMINAL_STATUSES.has(status);
+}
+
 /** Per-status uz/ru labels + emoji from the SPEC §2 table. */
 export const STATUS_META: Record<
   TrackStatus,

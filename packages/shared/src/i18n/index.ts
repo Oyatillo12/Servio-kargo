@@ -26,11 +26,17 @@ export interface ReadyDetail {
 }
 
 export interface InfoCardVars {
-  address: string;
-  hours: string;
-  /** Price per kg, formatted so'm without suffix. */
-  pricePerKgSom: string;
-  phone: string;
+  /**
+   * Active-tariff lines, each already formatted as `{name} — {price}` (the
+   * price rendered per §7.4: so'm/kg for UZS, `3.5$ / 44 300 so'm` for USD).
+   */
+  tariffLines: string[];
+  /** Formatted so'm rate (no suffix), present only in USD mode → kurs line. */
+  usdRateSom?: string;
+  /** Omit any of these when the tenant's source field is empty (§3.5). */
+  address?: string;
+  hours?: string;
+  phone?: string;
 }
 
 export interface LookupCardVars {
@@ -39,6 +45,10 @@ export interface LookupCardVars {
   statusLabel: string;
   /** Last event date, DD.MM.YYYY. */
   date: string;
+  /** Batch name — present only when the batch line should show (§3.6). */
+  batchName?: string;
+  /** Batch ETA, DD.MM.YYYY — present only when the batch has an eta_date. */
+  batchEta?: string;
   /** Formatted kg, present only when weight is set. */
   kg?: string;
   /** Formatted so'm (no suffix), present only when price is set. */
@@ -112,7 +122,8 @@ export interface Strings {
 
   // --- §4.2 status notifications (strings ready for the deferred sender) ---
   notifChinaWarehouse(code: string): string;
-  notifInTransit(code: string): string;
+  /** `eta` (DD.MM.YYYY) appends the batch ETA line when the batch has one. */
+  notifInTransit(code: string, eta?: string): string;
   notifTashkentWarehouse(code: string): string;
   notifReadyForPickup(v: ReadyNotifVars): string;
   notifDelivered(code: string): string;
@@ -158,13 +169,15 @@ export function statusNotification(
     workingHours: string;
     statusLabel: string;
     contactPhone: string;
+    /** Batch ETA (DD.MM.YYYY) for the IN_TRANSIT notification (§4.2). */
+    eta?: string;
   },
 ): string | null {
   switch (status) {
     case 'CHINA_WAREHOUSE':
       return s.notifChinaWarehouse(vars.code);
     case 'IN_TRANSIT':
-      return s.notifInTransit(vars.code);
+      return s.notifInTransit(vars.code, vars.eta);
     case 'TASHKENT_WAREHOUSE':
       return s.notifTashkentWarehouse(vars.code);
     case 'READY_FOR_PICKUP':

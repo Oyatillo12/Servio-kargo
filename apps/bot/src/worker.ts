@@ -36,6 +36,7 @@ import {
 import { getConfig } from './config';
 import { logger } from './logger';
 import {
+  getBatchById,
   getCustomerById,
   getTenantById,
   getTrackById,
@@ -88,6 +89,16 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
     return;
   }
 
+  // §4.2: IN_TRANSIT carries the batch ETA line when the track's batch has one.
+  let eta: string | undefined;
+  if (job.status === 'IN_TRANSIT' && track.batchId) {
+    const batch = await getBatchById(job.tenantId, track.batchId);
+    if (batch?.etaDate) {
+      const [y, m, d] = batch.etaDate.split('-');
+      eta = d && m && y ? `${d}.${m}.${y}` : batch.etaDate;
+    }
+  }
+
   const s = t(customer.lang);
   const message = statusNotification(s, job.status, {
     code: track.codeOriginal,
@@ -97,6 +108,7 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
     workingHours: tenant.workingHours ?? '',
     statusLabel: STATUS_META[job.status][customer.lang],
     contactPhone: tenant.contactPhone ?? '',
+    eta,
   });
   // CREATED (or any non-notifiable status that slipped through) → nothing to send.
   if (!message) return;

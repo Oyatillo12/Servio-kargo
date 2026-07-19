@@ -1,22 +1,18 @@
 import { requireAdmin } from '@/lib/auth';
+import { listBatches } from '@/lib/queries';
 
 import { ImportWizard } from './import-wizard';
 
 export const metadata = { title: 'Import — KargoTrack' };
 
 export default async function ImportPage() {
-  await requireAdmin();
+  const { tenant } = await requireAdmin();
+  const batches = await listBatches(tenant.id);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-bold text-slate-900">Import</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Excel fayl yuklang yoki trek kodlarini joylashtiring. Tasdiqlashdan
-          oldin natijani ko'rib chiqasiz.
-        </p>
-      </div>
-      <ImportWizard />
+    <div className="mx-auto max-w-md">
+      <h1 className="mb-4 text-xl font-bold text-foreground">Import</h1>
+      <ImportWizard batches={batches.map((b) => ({ id: b.id, name: b.name }))} />
     </div>
   );
 }

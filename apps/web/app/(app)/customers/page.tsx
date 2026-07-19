@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { DebtCell } from '@/components/debt-cell';
+import { Input } from '@/components/ui/input';
 import { requireAdmin } from '@/lib/auth';
 import { listCustomersWithDebt } from '@/lib/queries';
 
@@ -18,71 +19,60 @@ export default async function CustomersPage({
   return (
     <div>
       <div className="mb-3 flex items-baseline justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Mijozlar</h1>
-        <span className="text-sm text-slate-500">{customers.length} ta</span>
+        <h1 className="text-xl font-bold text-foreground">Mijozlar</h1>
+        <span className="text-xs text-muted-foreground">
+          jami <span className="font-mono font-semibold">{customers.length}</span>
+        </span>
       </div>
 
-      <form method="get" className="mb-4 flex gap-2">
-        <input
+      <form method="get" className="mb-4">
+        <Input
           name="q"
           defaultValue={q}
-          placeholder="Ism, telefon yoki kod bo'yicha qidirish"
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+          placeholder="Ism, kod yoki telefon qidirish"
+          className="bg-[#f7f8fa]"
         />
-        <button
-          type="submit"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-        >
-          Qidirish
-        </button>
       </form>
 
       {customers.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          Mijoz topilmadi.
+        <div className="rounded-xl border border-border bg-white p-10 text-center">
+          <div className="mx-auto mb-2 h-11 w-11 rounded-full border-2 border-dotted border-[#c3c9d6]" />
+          <p className="text-sm font-semibold text-foreground">
+            Mijoz topilmadi
+          </p>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Qidiruvni o&apos;zgartirib ko&apos;ring.
+          </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-3 py-2 font-medium">Kod</th>
-                <th className="px-3 py-2 font-medium">Ism</th>
-                <th className="px-3 py-2 font-medium">Telefon</th>
-                <th className="px-3 py-2 text-right font-medium">Treklar</th>
-                <th className="px-3 py-2 text-right font-medium">Qarz</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((c) => (
-                <tr
-                  key={c.id}
-                  className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                >
-                  <td className="whitespace-nowrap px-3 py-2 align-middle font-medium">
-                    <Link
-                      href={`/customers/${c.id}`}
-                      className="text-slate-800 hover:underline"
-                    >
-                      {c.clientCode}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2 align-middle text-slate-700">
-                    {c.fullName ?? '—'}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 align-middle text-slate-700">
-                    {c.phone ?? '—'}
-                  </td>
-                  <td className="px-3 py-2 text-right align-middle tabular-nums text-slate-700">
-                    {c.trackCount}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right align-middle">
-                    <DebtCell tiyin={c.debtTiyin} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="overflow-hidden rounded-xl border border-border bg-white">
+          {customers.map((c) => (
+            <Link
+              key={c.id}
+              href={`/customers/${c.id}`}
+              className="flex items-center justify-between gap-3 border-b border-[#eef0f4] px-4 py-3 last:border-0 hover:bg-secondary/60"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {c.fullName ?? 'Ismi yo‘q'}{' '}
+                  <span className="font-mono text-[12px] font-medium text-muted-foreground">
+                    {c.clientCode}
+                  </span>
+                </p>
+                <p className="truncate font-mono text-[12px] text-muted-foreground">
+                  {c.phone ?? '—'}
+                </p>
+              </div>
+              <div className="flex-none text-right">
+                <p className="text-[12px] text-muted-foreground">
+                  {c.trackCount} ta trek
+                </p>
+                <p className="text-[12.5px]">
+                  <DebtCell tiyin={c.debtTiyin} />
+                </p>
+              </div>
+            </Link>
+          ))}
         </div>
       )}
     </div>
