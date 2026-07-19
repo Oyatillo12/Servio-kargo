@@ -1,10 +1,6 @@
-import { APP_NAME } from '@kargotrack/shared';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
-      <h1>{APP_NAME}</h1>
-      <p>Admin panel skeleton. Features come next.</p>
-    </main>
-  );
+  // The panel entry point; the /tracks layout guard bounces to /login if needed.
+  redirect('/tracks');
 }

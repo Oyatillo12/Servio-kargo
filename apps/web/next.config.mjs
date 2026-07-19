@@ -6,6 +6,8 @@ const nextConfig = {
   experimental: {
     // Enables instrumentation.ts register() hook on server startup (Next 14).
     instrumentationHook: true,
+    // Native addon (argon2) — must stay a runtime require, not webpack-bundled.
+    serverComponentsExternalPackages: ['@node-rs/argon2'],
   },
 };
 
