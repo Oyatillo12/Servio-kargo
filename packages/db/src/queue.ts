@@ -15,12 +15,19 @@
  *  - retries: 5 attempts with exponential backoff.
  */
 
+import { randomUUID } from 'node:crypto';
+
 import PgBoss from 'pg-boss';
 
 import {
   NOTIFY_QUEUE,
+  REMINDER_QUEUE,
+  REMINDER_SWEEP_CRON,
+  REMINDER_SWEEP_QUEUE,
+  REMINDER_TZ,
   notifyDedupeKey,
   type NotifyJob,
+  type ReminderJob,
 } from '@kargotrack/shared';
 
 // SPEC §8: retry ×5 with exponential backoff.
@@ -53,6 +60,16 @@ export function getBoss(): Promise<PgBoss> {
         name: NOTIFY_QUEUE,
         policy: 'short',
       });
+      // Reminders: 'short' so a `singletonKey` collapses duplicate queued jobs
+      // (weekly dedupe, §7.7). Only the 'short' policy indexes singleton_key on
+      // created jobs — under 'standard' the key is ignored — so manual reminders
+      // must carry a *unique* key (see enqueueReminder) or they'd all collide on
+      // the empty key.
+      for (const name of [REMINDER_QUEUE, REMINDER_SWEEP_QUEUE]) {
+        const policy = name === REMINDER_QUEUE ? 'short' : 'standard';
+        await boss.createQueue(name, { name, policy });
+        await boss.updateQueue(name, { name, policy });
+      }
       return boss;
     })().catch((err) => {
       // Allow a later call to retry a failed startup.
@@ -106,6 +123,87 @@ export function workNotifications(handler: NotifyJobHandler): Promise<string> {
         }
       },
     ),
+  );
+}
+
+// --- Debt reminders (SPEC §4.4, §7.7) --------------------------------------
+
+/**
+ * Enqueue a single debtor reminder. Weekly-sweep callers pass a
+ * `singletonKey` of `weeklyReminderDedupeKey(customerId, dateKey)` so a re-run
+ * of the same hourly tick can't double-message a debtor. Manual (admin-button)
+ * callers omit it and get a unique key — an empty key would collapse every
+ * keyless job under the 'short' policy, so a bulk "send to all" would enqueue
+ * only one; a unique key also lets an admin deliberately re-send.
+ */
+export function enqueueReminder(
+  job: ReminderJob,
+  opts?: { singletonKey?: string },
+): Promise<string | null> {
+  const singletonKey =
+    opts?.singletonKey ?? `reminder-manual:${job.customerId}:${randomUUID()}`;
+  return getBoss().then((boss) =>
+    boss.send(REMINDER_QUEUE, job, {
+      singletonKey,
+      retryLimit: RETRY_LIMIT,
+      retryBackoff: RETRY_BACKOFF,
+    }),
+  );
+}
+
+export type ReminderJobHandler = (
+  job: ReminderJob,
+  meta: JobMeta,
+) => Promise<void>;
+
+/** Register the per-customer reminder worker (mirrors {@link workNotifications}). */
+export function workReminders(handler: ReminderJobHandler): Promise<string> {
+  return getBoss().then((boss) =>
+    boss.work<ReminderJob>(
+      REMINDER_QUEUE,
+      { batchSize: 1, includeMetadata: true, pollingIntervalSeconds: 1 },
+      async (jobs) => {
+        for (const job of jobs) {
+          await handler(job.data, {
+            id: job.id,
+            retryCount: job.retryCount,
+            retryLimit: job.retryLimit,
+          });
+        }
+      },
+    ),
+  );
+}
+
+export type SweepHandler = () => Promise<void>;
+
+/**
+ * Register the hourly debtor-sweep worker. The scheduled tick (see
+ * {@link scheduleReminderSweep}) fires jobs onto {@link REMINDER_SWEEP_QUEUE};
+ * the handler decides which tenants are due this hour and fans out reminders.
+ */
+export function workReminderSweeps(handler: SweepHandler): Promise<string> {
+  return getBoss().then((boss) =>
+    boss.work(
+      REMINDER_SWEEP_QUEUE,
+      { batchSize: 1, pollingIntervalSeconds: 30 },
+      async () => {
+        await handler();
+      },
+    ),
+  );
+}
+
+/**
+ * Install the repeatable hourly sweep tick (idempotent — pg-boss upserts the
+ * schedule by queue name). The worker projects "now" onto Asia/Tashkent, so the
+ * cron only needs to fire hourly; `tz` keeps DST-free but explicit (§7.9).
+ */
+export function scheduleReminderSweep(): Promise<void> {
+  return getBoss().then((boss) =>
+    boss.schedule(REMINDER_SWEEP_QUEUE, REMINDER_SWEEP_CRON, undefined, {
+      tz: REMINDER_TZ,
+    }),
   );
 }
 

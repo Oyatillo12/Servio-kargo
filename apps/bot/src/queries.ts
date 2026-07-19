@@ -18,7 +18,12 @@ import {
   type Tenant,
   type Track,
 } from '@kargotrack/db/schema';
-import { type Lang, nextClientCode } from '@kargotrack/shared';
+import {
+  type Lang,
+  computeDebtTiyin,
+  nextClientCode,
+  type DebtTrack,
+} from '@kargotrack/shared';
 
 import { logger } from './logger';
 
@@ -176,6 +181,63 @@ export async function listCustomerPayments(
       and(eq(payments.tenantId, tenantId), eq(payments.customerId, customerId)),
     )
     .orderBy(desc(payments.createdAt));
+}
+
+/**
+ * Ids of a tenant's customers whose net debt is > 0 (SPEC §7.5), for the weekly
+ * reminder sweep (§7.7). Pulls the tenant's non-deleted tracks + all payments
+ * once and groups in memory through the shared `computeDebtTiyin` — the single
+ * source of the debt rule, matching the admin panel's `listCustomersWithDebt`.
+ */
+export async function listTenantDebtorIds(tenantId: string): Promise<string[]> {
+  const db = getDb();
+
+  const trackRows = await db
+    .select({
+      customerId: tracks.customerId,
+      currentStatus: tracks.currentStatus,
+      priceTiyin: tracks.priceTiyin,
+      deletedAt: tracks.deletedAt,
+    })
+    .from(tracks)
+    .where(and(eq(tracks.tenantId, tenantId), isNull(tracks.deletedAt)));
+
+  const payRows = await db
+    .select({
+      customerId: payments.customerId,
+      amountTiyin: payments.amountTiyin,
+    })
+    .from(payments)
+    .where(eq(payments.tenantId, tenantId));
+
+  const tracksByCustomer = new Map<string, DebtTrack[]>();
+  for (const t of trackRows) {
+    if (!t.customerId) continue;
+    const list = tracksByCustomer.get(t.customerId) ?? [];
+    list.push({
+      currentStatus: t.currentStatus,
+      priceTiyin: t.priceTiyin,
+      deletedAt: t.deletedAt,
+    });
+    tracksByCustomer.set(t.customerId, list);
+  }
+
+  const paymentsByCustomer = new Map<string, { amountTiyin: number }[]>();
+  for (const p of payRows) {
+    const list = paymentsByCustomer.get(p.customerId) ?? [];
+    list.push({ amountTiyin: p.amountTiyin });
+    paymentsByCustomer.set(p.customerId, list);
+  }
+
+  const debtorIds: string[] = [];
+  for (const [customerId, custTracks] of tracksByCustomer) {
+    const debt = computeDebtTiyin(
+      custTracks,
+      paymentsByCustomer.get(customerId) ?? [],
+    );
+    if (debt > 0) debtorIds.push(customerId);
+  }
+  return debtorIds;
 }
 
 /** A single track by id (tenant-scoped), including soft-deleted rows. */

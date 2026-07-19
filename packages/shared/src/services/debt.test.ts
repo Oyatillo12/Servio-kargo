@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeDebtTiyin, type DebtTrack } from './debt';
+import { computeDebtTiyin, describeDebt, type DebtTrack } from './debt';
 
 const track = (over: Partial<DebtTrack>): DebtTrack => ({
   currentStatus: 'READY_FOR_PICKUP',
@@ -50,5 +50,43 @@ describe('computeDebtTiyin (SPEC §7.5)', () => {
   it('is 0 when settled', () => {
     const tracks = [track({ priceTiyin: 2_000_000 })];
     expect(computeDebtTiyin(tracks, [{ amountTiyin: 2_000_000 }])).toBe(0);
+  });
+
+  it('mixes statuses, null prices and overpayment into a net advance', () => {
+    const tracks = [
+      track({ currentStatus: 'READY_FOR_PICKUP', priceTiyin: 2_000_000 }),
+      track({ currentStatus: 'DELIVERED', priceTiyin: null }), // owed but unpriced → 0
+      track({ currentStatus: 'IN_TRANSIT', priceTiyin: 9_000_000 }), // not owed yet
+    ];
+    // owed = 2_000_000; paid 3_000_000 → advance of 1_000_000.
+    expect(computeDebtTiyin(tracks, [{ amountTiyin: 3_000_000 }])).toBe(
+      -1_000_000,
+    );
+  });
+});
+
+describe('describeDebt (SPEC §7.5)', () => {
+  it('classifies a positive net as debt', () => {
+    expect(describeDebt(1_500_000)).toEqual({
+      netTiyin: 1_500_000,
+      kind: 'debt',
+      magnitudeTiyin: 1_500_000,
+    });
+  });
+
+  it('classifies a negative net as advance with an absolute magnitude', () => {
+    expect(describeDebt(-500_000)).toEqual({
+      netTiyin: -500_000,
+      kind: 'advance',
+      magnitudeTiyin: 500_000,
+    });
+  });
+
+  it('classifies zero as settled', () => {
+    expect(describeDebt(0)).toEqual({
+      netTiyin: 0,
+      kind: 'settled',
+      magnitudeTiyin: 0,
+    });
   });
 });

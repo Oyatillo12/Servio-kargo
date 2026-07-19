@@ -12,19 +12,38 @@ import { join } from 'node:path';
 
 import { Api, GrammyError, InputFile } from 'grammy';
 
-import { workNotifications, type JobMeta } from '@kargotrack/db/queue';
 import {
+  enqueueReminder,
+  scheduleReminderSweep,
+  workNotifications,
+  workReminderSweeps,
+  workReminders,
+  type JobMeta,
+} from '@kargotrack/db/queue';
+import {
+  computeDebtTiyin,
   formatKg,
   formatSom,
   statusNotification,
   STATUS_META,
   t,
+  tashkentSchedule,
+  weeklyReminderDedupeKey,
   type NotifyJob,
+  type ReminderJob,
 } from '@kargotrack/shared';
 
 import { getConfig } from './config';
 import { logger } from './logger';
-import { getCustomerById, getTenantById, getTrackById } from './queries';
+import {
+  getCustomerById,
+  getTenantById,
+  getTrackById,
+  listCustomerPayments,
+  listCustomerTracks,
+  listTenantDebtorIds,
+  listTenants,
+} from './queries';
 import { TelegramRateLimiter } from './rateLimiter';
 
 /** One grammY Api per bot token (lighter than a full Bot for outbound sends). */
@@ -118,4 +137,108 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
 export async function startNotificationWorker(): Promise<void> {
   await workNotifications(handleNotifyJob);
   logger.info('notification worker started');
+}
+
+// --- Debt reminders (SPEC §4.4, §7.7) --------------------------------------
+
+/**
+ * Send one debtor reminder. Re-reads tenant/customer fresh and recomputes debt,
+ * so a customer who has since paid (debt ≤ 0) is skipped — this matters for both
+ * queued manual sends and the weekly sweep (§7.7).
+ */
+async function handleReminderJob(
+  job: ReminderJob,
+  meta: JobMeta,
+): Promise<void> {
+  const tenant = await getTenantById(job.tenantId);
+  if (!tenant) {
+    logger.warn({ job }, 'reminder: tenant gone, dropping');
+    return;
+  }
+
+  const customer = await getCustomerById(job.tenantId, job.customerId);
+  if (!customer?.tgUserId) {
+    logger.warn({ customerId: job.customerId }, 'reminder: no telegram id, dropping');
+    return;
+  }
+
+  const tracks = await listCustomerTracks(job.tenantId, customer.id);
+  const payments = await listCustomerPayments(job.tenantId, customer.id);
+  const debt = computeDebtTiyin(
+    tracks.map((tr) => ({
+      currentStatus: tr.currentStatus,
+      priceTiyin: tr.priceTiyin,
+      deletedAt: tr.deletedAt,
+    })),
+    payments.map((p) => ({ amountTiyin: p.amountTiyin })),
+  );
+  // §7.7: never nag a customer who is settled or in advance.
+  if (debt <= 0) {
+    logger.info({ customerId: customer.id, reason: job.reason }, 'reminder: no debt, skipping');
+    return;
+  }
+
+  const s = t(customer.lang);
+  const message = s.debtReminder(
+    customer.fullName ?? customer.clientCode,
+    tenant.name,
+    formatSom(debt),
+    tenant.contactPhone ?? '',
+  );
+
+  const api = apiFor(tenant.botToken);
+  const chatId = customer.tgUserId;
+
+  await limiter.acquire(chatId);
+  try {
+    await api.sendMessage(chatId, message);
+  } catch (err) {
+    if (isPermanentSendError(err)) {
+      logger.warn(
+        { err: err instanceof GrammyError ? err.description : err, chatId },
+        'reminder: permanent send error, dropping',
+      );
+      return;
+    }
+    if (meta.retryCount >= meta.retryLimit) {
+      logger.error({ jobId: meta.id, chatId, err }, 'reminder: failed after retries');
+    }
+    throw err; // transient → let pg-boss retry with backoff
+  }
+}
+
+/**
+ * Hourly sweep: for every tenant whose configured weekly slot matches "now"
+ * (Asia/Tashkent), enqueue a reminder per debtor. The dated singletonKey makes a
+ * re-run of the same hour a no-op, so a debtor is messaged at most once per week.
+ */
+async function handleSweepJob(): Promise<void> {
+  const { weekday, hour, dateKey } = tashkentSchedule(new Date());
+  const tenants = await listTenants();
+
+  for (const tenant of tenants) {
+    const reminders = tenant.settings?.reminders;
+    if (!reminders?.weekly_enabled) continue;
+    if (reminders.weekday !== weekday || reminders.hour !== hour) continue;
+
+    const debtorIds = await listTenantDebtorIds(tenant.id);
+    for (const customerId of debtorIds) {
+      await enqueueReminder(
+        { tenantId: tenant.id, customerId, reason: 'weekly' },
+        { singletonKey: weeklyReminderDedupeKey(customerId, dateKey) },
+      );
+    }
+    logger.info(
+      { tenant: tenant.name, count: debtorIds.length },
+      'reminder sweep: enqueued weekly reminders',
+    );
+  }
+}
+
+/** Start the reminder worker + install the hourly sweep schedule. */
+export async function startReminderWorker(): Promise<void> {
+  await workReminders(handleReminderJob);
+  await workReminderSweeps(handleSweepJob);
+  await scheduleReminderSweep();
+  logger.info('reminder worker started');
 }

@@ -9,13 +9,14 @@ import 'server-only';
 import { and, asc, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
-import { enqueueNotification } from '@kargotrack/db/queue';
+import { enqueueNotification, enqueueReminder } from '@kargotrack/db/queue';
 import {
   customers,
   payments,
   trackEvents,
   tracks,
   type Customer,
+  type Payment,
   type Track,
   type TrackEvent,
 } from '@kargotrack/db/schema';
@@ -298,6 +299,103 @@ export async function listCustomersWithDebt(
       paymentsByCustomer.get(c.id) ?? [],
     ),
   }));
+}
+
+// --- Customer detail + payments (SPEC §5.5) ---------------------------------
+
+export interface CustomerDetail {
+  customer: Customer;
+  tracks: Track[];
+  payments: Payment[];
+  debtTiyin: number;
+}
+
+/**
+ * A customer with their non-deleted tracks, payment history (newest first) and
+ * net debt (SPEC §7.5, via the shared `computeDebtTiyin`). Tenant-scoped.
+ */
+export async function getCustomerDetail(
+  tenantId: string,
+  customerId: string,
+): Promise<CustomerDetail | null> {
+  const db = getDb();
+
+  const [customer] = await db
+    .select()
+    .from(customers)
+    .where(and(eq(customers.tenantId, tenantId), eq(customers.id, customerId)))
+    .limit(1);
+  if (!customer) return null;
+
+  const custTracks = await db
+    .select()
+    .from(tracks)
+    .where(
+      and(
+        eq(tracks.tenantId, tenantId),
+        eq(tracks.customerId, customerId),
+        isNull(tracks.deletedAt),
+      ),
+    )
+    .orderBy(desc(tracks.createdAt));
+
+  const custPayments = await db
+    .select()
+    .from(payments)
+    .where(
+      and(eq(payments.tenantId, tenantId), eq(payments.customerId, customerId)),
+    )
+    .orderBy(desc(payments.createdAt));
+
+  const debtTiyin = computeDebtTiyin(
+    custTracks.map((t) => ({
+      currentStatus: t.currentStatus,
+      priceTiyin: t.priceTiyin,
+      deletedAt: t.deletedAt,
+    })),
+    custPayments.map((p) => ({ amountTiyin: p.amountTiyin })),
+  );
+
+  return { customer, tracks: custTracks, payments: custPayments, debtTiyin };
+}
+
+/** Record a payment for a customer (amount in tiyin). Tenant-scoped (§5.5). */
+export async function createPayment(args: {
+  tenantId: string;
+  customerId: string;
+  amountTiyin: number;
+  method: Payment['method'];
+  note: string | null;
+}): Promise<void> {
+  await getDb().insert(payments).values({
+    tenantId: args.tenantId,
+    customerId: args.customerId,
+    amountTiyin: args.amountTiyin,
+    method: args.method,
+    note: args.note,
+  });
+}
+
+// --- Debtors (SPEC §5.6) ----------------------------------------------------
+
+/** Customers with net debt > 0, sorted by debt descending (SPEC §5.6). */
+export async function listDebtors(tenantId: string): Promise<CustomerRow[]> {
+  const all = await listCustomersWithDebt(tenantId);
+  return all
+    .filter((c) => c.debtTiyin > 0)
+    .sort((a, b) => b.debtTiyin - a.debtTiyin);
+}
+
+/**
+ * Enqueue a manual debt reminder for a customer (SPEC §4.4). Fire-and-forget:
+ * the bot's reminder worker re-checks the debt and sends, respecting rate
+ * limits. Membership of the customer in this tenant is the caller's guarantee.
+ */
+export async function queueReminder(
+  tenantId: string,
+  customerId: string,
+): Promise<void> {
+  await enqueueReminder({ tenantId, customerId, reason: 'manual' });
 }
 
 // --- Import (SPEC §5.4, §7.2) -----------------------------------------------

@@ -41,3 +41,25 @@ export function computeDebtTiyin(
   const paid = payments.reduce((sum, p) => sum + p.amountTiyin, 0);
   return owed - paid;
 }
+
+/** Classification of a net debt figure for display (SPEC §7.5). */
+export type DebtKind = 'debt' | 'advance' | 'settled';
+
+export interface DebtSummary {
+  /** Signed net in tiyin: positive = owed, negative = advance, 0 = settled. */
+  netTiyin: number;
+  kind: DebtKind;
+  /** Absolute value for display — callers never render a leading minus (§7.5). */
+  magnitudeTiyin: number;
+}
+
+/**
+ * Classify a net debt (as produced by {@link computeDebtTiyin}) into
+ * debt/advance/settled + its display magnitude. Single source of the sign rule
+ * so the admin UI and bot don't each re-derive "> 0 ? debt : < 0 ? advance …".
+ */
+export function describeDebt(netTiyin: number): DebtSummary {
+  const kind: DebtKind =
+    netTiyin > 0 ? 'debt' : netTiyin < 0 ? 'advance' : 'settled';
+  return { netTiyin, kind, magnitudeTiyin: Math.abs(netTiyin) };
+}

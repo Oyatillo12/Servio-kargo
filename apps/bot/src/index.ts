@@ -17,7 +17,7 @@ import { logger } from './logger';
 import { listTenants } from './queries';
 import { BotRegistry } from './registry';
 import { startServer } from './server';
-import { startNotificationWorker } from './worker';
+import { startNotificationWorker, startReminderWorker } from './worker';
 
 async function startPolling(pollingToken?: string): Promise<void> {
   const tenants = await listTenants();
@@ -66,6 +66,12 @@ async function main(): Promise<void> {
   // bot process (CLAUDE.md rule 8) — log and keep serving updates.
   startNotificationWorker().catch((err) =>
     logger.error({ err }, 'failed to start notification worker'),
+  );
+
+  // Debt reminders (manual + weekly sweep). Same rule 8 guarantee — a failure to
+  // start must not crash the bot process.
+  startReminderWorker().catch((err) =>
+    logger.error({ err }, 'failed to start reminder worker'),
   );
 
   if (config.polling) {

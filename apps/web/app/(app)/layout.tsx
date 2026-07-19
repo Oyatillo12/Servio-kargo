@@ -30,6 +30,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <nav className="mx-auto flex max-w-5xl gap-1 px-2 pb-1">
           <NavLink href="/tracks">Treklar</NavLink>
           <NavLink href="/customers">Mijozlar</NavLink>
+          <NavLink href="/debtors">Qarzdorlar</NavLink>
           <NavLink href="/import">Import</NavLink>
         </nav>
       </header>
