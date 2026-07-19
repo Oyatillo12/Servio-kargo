@@ -1,0 +1,106 @@
+/**
+ * Russian strings — secondary locale. Natural Russian translations of the
+ * canonical SPEC §4 texts (money keeps the ` so'm` suffix per the spec's
+ * formatting rules).
+ */
+
+import type { Strings } from './index';
+
+export const ru: Strings = {
+  // --- §4.1 ---
+  welcome: (tenantName) =>
+    `Здравствуйте! Добро пожаловать в бот ${tenantName}.\nTilni tanlang / Выберите язык:`,
+  askPhone: 'Отправьте номер телефона для регистрации 👇',
+  askPhoneButton: '📱 Отправить номер',
+  registered: (clientCode) =>
+    `Готово! Ваш код клиента: ${clientCode}\n\nТеперь отправьте трек-коды — можно несколько сразу, каждый с новой строки.`,
+  askTracks: 'Отправьте трек-коды (можно несколько сразу):',
+  noTracks:
+    'У вас пока нет посылок. Нажмите ➕ Добавить трек и отправьте свой трек-код.',
+  helpFallback: 'Не понял 🤔 Отправьте трек-код или воспользуйтесь меню ниже.',
+  errorGeneric: 'Произошла ошибка, попробуйте ещё раз чуть позже.',
+
+  // --- §3.1 menu labels ---
+  menuAddTrack: '➕ Добавить трек',
+  menuMyTracks: '📦 Мои посылки',
+  menuBalance: '💰 Баланс',
+  menuInfo: 'ℹ️ Информация',
+  menuLang: '🌐 Til / Язык',
+
+  // --- §4.3 add-track summary ---
+  summaryAdded: (n, codes) => `✅ Добавлено (${n}): ${codes}`,
+  summaryClaimed: (n, codes) => `♻️ Закреплено за вами (${n}): ${codes}`,
+  summaryOtherOwner: (n, codes) =>
+    `⛔ Принадлежит другому клиенту (${n}): ${codes}`,
+  summaryBadFormat: (n, lines) => `❌ Неверный формат (${n}): ${lines}`,
+  addNothingNew: 'Новых треков не добавлено.',
+
+  // --- §3.3 my tracks ---
+  myTracksHeader: '📦 Мои посылки:',
+  readyDetail: ({ kg, som }) => ` — ${kg} kg, ${som} so'm`,
+  pageIndicator: (page, pages) => `Страница ${page}/${pages}`,
+
+  // --- §3.4 balance ---
+  balanceDebt: (som) => `💰 Ваш долг: ${som} so'm`,
+  balanceAdvance: (som) => `💰 Аванс: ${som} so'm`,
+  balanceZero: '💰 Задолженности нет. ✅',
+  paymentsHeader: 'Последние платежи:',
+  noPayments: 'История платежей пока пуста.',
+  paymentLine: (date, som, method) => `${date} — ${som} so'm (${method})`,
+  paymentMethod: {
+    cash: 'наличные',
+    click: 'Click',
+    payme: 'Payme',
+    other: 'другое',
+  },
+
+  // --- §3.5 info ---
+  infoCard: ({ address, hours, pricePerKgSom, phone }) =>
+    [
+      'ℹ️ Информация',
+      '',
+      `📍 Адрес: ${address}`,
+      `🕘 Часы работы: ${hours}`,
+      `💵 Цена: ${pricePerKgSom} so'm/kg`,
+      `📞 Контакт: ${phone}`,
+    ].join('\n'),
+
+  // --- §3.6 lookup ---
+  lookupCard: ({ code, statusEmoji, statusLabel, date, kg, som }) => {
+    const lines = [
+      `🔍 ${code}`,
+      `Статус: ${statusEmoji} ${statusLabel}`,
+      `Дата: ${date}`,
+    ];
+    if (kg != null) lines.push(`⚖️ Вес: ${kg} kg`);
+    if (som != null) lines.push(`💵 К оплате: ${som} so'm`);
+    return lines.join('\n');
+  },
+  lookupNotFound: (code) => `🔍 ${code} — трек не найден.`,
+
+  // --- §3.7 ---
+  langSwitched: 'Язык изменён ✅',
+
+  // --- §4.2 notifications ---
+  notifChinaWarehouse: (code) =>
+    `📦 ${code} — ваша посылка принята на складе в Китае.`,
+  notifInTransit: (code) => `🚚 ${code} — ваша посылка в пути.`,
+  notifTashkentWarehouse: (code) =>
+    `🇺🇿 ${code} — ваша посылка прибыла в Ташкент. Скоро будет готова к выдаче.`,
+  notifReadyForPickup: ({ code, kg, som, pickupAddress, workingHours }) => {
+    const lines = [`✅ ${code} — ваша посылка готова!`];
+    if (kg != null) lines.push(`⚖️ Вес: ${kg} kg`);
+    if (som != null) lines.push(`💵 К оплате: ${som} so'm`);
+    lines.push(`📍 Адрес: ${pickupAddress}`);
+    lines.push(`🕘 Часы работы: ${workingHours}`);
+    return lines.join('\n');
+  },
+  notifDelivered: (code) =>
+    `🎉 ${code} — ваша посылка выдана. Поздравляем с покупкой!`,
+  notifSideState: (code, statusLabel, contactPhone) =>
+    `⚠️ ${code} — статус: ${statusLabel}. За подробностями свяжитесь с нами: ${contactPhone}`,
+
+  // --- §4.4 ---
+  debtReminder: (name, tenantName, debtSom, contactPhone) =>
+    `Здравствуйте, ${name}! Ваш долг по ${tenantName}: ${debtSom} so'm.\nПожалуйста, произведите оплату. По вопросам пишите в этот бот или звоните: ${contactPhone}`,
+};

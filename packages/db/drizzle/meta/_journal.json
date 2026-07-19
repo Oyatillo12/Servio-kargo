@@ -8,6 +8,13 @@
       "when": 1784470542510,
       "tag": "0000_married_luke_cage",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784471364088,
+      "tag": "0001_long_vanisher",
+      "breakpoints": true
     }
   ]
 }

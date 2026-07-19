@@ -85,9 +85,10 @@ async function main() {
   const [tenant] = await db
     .insert(tenants)
     .values({
-      name: 'DemoKargo',
-      botToken: '123456789:DEMO-FAKE-BOT-TOKEN-DO-NOT-USE',
-      botUsername: 'demokargo_bot',
+      name: 'KargoTrack test',
+      codePrefix: 'DK',
+      botToken: '8872793732:AAEp7wq-ayj5nT_uinYQovAjETp2QoLfw1o',
+      botUsername: 'kargo_track_test_bot',
       pricePerKgTiyin: PRICE_PER_KG_TIYIN,
       pickupAddress: "Toshkent sh., Chilonzor t., Bunyodkor ko'chasi 1",
       workingHours: 'Dushanba–Shanba, 09:00–18:00',
@@ -113,8 +114,16 @@ async function main() {
 
   // --- Customers -----------------------------------------------------------
   const customerSeeds = [
-    { fullName: 'Alisher Karimov', phone: '+998901000001', lang: 'uz' as const },
-    { fullName: 'Dilnoza Yusupova', phone: '+998901000002', lang: 'uz' as const },
+    {
+      fullName: 'Alisher Karimov',
+      phone: '+998901000001',
+      lang: 'uz' as const,
+    },
+    {
+      fullName: 'Dilnoza Yusupova',
+      phone: '+998901000002',
+      lang: 'uz' as const,
+    },
     { fullName: 'Sardor Rahimov', phone: '+998901000003', lang: 'uz' as const },
     { fullName: 'Elena Petrova', phone: '+998901000004', lang: 'ru' as const },
     { fullName: 'Ivan Sidorov', phone: '+998901000005', lang: 'ru' as const },
@@ -169,7 +178,10 @@ async function main() {
         currentStatus: status,
         weightGrams,
         priceTiyin,
-        photoPath: status === 'READY_FOR_PICKUP' && rand() > 0.5 ? `demo/${code}.jpg` : null,
+        photoPath:
+          status === 'READY_FOR_PICKUP' && rand() > 0.5
+            ? `demo/${code}.jpg`
+            : null,
         createdAt,
       })
       .returning();

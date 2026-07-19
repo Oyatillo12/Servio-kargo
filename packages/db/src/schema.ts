@@ -72,6 +72,9 @@ export type TenantSettings = {
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
+  // Client-code prefix (2–4 latin letters, e.g. "DK"). client_code =
+  // code_prefix + '-' + per-tenant sequence (SPEC 6, customers.client_code).
+  codePrefix: text('code_prefix').notNull(),
   botToken: text('bot_token').notNull().unique(),
   botUsername: text('bot_username'),
   pricePerKgTiyin: bigint('price_per_kg_tiyin', { mode: 'number' }).notNull(),
