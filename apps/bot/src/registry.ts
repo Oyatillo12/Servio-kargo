@@ -7,8 +7,11 @@
 
 import type { Bot } from 'grammy';
 
+import { t } from '@kargotrack/shared';
+
 import { createBot } from './bot';
 import type { KargoContext } from './context';
+import { botCommands } from './keyboards';
 import { getTenantByToken } from './queries';
 import { logger } from './logger';
 
@@ -43,6 +46,7 @@ export class BotRegistry {
     try {
       const bot = createBot(tenant.id, token);
       await bot.init(); // fetches bot info; needed before handleUpdate
+      await this.registerCommands(bot);
       const entry: BotEntry = { bot };
       this.cache.set(token, entry);
       logger.info(
@@ -53,6 +57,22 @@ export class BotRegistry {
     } catch (err) {
       logger.error({ err, tenant: tenant.name }, 'failed to init bot');
       return undefined;
+    }
+  }
+
+  /**
+   * Populate the Telegram "Menu" command button. Uzbek is the default scope;
+   * Russian is registered for clients whose language is `ru`. Never fatal — a
+   * failed command sync must not stop the bot from serving updates.
+   */
+  private async registerCommands(bot: Bot<KargoContext>): Promise<void> {
+    try {
+      await bot.api.setMyCommands(botCommands(t('uz')));
+      await bot.api.setMyCommands(botCommands(t('ru')), {
+        language_code: 'ru',
+      });
+    } catch (err) {
+      logger.warn({ err }, 'failed to set bot commands');
     }
   }
 }

@@ -12,6 +12,7 @@ import {
 import { requireAdmin } from '@/lib/auth';
 import { listBatches, listTracks } from '@/lib/queries';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/page-header';
 import { cn } from '@/lib/utils';
 
 import { TracksTable, type TrackRowView } from './tracks-table';
@@ -109,12 +110,7 @@ export default async function TracksPage({
 
   return (
     <div>
-      <div className="mb-3 flex items-baseline justify-between">
-        <h1 className="text-xl font-bold text-foreground">Treklar</h1>
-        <span className="text-xs text-muted-foreground">
-          jami <span className="font-mono font-semibold">{result.total}</span>
-        </span>
-      </div>
+      <PageHeader title="Treklar" count={result.total} />
 
       <div className="mb-3 flex gap-2">
         <form method="get" className="flex-1">

@@ -4,6 +4,8 @@ import { ChevronRight } from 'lucide-react';
 import type { Transport } from '@kargotrack/db/schema';
 
 import { StatusBadge } from '@/components/status-badge';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
 import { requireAdmin } from '@/lib/auth';
 import { listBatches } from '@/lib/queries';
 
@@ -23,22 +25,15 @@ export default async function BatchesPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-3">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-bold text-foreground">Reyslar</h1>
-        <span className="text-xs text-muted-foreground">
-          jami <span className="font-mono font-semibold">{batches.length}</span>
-        </span>
-      </div>
+      <PageHeader title="Reyslar" count={batches.length} className="mb-0" />
 
       <NewBatchForm />
 
       {batches.length === 0 ? (
-        <div className="rounded-xl border border-border bg-white p-10 text-center">
-          <p className="text-sm font-semibold text-foreground">Reys yo&apos;q</p>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Yuqoridagi tugma orqali birinchi reysni yarating.
-          </p>
-        </div>
+        <EmptyState
+          title="Reys yo'q"
+          hint="Yuqoridagi tugma orqali birinchi reysni yarating."
+        />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-white">
           {batches.map((b) => (

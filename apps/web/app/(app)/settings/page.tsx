@@ -1,5 +1,6 @@
 import { formatSom, formatUsd } from '@kargotrack/shared';
 
+import { PageHeader } from '@/components/page-header';
 import { requireAdmin } from '@/lib/auth';
 import { listTariffs } from '@/lib/queries';
 import { getWebhookInfo } from '@/lib/telegram';
@@ -37,14 +38,18 @@ export default async function SettingsPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-md space-y-3">
-      <h1 className="text-xl font-bold text-foreground">Sozlamalar</h1>
+    <div className="mx-auto max-w-4xl space-y-3">
+      <PageHeader title="Sozlamalar" className="mb-0" />
 
-      <TariffsCard tariffs={tariffs} unitLabel={unitLabel} />
-      <CurrencyCard
-        initialCurrency={tenant.currency}
-        initialRateSom={tenant.usdRateTiyin != null ? formatSom(tenant.usdRateTiyin) : ''}
-      />
+      <div className="space-y-3 md:grid md:grid-cols-2 md:items-start md:gap-3 md:space-y-0">
+        <TariffsCard tariffs={tariffs} unitLabel={unitLabel} />
+        <CurrencyCard
+          initialCurrency={tenant.currency}
+          initialRateSom={
+            tenant.usdRateTiyin != null ? formatSom(tenant.usdRateTiyin) : ''
+          }
+        />
+      </div>
 
       <SettingsForm
         initial={{

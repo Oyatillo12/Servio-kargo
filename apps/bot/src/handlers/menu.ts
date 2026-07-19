@@ -14,15 +14,17 @@ import {
 } from '@kargotrack/shared';
 
 import type { KargoContext } from '../context';
-import { paginationKeyboard } from '../keyboards';
+import { myTracksKeyboard } from '../keyboards';
 import {
   getActiveTariffs,
+  getTrackById,
   listCustomerPayments,
   listCustomerTracks,
 } from '../queries';
 import { ensureRegistered, renderTrackLine } from './common';
+import { sendTrackCard } from './lookup';
 
-/** Build the text + pagination keyboard for a My-tracks page. */
+/** Build the text + inline keyboard for a My-tracks page. */
 async function buildMyTracksView(
   ctx: KargoContext,
   requestedPage: number,
@@ -38,8 +40,12 @@ async function buildMyTracksView(
   const lines = [ctx.s.myTracksHeader];
   for (const track of slice) lines.push(renderTrackLine(track, ctx));
   if (pages > 1) lines.push('', ctx.s.pageIndicator(page, pages));
+  lines.push('', ctx.s.myTracksTapHint);
 
-  return { text: lines.join('\n'), keyboard: paginationKeyboard(page, pages) };
+  return {
+    text: lines.join('\n'),
+    keyboard: myTracksKeyboard(slice, page, pages),
+  };
 }
 
 /** 📦 Mening yuklarim — first page. */
@@ -60,6 +66,22 @@ export async function myTracksPageCallback(ctx: KargoContext): Promise<void> {
   } catch {
     // "message is not modified" (same page tapped) — safe to ignore.
   }
+}
+
+/** `track:{id}` inline callback — send the tapped track's full status card. */
+export async function trackDetailCallback(ctx: KargoContext): Promise<void> {
+  await ctx.answerCallbackQuery();
+  if (!ctx.customer) return;
+  const trackId = ctx.match?.[1];
+  if (!trackId) return;
+
+  const track = await getTrackById(ctx.tenant.id, trackId);
+  // Only reveal a track the requester actually owns (tenant + ownership scoped).
+  if (!track || track.deletedAt || track.customerId !== ctx.customer.id) {
+    await ctx.reply(ctx.s.lookupNotFound(trackId));
+    return;
+  }
+  await sendTrackCard(ctx, track);
 }
 
 /** 💰 Balans — debt/advance + last 5 payments (§3.4). */

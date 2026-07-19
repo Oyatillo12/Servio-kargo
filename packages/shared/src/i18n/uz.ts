@@ -29,6 +29,16 @@ export const uz: Strings = {
   menuInfo: "ℹ️ Ma'lumot",
   menuLang: '🌐 Til / Язык',
 
+  // --- Telegram command-menu descriptions (setMyCommands) ---
+  commands: {
+    start: "Boshlash / Ro'yxatdan o'tish",
+    mytracks: 'Mening yuklarim',
+    balance: 'Balans va qarz',
+    calc: 'Narx kalkulyatori',
+    info: "Ma'lumot",
+    manzil: 'Xitoy ombori manzili',
+  },
+
   // --- §4.3 add-track summary ---
   summaryAdded: (n, codes) => `✅ Qo'shildi (${n}): ${codes}`,
   summaryClaimed: (n, codes) => `♻️ Sizga biriktirildi (${n}): ${codes}`,
@@ -39,6 +49,7 @@ export const uz: Strings = {
 
   // --- §3.3 my tracks ---
   myTracksHeader: '📦 Mening yuklarim:',
+  myTracksTapHint: "👆 Batafsil ko'rish uchun trek ustiga bosing.",
   readyDetail: ({ kg, som }) => ` — ${kg} kg, ${som} so'm`,
   pageIndicator: (page, pages) => `Sahifa ${page}/${pages}`,
 
@@ -109,6 +120,10 @@ export const uz: Strings = {
   calcResult: ({ tariffName, kg, som, usd }) =>
     `🧮 ${tariffName}\n${kg} kg ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nAniq summa yuk tortilganda hisoblanadi.`,
   calcInvalid: 'Raqam kiriting, masalan: 2.5',
+  calcNoTariffs:
+    "Hozircha tarif mavjud emas. Iltimos, administrator bilan bog'laning.",
+  calcNoRate:
+    "Valyuta kursi hali kiritilmagan. Iltimos, administrator bilan bog'laning.",
 
   // --- §3.10 China warehouse address (§4.5) ---
   chinaAddrHeader:

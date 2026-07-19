@@ -1,6 +1,8 @@
 import Link from 'next/link';
 
 import { DebtCell } from '@/components/debt-cell';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
 import { Input } from '@/components/ui/input';
 import { requireAdmin } from '@/lib/auth';
 import { listCustomersWithDebt } from '@/lib/queries';
@@ -18,12 +20,7 @@ export default async function CustomersPage({
 
   return (
     <div>
-      <div className="mb-3 flex items-baseline justify-between">
-        <h1 className="text-xl font-bold text-foreground">Mijozlar</h1>
-        <span className="text-xs text-muted-foreground">
-          jami <span className="font-mono font-semibold">{customers.length}</span>
-        </span>
-      </div>
+      <PageHeader title="Mijozlar" count={customers.length} />
 
       <form method="get" className="mb-4">
         <Input
@@ -35,15 +32,10 @@ export default async function CustomersPage({
       </form>
 
       {customers.length === 0 ? (
-        <div className="rounded-xl border border-border bg-white p-10 text-center">
-          <div className="mx-auto mb-2 h-11 w-11 rounded-full border-2 border-dotted border-[#c3c9d6]" />
-          <p className="text-sm font-semibold text-foreground">
-            Mijoz topilmadi
-          </p>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Qidiruvni o&apos;zgartirib ko&apos;ring.
-          </p>
-        </div>
+        <EmptyState
+          title="Mijoz topilmadi"
+          hint="Qidiruvni o'zgartirib ko'ring."
+        />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-white">
           {customers.map((c) => (

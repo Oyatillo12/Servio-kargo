@@ -5,13 +5,27 @@
  */
 
 import { InlineKeyboard, Keyboard } from 'grammy';
+import type { BotCommand } from 'grammy/types';
 
-import type { Tariff } from '@kargotrack/db/schema';
+import type { Tariff, Track } from '@kargotrack/db/schema';
 import {
   LANG_BUTTON_RU,
   LANG_BUTTON_UZ,
+  STATUS_META,
   type Strings,
 } from '@kargotrack/shared';
+
+/** Slash-command list for the Telegram "Menu" button (setMyCommands). */
+export function botCommands(s: Strings): BotCommand[] {
+  return [
+    { command: 'start', description: s.commands.start },
+    { command: 'mytracks', description: s.commands.mytracks },
+    { command: 'balance', description: s.commands.balance },
+    { command: 'calc', description: s.commands.calc },
+    { command: 'info', description: s.commands.info },
+    { command: 'manzil', description: s.commands.manzil },
+  ];
+}
 
 /** Two inline buttons: `O'zbekcha 🇺🇿` / `Русский 🇷🇺` (SPEC §3.1). */
 export function langKeyboard(): InlineKeyboard {
@@ -49,16 +63,25 @@ export function calcTariffsKeyboard(tariffs: Tariff[]): InlineKeyboard {
 }
 
 /**
- * Pagination controls for My tracks. Shows ◀️ / ▶️ only when there is a
- * previous / next page. Returns `undefined` when there is a single page.
+ * My-tracks keyboard: one tappable button per track on the page (opens its full
+ * status card via `track:{id}`), then a ◀️ / ▶️ pagination row when there is
+ * more than one page.
  */
-export function paginationKeyboard(
+export function myTracksKeyboard(
+  slice: Track[],
   page: number,
   pages: number,
-): InlineKeyboard | undefined {
-  if (pages <= 1) return undefined;
+): InlineKeyboard {
   const kb = new InlineKeyboard();
-  if (page > 1) kb.text('◀️', `mytracks:${page - 1}`);
-  if (page < pages) kb.text('▶️', `mytracks:${page + 1}`);
+  for (const track of slice) {
+    kb.text(
+      `${STATUS_META[track.currentStatus].emoji} ${track.codeOriginal}`,
+      `track:${track.id}`,
+    ).row();
+  }
+  if (pages > 1) {
+    if (page > 1) kb.text('◀️', `mytracks:${page - 1}`);
+    if (page < pages) kb.text('▶️', `mytracks:${page + 1}`);
+  }
   return kb;
 }

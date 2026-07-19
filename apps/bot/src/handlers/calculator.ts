@@ -27,8 +27,8 @@ export async function showCalculator(ctx: KargoContext): Promise<void> {
   resetCalc(ctx);
   const tariffs = await getActiveTariffs(ctx.tenant.id);
   if (tariffs.length === 0) {
-    // No tariffs to price against — nudge the user back to the menu.
-    await ctx.reply(ctx.s.helpFallback);
+    // No tariffs to price against — a config gap, not a user mistake.
+    await ctx.reply(ctx.s.calcNoTariffs);
     return;
   }
   await ctx.reply(ctx.s.calcChooseTariff, {
@@ -78,10 +78,10 @@ export async function handleCalcWeight(
   }
 
   const tn = ctx.tenant;
-  // A USD tenant with no kurs set can't be priced — treat like "no tariff".
+  // A USD tenant with no kurs set can't be priced — say so honestly.
   if (tn.currency === 'USD' && tn.usdRateTiyin == null) {
     resetCalc(ctx);
-    await ctx.reply(ctx.s.helpFallback);
+    await ctx.reply(ctx.s.calcNoRate);
     return true;
   }
   const price = computeTrackPrice({

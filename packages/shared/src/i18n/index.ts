@@ -95,6 +95,16 @@ export interface Strings {
   menuInfo: string;
   menuLang: string;
 
+  // --- Telegram command-menu descriptions (setMyCommands) ---
+  commands: {
+    start: string;
+    mytracks: string;
+    balance: string;
+    calc: string;
+    info: string;
+    manzil: string;
+  };
+
   // --- §4.3 add-track result summary ---
   summaryAdded(n: number, codes: string): string;
   summaryClaimed(n: number, codes: string): string;
@@ -104,6 +114,8 @@ export interface Strings {
 
   // --- §3.3 my tracks ---
   myTracksHeader: string;
+  /** Hint under the list: tap a track button to open its full card. */
+  myTracksTapHint: string;
   /** Appended to a READY_FOR_PICKUP line when weight/price are set. */
   readyDetail(d: ReadyDetail): string;
   pageIndicator(page: number, pages: number): string;
@@ -129,6 +141,10 @@ export interface Strings {
   calcAskKg: string;
   calcResult(v: CalcResultVars): string;
   calcInvalid: string;
+  /** Calculator opened but the tenant has no active tariff to price against. */
+  calcNoTariffs: string;
+  /** USD tenant with no kurs set — can't price (config problem, not user error). */
+  calcNoRate: string;
 
   // --- §3.10 China warehouse address (§4.5) ---
   chinaAddrHeader: string;

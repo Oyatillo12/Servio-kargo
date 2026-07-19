@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SectionCard } from '@/components/ui/section-card';
 import { Switch } from '@/components/ui/switch';
 import {
   Select,
@@ -106,219 +107,218 @@ export function SettingsForm({ initial: init }: { initial: SettingsInitial }) {
       <input type="hidden" name="weekday" value={weekday} />
       <input type="hidden" name="hour" value={hour} />
 
-      {/* Office info */}
-      <div className="space-y-3 rounded-xl border border-border bg-white p-3.5">
-        <h2 className="text-[13.5px] font-semibold">Ofis ma&apos;lumotlari</h2>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="pickupAddress">Manzil</Label>
-          <Input
-            id="pickupAddress"
-            name="pickupAddress"
-            defaultValue={init.pickupAddress}
-            placeholder="Chilonzor 9, Toshkent"
-          />
-        </div>
-        <div className="flex gap-2.5">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <Label htmlFor="workingHours">Ish vaqti</Label>
-            <Input
-              id="workingHours"
-              name="workingHours"
-              defaultValue={init.workingHours}
-              placeholder="09:00–19:00"
-              className="font-mono"
-            />
-          </div>
-          <div className="flex flex-[1.4] flex-col gap-1.5">
-            <Label htmlFor="contactPhone">Telefon</Label>
-            <Input
-              id="contactPhone"
-              name="contactPhone"
-              defaultValue={init.contactPhone}
-              placeholder="+998 71 200 40 40"
-              className="font-mono"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 🇨🇳 China warehouse address template (SPEC §3.10 / §5.9) */}
-      <div className="space-y-2 rounded-xl border border-border bg-white p-3.5">
-        <h2 className="text-[13.5px] font-semibold">
-          🇨🇳 Xitoy ombori manzili
-        </h2>
-        <textarea
-          name="chinaAddressTemplate"
-          defaultValue={init.chinaAddressTemplate}
-          rows={5}
-          placeholder={
-            'Ism: {client_code}\nTel: +86 ...\nManzil: Guangzhou, ...'
-          }
-          className="w-full resize-y rounded-lg border border-input bg-white px-3 py-2.5 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        <p className="text-[11.5px] text-muted-foreground">
-          <code className="rounded bg-secondary px-1 py-0.5">
-            {'{client_code}'}
-          </code>{' '}
-          — mijoz kodi o&apos;rniga qo&apos;yiladi.
-        </p>
-      </div>
-
-      {/* Info text (SPEC §3.5 / §5.9) */}
-      <div className="space-y-2 rounded-xl border border-border bg-white p-3.5">
-        <h2 className="text-[13.5px] font-semibold">Ma&apos;lumot matni</h2>
-        <textarea
-          name="infoText"
-          defaultValue={init.infoText}
-          rows={5}
-          placeholder="Taqiqlangan yuklar, qoidalar, tez-tez so'raladigan savollar…"
-          className="w-full resize-y rounded-lg border border-input bg-white px-3 py-2.5 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        <p className="text-[11.5px] text-muted-foreground">
-          Botda ℹ️ Ma&apos;lumot bo&apos;limida ko&apos;rsatiladi.
-        </p>
-      </div>
-
-      {/* Staff Telegram IDs */}
-      <div className="space-y-2.5 rounded-xl border border-border bg-white p-3.5">
-        <h2 className="text-[13.5px] font-semibold">Xodim Telegram IDlari</h2>
-        {staff.length === 0 ? (
-          <p className="text-[13px] text-muted-foreground">
-            Hali xodim qo&apos;shilmagan.
-          </p>
-        ) : (
-          staff.map((id) => (
-            <div
-              key={id}
-              className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5"
-            >
-              <span className="font-mono text-[12.5px] text-slate-600">
-                {id}
-              </span>
-              <button
-                type="button"
-                aria-label="O'chirish"
-                onClick={() => setStaff((s) => s.filter((x) => x !== id))}
-                className="p-1 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      {/* Section cards flow into two balanced columns on desktop. */}
+      <div className="space-y-3 md:grid md:grid-cols-2 md:items-start md:gap-3 md:space-y-0">
+        {/* Office info */}
+        <SectionCard title="Ofis ma'lumotlari">
+          <div className="space-y-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="pickupAddress">Manzil</Label>
+              <Input
+                id="pickupAddress"
+                name="pickupAddress"
+                defaultValue={init.pickupAddress}
+                placeholder="Chilonzor 9, Toshkent"
+              />
             </div>
-          ))
-        )}
-        <div className="flex gap-2">
-          <Input
-            value={newStaff}
-            onChange={(e) => setNewStaff(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addStaff();
-              }
-            }}
-            inputMode="numeric"
-            placeholder="Telegram ID"
-            className="font-mono"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label="Qo'shish"
-            onClick={addStaff}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+            <div className="flex gap-2.5">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label htmlFor="workingHours">Ish vaqti</Label>
+                <Input
+                  id="workingHours"
+                  name="workingHours"
+                  defaultValue={init.workingHours}
+                  placeholder="09:00–19:00"
+                  className="font-mono"
+                />
+              </div>
+              <div className="flex flex-[1.4] flex-col gap-1.5">
+                <Label htmlFor="contactPhone">Telefon</Label>
+                <Input
+                  id="contactPhone"
+                  name="contactPhone"
+                  defaultValue={init.contactPhone}
+                  placeholder="+998 71 200 40 40"
+                  className="font-mono"
+                />
+              </div>
+            </div>
+          </div>
+        </SectionCard>
 
-      {/* Weekly auto-reminder */}
-      <div className="space-y-3 rounded-xl border border-border bg-white p-3.5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[13.5px] font-semibold">Haftalik avto-eslatma</p>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Qarzdorlarga avtomatik eslatma
+        {/* 🇨🇳 China warehouse address template (SPEC §3.10 / §5.9) */}
+        <SectionCard title="🇨🇳 Xitoy ombori manzili">
+          <div className="space-y-2">
+            <textarea
+              name="chinaAddressTemplate"
+              defaultValue={init.chinaAddressTemplate}
+              rows={5}
+              placeholder={
+                'Ism: {client_code}\nTel: +86 ...\nManzil: Guangzhou, ...'
+              }
+              className="w-full resize-y rounded-lg border border-input bg-white px-3 py-2.5 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <p className="text-[11.5px] text-muted-foreground">
+              <code className="rounded bg-secondary px-1 py-0.5">
+                {'{client_code}'}
+              </code>{' '}
+              — mijoz kodi o&apos;rniga qo&apos;yiladi.
             </p>
           </div>
-          <Switch checked={weekly} onCheckedChange={setWeekly} />
-        </div>
-        <div
-          className={cn(
-            'flex gap-2.5',
-            !weekly && 'pointer-events-none opacity-50',
-          )}
-        >
-          <div className="flex flex-1 flex-col gap-1.5">
-            <Label>Kun</Label>
-            <Select value={weekday} onValueChange={setWeekday}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {WEEKDAYS.map((d) => (
-                  <SelectItem key={d.value} value={d.value}>
-                    {d.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-1 flex-col gap-1.5">
-            <Label>Soat</Label>
-            <Select value={hour} onValueChange={setHour}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {HOURS.map((h) => (
-                  <SelectItem key={h.value} value={h.value}>
-                    {h.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+        </SectionCard>
 
-      {/* Telegram bot */}
-      <div className="space-y-3 rounded-xl border border-border bg-white p-3.5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[13.5px] font-semibold">Telegram bot</p>
-            {init.botUsername ? (
-              <p className="mt-0.5 font-mono text-[12px] text-muted-foreground">
-                @{init.botUsername}
-              </p>
-            ) : null}
+        {/* Info text (SPEC §3.5 / §5.9) */}
+        <SectionCard title="Ma'lumot matni">
+          <div className="space-y-2">
+            <textarea
+              name="infoText"
+              defaultValue={init.infoText}
+              rows={5}
+              placeholder="Taqiqlangan yuklar, qoidalar, tez-tez so'raladigan savollar…"
+              className="w-full resize-y rounded-lg border border-input bg-white px-3 py-2.5 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <p className="text-[11.5px] text-muted-foreground">
+              Botda ℹ️ Ma&apos;lumot bo&apos;limida ko&apos;rsatiladi.
+            </p>
           </div>
-          <span
+        </SectionCard>
+
+        {/* Staff Telegram IDs */}
+        <SectionCard title="Xodim Telegram IDlari">
+          <div className="space-y-2.5">
+            {staff.length === 0 ? (
+              <p className="text-[13px] text-muted-foreground">
+                Hali xodim qo&apos;shilmagan.
+              </p>
+            ) : (
+              staff.map((id) => (
+                <div
+                  key={id}
+                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5"
+                >
+                  <span className="font-mono text-[12.5px] text-slate-600">
+                    {id}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="O'chirish"
+                    onClick={() => setStaff((s) => s.filter((x) => x !== id))}
+                    className="p-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            )}
+            <div className="flex gap-2">
+              <Input
+                value={newStaff}
+                onChange={(e) => setNewStaff(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addStaff();
+                  }
+                }}
+                inputMode="numeric"
+                placeholder="Telegram ID"
+                className="font-mono"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Qo'shish"
+                onClick={addStaff}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Weekly auto-reminder */}
+        <SectionCard
+          title="Haftalik avto-eslatma"
+          description="Qarzdorlarga avtomatik eslatma"
+          action={<Switch checked={weekly} onCheckedChange={setWeekly} />}
+        >
+          <div
             className={cn(
-              'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12.5px] font-semibold',
-              init.webhookConnected
-                ? 'border-[#c2e8cf] bg-[#e2f6e8] text-[#177338]'
-                : 'border-[#f5c8c6] bg-[#fde8e8] text-[#b3261e]',
+              'flex gap-2.5',
+              !weekly && 'pointer-events-none opacity-50',
             )}
           >
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Label>Kun</Label>
+              <Select value={weekday} onValueChange={setWeekday}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WEEKDAYS.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>
+                      {d.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Label>Soat</Label>
+              <Select value={hour} onValueChange={setHour}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {HOURS.map((h) => (
+                    <SelectItem key={h.value} value={h.value}>
+                      {h.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Telegram bot */}
+        <SectionCard
+          title="Telegram bot"
+          description={
+            init.botUsername ? (
+              <span className="font-mono">@{init.botUsername}</span>
+            ) : undefined
+          }
+          action={
             <span
               className={cn(
-                'h-[7px] w-[7px] rounded-full',
-                init.webhookConnected ? 'bg-[#177338]' : 'bg-[#b3261e]',
+                'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12.5px] font-semibold',
+                init.webhookConnected
+                  ? 'border-[#c2e8cf] bg-[#e2f6e8] text-[#177338]'
+                  : 'border-[#f5c8c6] bg-[#fde8e8] text-[#b3261e]',
               )}
-            />
-            {init.webhookConnected ? 'Ulangan' : 'Uzilgan'}
-          </span>
-        </div>
-        <Button
-          type="button"
-          variant={init.webhookConnected ? 'secondary' : 'destructive'}
-          className="w-full"
-          onClick={reconnect}
-          disabled={connecting}
+            >
+              <span
+                className={cn(
+                  'h-[7px] w-[7px] rounded-full',
+                  init.webhookConnected ? 'bg-[#177338]' : 'bg-[#b3261e]',
+                )}
+              />
+              {init.webhookConnected ? 'Ulangan' : 'Uzilgan'}
+            </span>
+          }
         >
-          {connecting ? 'Ulanmoqda…' : 'Webhookni qayta ulash'}
-        </Button>
+          <Button
+            type="button"
+            variant={init.webhookConnected ? 'secondary' : 'destructive'}
+            className="w-full"
+            onClick={reconnect}
+            disabled={connecting}
+          >
+            {connecting ? 'Ulanmoqda…' : 'Webhookni qayta ulash'}
+          </Button>
+        </SectionCard>
       </div>
 
       <SaveButton />

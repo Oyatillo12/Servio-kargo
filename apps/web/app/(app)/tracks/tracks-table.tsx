@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import type { TrackStatus } from '@kargotrack/shared';
 
 import { StatusBadge } from '@/components/status-badge';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -76,13 +77,10 @@ export function TracksTable({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-white p-10 text-center">
-        <div className="mx-auto mb-2 h-11 w-11 rounded-full border-2 border-dotted border-[#c3c9d6]" />
-        <p className="text-sm font-semibold text-foreground">Trek topilmadi</p>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          Qidiruv yoki filtrni o&apos;zgartirib ko&apos;ring.
-        </p>
-      </div>
+      <EmptyState
+        title="Trek topilmadi"
+        hint="Qidiruv yoki filtrni o'zgartirib ko'ring."
+      />
     );
   }
 

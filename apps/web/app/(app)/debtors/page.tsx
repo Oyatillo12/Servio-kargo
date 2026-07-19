@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { formatSom } from '@kargotrack/shared';
 
 import { DebtCell } from '@/components/debt-cell';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
 import { ReminderButton } from '@/components/reminder-button';
 import { requireAdmin } from '@/lib/auth';
 import { listDebtors } from '@/lib/queries';
@@ -20,15 +22,17 @@ export default async function DebtorsPage() {
 
   return (
     <div>
-      <div className="mb-3 flex items-baseline justify-between">
-        <h1 className="text-xl font-bold text-foreground">Qarzdorlar</h1>
-        <span className="text-xs text-muted-foreground">
-          jami{' '}
-          <span className="font-mono font-semibold text-[#b3261e]">
-            {debtors.length} · {formatSom(totalTiyin)} so&apos;m
+      <PageHeader
+        title="Qarzdorlar"
+        right={
+          <span className="text-xs text-muted-foreground">
+            jami{' '}
+            <span className="font-mono font-semibold text-[#b3261e]">
+              {debtors.length} · {formatSom(totalTiyin)} so&apos;m
+            </span>
           </span>
-        </span>
-      </div>
+        }
+      />
 
       {debtors.length > 0 ? (
         <div className="mb-4">
@@ -40,17 +44,15 @@ export default async function DebtorsPage() {
       ) : null}
 
       {debtors.length === 0 ? (
-        <div className="rounded-xl border border-border bg-white p-10 text-center">
-          <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full border border-[#c2e8cf] bg-[#e2f6e8] text-lg text-[#177338]">
-            ✓
-          </div>
-          <p className="text-sm font-semibold text-foreground">
-            Qarzdorlar yo&apos;q
-          </p>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Barcha to&apos;lovlar yopilgan.
-          </p>
-        </div>
+        <EmptyState
+          icon={
+            <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full border border-[#c2e8cf] bg-[#e2f6e8] text-lg text-[#177338]">
+              ✓
+            </div>
+          }
+          title="Qarzdorlar yo'q"
+          hint="Barcha to'lovlar yopilgan."
+        />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-white">
           {debtors.map((c) => (

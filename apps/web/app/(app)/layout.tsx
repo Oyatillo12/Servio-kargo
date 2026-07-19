@@ -2,17 +2,21 @@ import type { ReactNode } from 'react';
 import { LogOut } from 'lucide-react';
 
 import { requireAdmin } from '@/lib/auth';
+import { listDebtors } from '@/lib/queries';
 import { logoutAction } from '@/app/login/actions';
 import { RouteDots, Wordmark } from '@/components/brand';
 import { Button } from '@/components/ui/button';
 
-import { SidebarNav, BottomNav } from './nav-link';
+import { SidebarNav, BottomNav, MobileTitle } from './nav-link';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { admin, tenant } = await requireAdmin();
 
   const initial = tenant.name.trim().charAt(0).toUpperCase() || 'K';
   const roleLabel = admin.role === 'owner' ? 'Egasi' : 'Xodim';
+
+  // Pending-debtor count for the "Ko'proq" badge (Qarzdorlar lives in the sheet).
+  const debtorCount = (await listDebtors(tenant.id)).length;
 
   return (
     <div className="min-h-screen md:flex">
@@ -56,7 +60,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen flex-1 flex-col">
         {/* Mobile top bar */}
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white px-4 py-2.5 md:hidden">
-          <Wordmark className="text-base" />
+          <MobileTitle fallback={tenant.name} />
           <form action={logoutAction}>
             <button
               type="submit"
@@ -74,7 +78,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
         {/* Mobile bottom tab bar */}
         <div className="sticky bottom-0 z-10 md:hidden">
-          <BottomNav />
+          <BottomNav moreBadge={debtorCount} />
         </div>
       </div>
     </div>

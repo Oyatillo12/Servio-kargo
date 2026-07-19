@@ -29,6 +29,16 @@ export const ru: Strings = {
   menuInfo: 'ℹ️ Информация',
   menuLang: '🌐 Til / Язык',
 
+  // --- Telegram command-menu descriptions (setMyCommands) ---
+  commands: {
+    start: 'Начать / Регистрация',
+    mytracks: 'Мои посылки',
+    balance: 'Баланс и долг',
+    calc: 'Калькулятор цены',
+    info: 'Информация',
+    manzil: 'Адрес склада в Китае',
+  },
+
   // --- §4.3 add-track summary ---
   summaryAdded: (n, codes) => `✅ Добавлено (${n}): ${codes}`,
   summaryClaimed: (n, codes) => `♻️ Закреплено за вами (${n}): ${codes}`,
@@ -39,7 +49,8 @@ export const ru: Strings = {
 
   // --- §3.3 my tracks ---
   myTracksHeader: '📦 Мои посылки:',
-  readyDetail: ({ kg, som }) => ` — ${kg} kg, ${som} so'm`,
+  myTracksTapHint: '👆 Нажмите на трек, чтобы открыть подробности.',
+  readyDetail: ({ kg, som }) => ` — ${kg} кг, ${som} so'm`,
   pageIndicator: (page, pages) => `Страница ${page}/${pages}`,
 
   // --- §3.4 balance ---
@@ -97,7 +108,7 @@ export const ru: Strings = {
           : `🚚 Рейс: ${batchName}`,
       );
     }
-    if (kg != null) lines.push(`⚖️ Вес: ${kg} kg`);
+    if (kg != null) lines.push(`⚖️ Вес: ${kg} кг`);
     if (som != null) lines.push(`💵 К оплате: ${som} so'm`);
     return lines.join('\n');
   },
@@ -107,8 +118,12 @@ export const ru: Strings = {
   calcChooseTariff: 'Выберите тариф:',
   calcAskKg: 'Введите вес (кг), например: 3.2',
   calcResult: ({ tariffName, kg, som, usd }) =>
-    `🧮 ${tariffName}\n${kg} kg ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nТочная сумма рассчитывается при взвешивании.`,
+    `🧮 ${tariffName}\n${kg} кг ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nТочная сумма рассчитывается при взвешивании.`,
   calcInvalid: 'Введите число, например: 2.5',
+  calcNoTariffs:
+    'Пока нет доступных тарифов. Пожалуйста, свяжитесь с администратором.',
+  calcNoRate:
+    'Курс валюты ещё не задан. Пожалуйста, свяжитесь с администратором.',
 
   // --- §3.10 China warehouse address (§4.5) ---
   chinaAddrHeader:
@@ -144,7 +159,7 @@ export const ru: Strings = {
     `🇺🇿 ${code} — ваша посылка прибыла в Ташкент. Скоро будет готова к выдаче.`,
   notifReadyForPickup: ({ code, kg, som, pickupAddress, workingHours }) => {
     const lines = [`✅ ${code} — ваша посылка готова!`];
-    if (kg != null) lines.push(`⚖️ Вес: ${kg} kg`);
+    if (kg != null) lines.push(`⚖️ Вес: ${kg} кг`);
     if (som != null) lines.push(`💵 К оплате: ${som} so'm`);
     lines.push(`📍 Адрес: ${pickupAddress}`);
     lines.push(`🕘 Часы работы: ${workingHours}`);

@@ -72,7 +72,9 @@ export async function contactHandler(ctx: KargoContext): Promise<void> {
     lang,
   });
   ctx.customer = customer;
-  ctx.session.step = undefined;
+  // The `registered` copy invites the user to send their codes now, so arm the
+  // add-tracks flow — a pasted code goes to "add", not the free-text lookup.
+  ctx.session.step = 'awaiting_tracks';
 
   await ctx.reply(s.registered(customer.clientCode), {
     reply_markup: mainMenuKeyboard(s),

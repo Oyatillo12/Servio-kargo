@@ -18,6 +18,8 @@ import {
   STATUS_META,
 } from '@kargotrack/shared';
 
+import type { Track } from '@kargotrack/db/schema';
+
 import { getConfig } from '../config';
 import type { KargoContext } from '../context';
 import { findTrackByCode, getBatchById, getLastEventAt } from '../queries';
@@ -29,25 +31,16 @@ function formatIsoDate(iso: string): string {
   return d && m && y ? `${d}.${m}.${y}` : iso;
 }
 
-export async function handleLookup(
+/**
+ * Render + send a track's status card (SPEC §3.6), attaching the warehouse
+ * photo when one exists. Shared by the free-text lookup and the "Mening
+ * yuklarim" per-track buttons so both stay identical.
+ */
+export async function sendTrackCard(
   ctx: KargoContext,
-  text: string,
+  track: Track,
 ): Promise<void> {
   const s = ctx.s;
-  const normalized = normalizeCode(text);
-
-  // Not a plausible code → short help pointing to the menu.
-  if (!isValidTrackCode(normalized)) {
-    await ctx.reply(s.helpFallback);
-    return;
-  }
-
-  const track = await findTrackByCode(ctx.tenant.id, normalized);
-  if (!track) {
-    await ctx.reply(s.lookupNotFound(normalized));
-    return;
-  }
-
   const meta = STATUS_META[track.currentStatus];
   const lastAt = (await getLastEventAt(track.id)) ?? track.createdAt;
 
@@ -90,4 +83,26 @@ export async function handleLookup(
   }
 
   await ctx.reply(card);
+}
+
+export async function handleLookup(
+  ctx: KargoContext,
+  text: string,
+): Promise<void> {
+  const s = ctx.s;
+  const normalized = normalizeCode(text);
+
+  // Not a plausible code → short help pointing to the menu.
+  if (!isValidTrackCode(normalized)) {
+    await ctx.reply(s.helpFallback);
+    return;
+  }
+
+  const track = await findTrackByCode(ctx.tenant.id, normalized);
+  if (!track) {
+    await ctx.reply(s.lookupNotFound(normalized));
+    return;
+  }
+
+  await sendTrackCard(ctx, track);
 }
