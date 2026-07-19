@@ -81,6 +81,16 @@ export const ru: Strings = {
   // --- §3.7 ---
   langSwitched: 'Язык изменён ✅',
 
+  // --- §3.8 staff photo mode ---
+  staffPhotoNoCaption:
+    'Отправьте фото, указав трек-код в подписи (caption).',
+  staffPhotoNotFound: (code) =>
+    `❌ Трек не найден: ${code}. Проверьте код и отправьте ещё раз.`,
+  staffPhotoLinked: (code) => `✅ Фото прикреплено к треку ${code}.`,
+  staffPhotoTooLarge: (maxMb) =>
+    `❌ Файл слишком большой. Максимальный размер — ${maxMb} МБ.`,
+  staffPhotoError: 'Не удалось загрузить фото, попробуйте ещё раз чуть позже.',
+
   // --- §4.2 notifications ---
   notifChinaWarehouse: (code) =>
     `📦 ${code} — ваша посылка принята на складе в Китае.`,

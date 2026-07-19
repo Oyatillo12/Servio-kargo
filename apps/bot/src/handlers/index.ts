@@ -9,6 +9,7 @@ import type { Bot } from 'grammy';
 import type { KargoContext } from '../context';
 import { contactHandler, langCallback, startCommand } from './start';
 import { myTracksPageCallback } from './menu';
+import { staffPhotoHandler } from './staffPhoto';
 import { textRouter } from './text';
 
 export function registerHandlers(bot: Bot<KargoContext>): void {
@@ -18,5 +19,6 @@ export function registerHandlers(bot: Bot<KargoContext>): void {
   bot.callbackQuery(/^mytracks:(\d+)$/, myTracksPageCallback);
 
   bot.on('message:contact', contactHandler);
+  bot.on('message:photo', staffPhotoHandler);
   bot.on('message:text', textRouter);
 }

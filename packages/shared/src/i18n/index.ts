@@ -103,6 +103,13 @@ export interface Strings {
   // --- §3.7 language switch ---
   langSwitched: string;
 
+  // --- §3.8 staff photo mode ---
+  staffPhotoNoCaption: string;
+  staffPhotoNotFound(code: string): string;
+  staffPhotoLinked(code: string): string;
+  staffPhotoTooLarge(maxMb: number): string;
+  staffPhotoError: string;
+
   // --- §4.2 status notifications (strings ready for the deferred sender) ---
   notifChinaWarehouse(code: string): string;
   notifInTransit(code: string): string;

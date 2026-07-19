@@ -333,6 +333,18 @@ export async function claimTrack(
   return rows.length > 0;
 }
 
+/** Link a warehouse photo (path relative to uploadsDir) to a track (SPEC §3.8). */
+export async function setTrackPhoto(
+  tenantId: string,
+  trackId: string,
+  photoPath: string,
+): Promise<void> {
+  await getDb()
+    .update(tracks)
+    .set({ photoPath })
+    .where(and(eq(tracks.tenantId, tenantId), eq(tracks.id, trackId)));
+}
+
 /** Timestamp of the most recent audit event for a track (SPEC §3.6). */
 export async function getLastEventAt(trackId: string): Promise<Date | null> {
   const db = getDb();

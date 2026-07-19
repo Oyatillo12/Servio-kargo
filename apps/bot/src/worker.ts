@@ -106,11 +106,11 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
 
   await limiter.acquire(chatId);
   try {
-    // Attach the warehouse photo on READY_FOR_PICKUP when the file exists (§4.2).
-    const photoAbs =
-      job.status === 'READY_FOR_PICKUP' && track.photoPath
-        ? join(getConfig().uploadsDir, track.photoPath)
-        : undefined;
+    // Attach the warehouse photo to the status notification when one exists, so
+    // the customer's next update after a staff upload carries it (§3.8, §4.2).
+    const photoAbs = track.photoPath
+      ? join(getConfig().uploadsDir, track.photoPath)
+      : undefined;
 
     if (photoAbs && existsSync(photoAbs)) {
       await api.sendPhoto(chatId, new InputFile(photoAbs), { caption: message });
