@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784470542510,
+      "tag": "0000_married_luke_cage",
+      "breakpoints": true
+    }
+  ]
+}

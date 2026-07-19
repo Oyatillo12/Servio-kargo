@@ -6,3 +6,10 @@
  */
 
 export const APP_NAME = 'KargoTrack';
+
+export {
+  normalizeCode,
+  isValidTrackCode,
+  TRACK_CODE_MIN_LENGTH,
+  TRACK_CODE_MAX_LENGTH,
+} from './normalize';

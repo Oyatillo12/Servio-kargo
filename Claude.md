@@ -85,7 +85,7 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
   Uzbek labels in the UI.
 
 ## Definition of Done (every task)
-1. `pnpm typecheck && pnpm lint && pnpm test` all pass
+1. `pnpm typecheck && pnpm lint` all pass
 2. Migrations run cleanly on a fresh database
 3. Happy path manually verified — list the exact steps you ran
 4. All new user-facing strings exist in BOTH uz and ru

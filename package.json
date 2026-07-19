@@ -14,6 +14,8 @@
     "typecheck": "pnpm -r --parallel run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "pnpm -r --parallel run test",
+    "db:seed": "pnpm --filter @kargotrack/db run db:seed",
     "db:generate": "pnpm --filter @kargotrack/db run db:generate",
     "db:migrate": "pnpm --filter @kargotrack/db run db:migrate"
   },
