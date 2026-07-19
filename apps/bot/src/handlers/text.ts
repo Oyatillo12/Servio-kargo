@@ -5,6 +5,8 @@
  *   3. otherwise → free-text status lookup / help fallback.
  */
 
+import { parseStaffWeighing } from '@kargotrack/shared';
+
 import type { KargoContext } from '../context';
 import { langKeyboard } from '../keyboards';
 import { handleAddTracks } from './addTrack';
@@ -13,6 +15,7 @@ import { showChinaAddress } from './china';
 import { matchMenuAction } from './common';
 import { handleLookup } from './lookup';
 import { showBalance, showInfo, showMyTracks } from './menu';
+import { handleStaffWeighing, isStaff } from './staffWeigh';
 
 /** Clear every pending multi-step flow's session state. */
 function resetFlows(ctx: KargoContext): void {
@@ -62,6 +65,16 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
     ctx.session.step = undefined;
     await handleAddTracks(ctx, text);
     return;
+  }
+
+  // Staff weighing (§3.8): a staff member's free-text `CODE 3.2` weighs the
+  // track. Only staff, and only when it parses — otherwise fall through to lookup.
+  if (isStaff(ctx)) {
+    const weighing = parseStaffWeighing(text);
+    if (weighing) {
+      await handleStaffWeighing(ctx, weighing);
+      return;
+    }
   }
 
   await handleLookup(ctx, text);

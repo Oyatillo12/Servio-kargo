@@ -134,6 +134,12 @@ export {
   type StatusTransitionInput,
   type StatusTransitionPlan,
 } from './services/statusChange';
+export {
+  parseStaffWeighing,
+  planStaffWeighing,
+  type StaffWeighing,
+  type StaffWeighingPlan,
+} from './services/staff';
 
 // i18n (SPEC §4)
 export {

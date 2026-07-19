@@ -121,12 +121,15 @@ export const ru: Strings = {
   // --- §3.7 ---
   langSwitched: 'Язык изменён ✅',
 
-  // --- §3.8 staff photo mode ---
+  // --- §3.8 staff mode (weighing + photo) / §4.5 staff strings ---
   staffPhotoNoCaption:
     'Отправьте фото, указав трек-код в подписи (caption).',
-  staffPhotoNotFound: (code) =>
-    `❌ Трек не найден: ${code}. Проверьте код и отправьте ещё раз.`,
-  staffPhotoLinked: (code) => `✅ Фото прикреплено к треку ${code}.`,
+  staffSaved: (code, kg, som) => `✅ ${code}: ${kg} кг → ${som} сум`,
+  staffSavedNew: (code, kg, som) =>
+    `🆕 ${code}: создан новый трек (${kg} кг → ${som} сум). Клиент пока не привязан.`,
+  staffPhotoOk: (code) => `📷 ${code}: фото прикреплено.`,
+  staffNotFound: (code) =>
+    `❓ ${code} не найден. Отправьте вместе с весом — создам новый трек, например: ${code} 3.2`,
   staffPhotoTooLarge: (maxMb) =>
     `❌ Файл слишком большой. Максимальный размер — ${maxMb} МБ.`,
   staffPhotoError: 'Не удалось загрузить фото, попробуйте ещё раз чуть позже.',

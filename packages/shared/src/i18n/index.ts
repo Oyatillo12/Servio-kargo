@@ -138,10 +138,14 @@ export interface Strings {
   // --- §3.7 language switch ---
   langSwitched: string;
 
-  // --- §3.8 staff photo mode ---
+  // --- §3.8 staff mode (weighing + photo) / §4.5 staff strings ---
   staffPhotoNoCaption: string;
-  staffPhotoNotFound(code: string): string;
-  staffPhotoLinked(code: string): string;
+  /** `CODE kg → price` saved onto an existing track. */
+  staffSaved(code: string, kg: string, som: string): string;
+  /** Weighing an unknown code created a new, unattached track. */
+  staffSavedNew(code: string, kg: string, som: string): string;
+  staffPhotoOk(code: string): string;
+  staffNotFound(code: string): string;
   staffPhotoTooLarge(maxMb: number): string;
   staffPhotoError: string;
 

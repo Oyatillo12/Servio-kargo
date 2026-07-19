@@ -121,12 +121,15 @@ export const uz: Strings = {
   // --- §3.7 ---
   langSwitched: "Til o'zgartirildi ✅",
 
-  // --- §3.8 staff photo mode ---
+  // --- §3.8 staff mode (weighing + photo) / §4.5 staff strings ---
   staffPhotoNoCaption:
     "Rasmni yuborishda izoh (caption) sifatida trek kodini yozing.",
-  staffPhotoNotFound: (code) =>
-    `❌ Bunday trek topilmadi: ${code}. Kodni tekshirib, qayta yuboring.`,
-  staffPhotoLinked: (code) => `✅ Rasm ${code} trekiga biriktirildi.`,
+  staffSaved: (code, kg, som) => `✅ ${code}: ${kg} kg → ${som} so'm`,
+  staffSavedNew: (code, kg, som) =>
+    `🆕 ${code}: yangi trek yaratildi (${kg} kg → ${som} so'm). Mijoz hali biriktirilmagan.`,
+  staffPhotoOk: (code) => `📷 ${code}: rasm biriktirildi.`,
+  staffNotFound: (code) =>
+    `❓ ${code} topilmadi. Vazn bilan yuborsangiz, yangi trek sifatida yarataman, masalan: ${code} 3.2`,
   staffPhotoTooLarge: (maxMb) =>
     `❌ Rasm hajmi juda katta. Ruxsat etilgan eng katta hajm — ${maxMb} MB.`,
   staffPhotoError: "Rasmni yuklab bo'lmadi, birozdan so'ng qayta urinib ko'ring.",
