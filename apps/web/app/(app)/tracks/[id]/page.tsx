@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { WeightForm, type TariffOption } from './weight-form';
 import { TrackActions } from './track-actions';
 
-export const metadata = { title: 'Trek — KargoTrack' };
+export const metadata = { title: 'Trek — SERVIO Kargo' };
 
 const RAIL: { key: TrackStatus; label: string; emoji: string }[] = [
   { key: 'CHINA_WAREHOUSE', label: 'Xitoy', emoji: '📦' },

@@ -4,7 +4,7 @@ import { listBroadcasts, listCustomerIdsWithTelegram } from '@/lib/queries';
 
 import { BroadcastForm } from './broadcast-form';
 
-export const metadata = { title: 'Xabarnoma — KargoTrack' };
+export const metadata = { title: 'Xabarnoma — SERVIO Kargo' };
 
 /** First 80 chars of the broadcast text, on a single line (SPEC §5.8 history). */
 function preview(text: string): string {

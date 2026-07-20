@@ -1,6 +1,9 @@
-import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
-/** The dotted route mark used under the KargoTrack wordmark (design 01/14). */
+import { cn } from '@/lib/utils';
+import logo from '../public/logo.png';
+
+/** The dotted route mark used under the SERVIO Kargo wordmark (design 01/14). */
 export function RouteDots({ className }: { className?: string }) {
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
@@ -13,16 +16,14 @@ export function RouteDots({ className }: { className?: string }) {
   );
 }
 
-/** KargoTrack wordmark. */
+/** SERVIO Kargo wordmark — the horizontal "servio kargo" logo lockup. */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span
-      className={cn(
-        'text-lg font-bold tracking-tight text-primary',
-        className,
-      )}
-    >
-      KargoTrack
-    </span>
+    <Image
+      src={logo}
+      alt="SERVIO Kargo"
+      priority
+      className={cn('h-6 w-auto', className)}
+    />
   );
 }

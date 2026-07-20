@@ -3,8 +3,8 @@ import type { Config } from 'tailwindcss';
 /**
  * Dense, mobile-first admin UI (SPEC §5 / CLAUDE.md coding conventions).
  * Styling layer: Tailwind + shadcn/ui (Radix primitives in `components/ui`).
- * Brand indigo (#27357e) + Inter / IBM Plex Mono, driven by the CSS tokens in
- * `app/globals.css`.
+ * Brand indigo (Indigo 800 · #2B2687) + Inter / IBM Plex Mono, driven by the CSS
+ * tokens in `app/globals.css`.
  */
 const config: Config = {
   darkMode: ['class'],
@@ -24,6 +24,26 @@ const config: Config = {
         mono: ['var(--font-mono)', 'IBM Plex Mono', 'ui-monospace', 'monospace'],
       },
       colors: {
+        // SERVIO brand palette (hex CSS vars from Colors.png) — usable as
+        // e.g. `text-brand-copper`, `bg-brand-indigo-50`, `border-brand-error`.
+        brand: {
+          'indigo-950': 'var(--brand-indigo-950)',
+          'indigo-800': 'var(--brand-indigo-800)',
+          'indigo-600': 'var(--brand-indigo-600)',
+          'indigo-300': 'var(--brand-indigo-300)',
+          'indigo-50': 'var(--brand-indigo-50)',
+          copper: 'var(--brand-copper)',
+          'copper-soft': 'var(--brand-copper-soft)',
+          black: 'var(--brand-black)',
+          'gray-700': 'var(--brand-gray-700)',
+          'gray-500': 'var(--brand-gray-500)',
+          'gray-300': 'var(--brand-gray-300)',
+          surface: 'var(--brand-surface)',
+          success: 'var(--brand-success)',
+          warning: 'var(--brand-warning)',
+          error: 'var(--brand-error)',
+          info: 'var(--brand-info)',
+        },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',

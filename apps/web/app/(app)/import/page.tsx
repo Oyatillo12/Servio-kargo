@@ -3,7 +3,7 @@ import { listBatches } from '@/lib/queries';
 
 import { ImportWizard } from './import-wizard';
 
-export const metadata = { title: 'Import — KargoTrack' };
+export const metadata = { title: 'Import — SERVIO Kargo' };
 
 export default async function ImportPage() {
   const { tenant } = await requireAdmin();

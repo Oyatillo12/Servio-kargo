@@ -5,7 +5,7 @@ import { RouteDots, Wordmark } from '@/components/brand';
 
 import { LoginForm } from './login-form';
 
-export const metadata = { title: 'Kirish — KargoTrack' };
+export const metadata = { title: 'Kirish — SERVIO Kargo' };
 
 export default async function LoginPage() {
   // Already signed in → straight to the panel.
@@ -14,7 +14,7 @@ export default async function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-7 px-5 py-10">
       <div className="flex flex-col items-center gap-2.5 text-center">
-        <Wordmark className="text-2xl" />
+        <Wordmark className="h-9" />
         <RouteDots />
         <p className="text-[13px] text-muted-foreground">
           Xitoy → O&apos;zbekiston kargo boshqaruvi
@@ -25,7 +25,7 @@ export default async function LoginPage() {
         <LoginForm />
       </div>
 
-      <p className="text-[11px] text-muted-foreground">KargoTrack admin panel</p>
+      <p className="text-[11px] text-muted-foreground">SERVIO Kargo admin panel</p>
     </main>
   );
 }

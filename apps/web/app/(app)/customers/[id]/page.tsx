@@ -13,7 +13,7 @@ import { sendReminderAction } from '@/lib/reminder-actions';
 
 import { PaymentForm } from './payment-form';
 
-export const metadata = { title: 'Mijoz — KargoTrack' };
+export const metadata = { title: 'Mijoz — SERVIO Kargo' };
 
 // Uzbek admin labels for payment methods (reuse the canonical i18n catalogue).
 const methodLabel = t('uz').paymentMethod;

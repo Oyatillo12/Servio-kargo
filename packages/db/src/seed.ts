@@ -1,7 +1,7 @@
 /**
- * Demo seed for KargoTrack.
+ * Demo seed for SERVIO Kargo.
  *
- * Creates one tenant (DemoKargo), one owner admin, 5 customers, 30 tracks
+ * Creates one tenant (SERVIO Kargo demo), one owner admin, 5 customers, 30 tracks
  * spread across every status with realistic timestamps over the last 20 days,
  * a full track_events audit trail per track, and a few payments so debt is
  * non-trivial. Prints row counts at the end.
@@ -76,7 +76,7 @@ function makeCode(i: number): string {
 }
 
 async function main() {
-  console.log('Seeding DemoKargo…');
+  console.log('Seeding SERVIO Kargo demo…');
 
   // Clean slate (FK-safe order). RESTART IDENTITY not needed (uuid PKs).
   await db.execute(
@@ -87,7 +87,7 @@ async function main() {
   const [tenant] = await db
     .insert(tenants)
     .values({
-      name: 'KargoTrack test',
+      name: 'SERVIO Kargo demo',
       codePrefix: 'DK',
       botToken: '8872793732:AAEp7wq-ayj5nT_uinYQovAjETp2QoLfw1o',
       botUsername: 'kargo_track_test_bot',

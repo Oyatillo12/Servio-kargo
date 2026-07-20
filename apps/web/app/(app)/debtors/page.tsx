@@ -12,7 +12,7 @@ import { sendReminderAction } from '@/lib/reminder-actions';
 
 import { BulkReminder } from './bulk-reminder';
 
-export const metadata = { title: 'Qarzdorlar — KargoTrack' };
+export const metadata = { title: 'Qarzdorlar — SERVIO Kargo' };
 
 export default async function DebtorsPage() {
   const { tenant } = await requireAdmin();

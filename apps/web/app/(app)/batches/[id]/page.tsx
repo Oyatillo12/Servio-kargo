@@ -11,7 +11,7 @@ import { getBatchDetail } from '@/lib/queries';
 
 import { BatchControls, type MemberInfo } from './batch-controls';
 
-export const metadata = { title: 'Reys — KargoTrack' };
+export const metadata = { title: 'Reys — SERVIO Kargo' };
 
 const TRANSPORT_LABEL: Record<Transport, string> = {
   avia: 'Avia',

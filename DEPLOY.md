@@ -1,4 +1,4 @@
-# Deploying KargoTrack (first time, step by step)
+# Deploying SERVIO Kargo (first time, step by step)
 
 You need a domain and a bank card (~30 min). Replace `kargotrack.uz` below with your own domain everywhere.
 

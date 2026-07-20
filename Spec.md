@@ -1,4 +1,4 @@
-# SPEC.md — KargoTrack Functional Specification (v2)
+# SPEC.md — SERVIO Kargo Functional Specification (v2)
 
 > Bu fayl — loyihaning to'liq texnik topshirig'i. CLAUDE.md bilan birga repo
 > ildizida turadi. Promptlar shu faylning bo'limlariga havola qiladi.

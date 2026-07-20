@@ -6,7 +6,7 @@
  * lives in the apps and passes plain data into these functions.
  */
 
-export const APP_NAME = 'KargoTrack';
+export const APP_NAME = 'SERVIO Kargo';
 
 // Track-code normalization (SPEC §7.1)
 export {

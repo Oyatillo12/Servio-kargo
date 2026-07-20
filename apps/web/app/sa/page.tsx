@@ -7,7 +7,7 @@ import { saLogoutAction } from './login/actions';
 import { OnboardForm } from './onboard-form';
 import { WebhookButton } from './webhook-button';
 
-export const metadata = { title: 'Super-admin — KargoTrack' };
+export const metadata = { title: 'Super-admin — SERVIO Kargo' };
 // Always reflect the latest tenants (no static caching for this console).
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +21,7 @@ export default async function SaPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-900">
-              KargoTrack — Super-admin
+              SERVIO Kargo — Super-admin
             </p>
             <p className="truncate text-xs text-slate-500">
               Platforma boshqaruvi

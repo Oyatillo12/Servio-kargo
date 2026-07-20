@@ -1,5 +1,5 @@
 /**
- * Custom grammY context for KargoTrack. Middleware in `bot.ts` loads the tenant
+ * Custom grammY context for SERVIO Kargo. Middleware in `bot.ts` loads the tenant
  * and (if any) the customer per update, resolves the effective language, and
  * attaches the i18n string catalogue — so handlers stay thin.
  */

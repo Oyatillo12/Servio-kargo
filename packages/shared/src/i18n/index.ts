@@ -1,5 +1,5 @@
 /**
- * i18n for KargoTrack user-facing strings (CLAUDE.md rule 5, SPEC §4).
+ * i18n for SERVIO Kargo user-facing strings (CLAUDE.md rule 5, SPEC §4).
  *
  * Uzbek (Latin) is the default, Russian secondary. Every customer-facing string
  * lives here — never hardcode text in handlers. The `Strings` interface is the

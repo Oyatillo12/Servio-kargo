@@ -1,4 +1,4 @@
-# KargoTrack — Multi-tenant Cargo Tracking System (China → Uzbekistan)
+# SERVIO Kargo — Multi-tenant Cargo Tracking System (China → Uzbekistan)
 
 ## Project Overview
 SaaS platform for cargo companies shipping from China (Guangzhou/Yiwu) to Uzbekistan.

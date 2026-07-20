@@ -12,7 +12,7 @@ import { SidebarNav, BottomNav, MobileTitle } from './nav-link';
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { admin, tenant } = await requireAdmin();
 
-  const initial = tenant.name.trim().charAt(0).toUpperCase() || 'K';
+  const initial = tenant.name.trim().charAt(0).toUpperCase() || 'S';
   const roleLabel = admin.role === 'owner' ? 'Egasi' : 'Xodim';
 
   // Pending-debtor count for the "Ko'proq" badge (Qarzdorlar lives in the sheet).

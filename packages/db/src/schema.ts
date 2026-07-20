@@ -1,5 +1,5 @@
 /**
- * Drizzle schema for KargoTrack (PostgreSQL).
+ * Drizzle schema for SERVIO Kargo (PostgreSQL).
  *
  * Core tables from CLAUDE.md "Data Model" plus the SPEC.md 7.8 `deleted_at`
  * soft-delete extension on `tracks`.

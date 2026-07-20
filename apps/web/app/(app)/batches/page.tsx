@@ -11,7 +11,7 @@ import { listBatches } from '@/lib/queries';
 
 import { NewBatchForm } from './new-batch-form';
 
-export const metadata = { title: 'Reyslar — KargoTrack' };
+export const metadata = { title: 'Reyslar — SERVIO Kargo' };
 
 const TRANSPORT_LABEL: Record<Transport, string> = {
   avia: 'Avia',

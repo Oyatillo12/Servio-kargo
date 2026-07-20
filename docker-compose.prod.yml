@@ -5,7 +5,7 @@
 services:
   postgres:
     image: postgres:18
-    container_name: kargotrack-postgres
+    container_name: serviokargo-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -25,7 +25,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     image: kargotrack-web
-    container_name: kargotrack-web
+    container_name: serviokargo-web
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -40,7 +40,7 @@ services:
       context: .
       dockerfile: apps/bot/Dockerfile
     image: kargotrack-bot
-    container_name: kargotrack-bot
+    container_name: serviokargo-bot
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -51,7 +51,7 @@ services:
 
   caddy:
     image: caddy:2
-    container_name: kargotrack-caddy
+    container_name: serviokargo-caddy
     restart: unless-stopped
     ports:
       - '80:80'

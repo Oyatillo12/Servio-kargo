@@ -11,7 +11,7 @@ import { getDailyTushum, getDashboardStats } from '@/lib/queries';
 
 import { TushumChart } from './tushum-chart';
 
-export const metadata = { title: 'Bosh sahifa — KargoTrack' };
+export const metadata = { title: 'Bosh sahifa — SERVIO Kargo' };
 
 const PERIOD_LABELS: Record<DashboardPeriod, string> = {
   today: 'Bugun',

@@ -9,7 +9,7 @@ import { CurrencyCard } from './currency-card';
 import { SettingsForm } from './settings-form';
 import { TariffsCard, type TariffView } from './tariffs-card';
 
-export const metadata = { title: 'Sozlamalar — KargoTrack' };
+export const metadata = { title: 'Sozlamalar — SERVIO Kargo' };
 
 export default async function SettingsPage() {
   const { tenant } = await requireAdmin();

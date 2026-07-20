@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy / update KargoTrack on the VPS. Safe to re-run: named volumes
+# Deploy / update SERVIO Kargo on the VPS. Safe to re-run: named volumes
 # (pgdata, uploads, caddy_*) are never removed, so there is no data loss.
 #
 # Usage:  ./deploy.sh

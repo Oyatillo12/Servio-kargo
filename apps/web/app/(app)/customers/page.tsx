@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { requireAdmin } from '@/lib/auth';
 import { listCustomersWithDebt } from '@/lib/queries';
 
-export const metadata = { title: 'Mijozlar — KargoTrack' };
+export const metadata = { title: 'Mijozlar — SERVIO Kargo' };
 
 export default async function CustomersPage({
   searchParams,

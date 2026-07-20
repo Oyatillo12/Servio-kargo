@@ -20,8 +20,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'KargoTrack — Admin',
+  title: 'SERVIO Kargo — Admin',
   description: 'Multi-tenant cargo tracking (China → Uzbekistan)',
+  icons: { icon: '/favicon.png', apple: '/favicon.png' },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

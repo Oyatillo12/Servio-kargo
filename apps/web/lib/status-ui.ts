@@ -1,7 +1,7 @@
 /**
  * Status badge styling for the admin panel. Labels + emoji come from the
  * canonical `STATUS_META` in `@kargotrack/shared` (SPEC §2); the Tailwind colour
- * classes here mirror the KargoTrack design system (design screen 17).
+ * classes here mirror the SERVIO Kargo design system (design screen 17).
  */
 
 import { STATUS_META, type TrackStatus } from '@kargotrack/shared';

@@ -3,39 +3,60 @@
 @tailwind utilities;
 
 /*
- * KargoTrack admin theme — brand indigo (#27357e) on a light neutral surface,
- * mapped onto shadcn/ui design tokens. Admins work from phones (mobile-first).
+ * SERVIO Kargo admin theme — brand indigo (Indigo 800 · #2B2687) on a light
+ * neutral surface, mapped onto shadcn/ui design tokens. The full brand palette
+ * from apps/web/public/Colors.png is exposed as --brand-* variables below.
+ * Admins work from phones (mobile-first).
  */
 @layer base {
   :root {
     color-scheme: light;
 
-    --background: 220 20% 97%; /* #f4f5f7 page */
-    --foreground: 225 34% 15%; /* #1a2035 text */
+    /* --- SERVIO brand palette (hex, from Colors.png) --- */
+    --brand-indigo-950: #16143b; /* Tun */
+    --brand-indigo-800: #2b2687; /* Asosiy — primary */
+    --brand-indigo-600: #4640bf;
+    --brand-indigo-300: #a7a3ea;
+    --brand-indigo-50: #eeedfa;
+    --brand-copper: #c2691e; /* Mis · urg'u — accent, keep ≤ ~10% of surface */
+    --brand-copper-soft: #e0873a; /* Mis · to'q fonda */
+    --brand-black: #101014; /* Qora */
+    --brand-gray-700: #55555f;
+    --brand-gray-500: #8a8a96;
+    --brand-gray-300: #d5d5dc;
+    --brand-surface: #f2f2f6; /* Fon */
+    --brand-success: #1f8a4c; /* Muvaffaqiyat */
+    --brand-warning: #c77e10; /* Ogohlantirish */
+    --brand-error: #cc3d33; /* Xato */
+    --brand-info: #3b6fd4; /* Ma'lumot */
+
+    /* --- shadcn/ui tokens (HSL), mapped onto the brand palette --- */
+    --background: 240 17% 96%; /* Fon #F2F2F6 */
+    --foreground: 243 49% 15%; /* Indigo 950 #16143B */
 
     --card: 0 0% 100%;
-    --card-foreground: 225 34% 15%;
+    --card-foreground: 243 49% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 225 34% 15%;
+    --popover-foreground: 243 49% 15%;
 
-    --primary: 230 53% 32%; /* #27357e */
+    --primary: 243 56% 34%; /* Indigo 800 #2B2687 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 20% 96%;
-    --secondary-foreground: 225 34% 15%;
+    --secondary: 240 14% 95%;
+    --secondary-foreground: 243 49% 15%;
 
-    --muted: 220 16% 95%;
-    --muted-foreground: 219 12% 41%; /* #5b6474 */
+    --muted: 240 14% 95%;
+    --muted-foreground: 240 6% 35%; /* Kulrang 700 #55555F */
 
-    --accent: 226 48% 95%; /* #eef0f9 */
-    --accent-foreground: 230 53% 32%;
+    --accent: 245 57% 96%; /* Indigo 50 #EEEDFA */
+    --accent-foreground: 243 56% 34%;
 
-    --destructive: 3 71% 41%; /* #b3261e */
+    --destructive: 4 60% 50%; /* Xato #CC3D33 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 16% 91%; /* #e4e7ec */
-    --input: 221 17% 86%; /* #d5dae3 */
-    --ring: 230 53% 32%;
+    --border: 240 9% 85%; /* Kulrang 300 #D5D5DC */
+    --input: 240 9% 82%;
+    --ring: 243 56% 34%;
 
     --radius: 0.625rem; /* 10px */
   }

@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:18
-    container_name: kargotrack-postgres
+    container_name: serviokargo-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: kargotrack

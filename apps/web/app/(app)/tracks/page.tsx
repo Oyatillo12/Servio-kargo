@@ -19,7 +19,7 @@ import { TracksTable, type TrackRowView } from './tracks-table';
 import { BatchFilter } from './batch-filter';
 import type { BatchOption } from './batch-assign-dialog';
 
-export const metadata = { title: 'Treklar — KargoTrack' };
+export const metadata = { title: 'Treklar — SERVIO Kargo' };
 
 function isStatus(v: string | undefined): v is TrackStatus {
   return !!v && (TRACK_STATUSES as readonly string[]).includes(v);
