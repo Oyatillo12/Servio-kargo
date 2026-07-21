@@ -1,6 +1,6 @@
 # Deploying SERVIO Kargo (first time, step by step)
 
-You need a domain and a bank card (~30 min). Replace `kargotrack.uz` below with your own domain everywhere.
+You need a domain and a bank card (~30 min). Replace `kargo.servio.uz` below with your own domain everywhere.
 
 ## 1. Buy a server (VPS)
 - Sign up at any VPS provider (Hetzner, DigitalOcean, Contabo).
@@ -9,7 +9,7 @@ You need a domain and a bank card (~30 min). Replace `kargotrack.uz` below with 
 
 ## 2. Point your domain at the server
 In your domain's DNS settings add two **A records**, both to your server IP:
-`kargotrack.uz` and `bot.kargotrack.uz`. Wait ~10 minutes for DNS to spread.
+`kargo.servio.uz` and `kargo-bot.servio.uz`. Wait ~10 minutes for DNS to spread.
 
 ## 3. Log in and install Docker
 `ssh root@YOUR_SERVER_IP`, then:

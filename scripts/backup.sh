@@ -14,7 +14,7 @@ OUT="$BACKUP_DIR/kargotrack_${STAMP}.sql.gz"
 mkdir -p "$BACKUP_DIR"
 
 echo "==> Dumping database to $OUT"
-docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" kargotrack-postgres \
+docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" serviokargo-postgres \
   pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner \
   | gzip > "$OUT"
 

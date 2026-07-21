@@ -22,7 +22,7 @@ $COMPOSE build
 echo "==> Starting database"
 $COMPOSE up -d postgres
 # Wait until Postgres reports healthy before migrating.
-until [ "$(docker inspect -f '{{.State.Health.Status}}' kargotrack-postgres 2>/dev/null)" = "healthy" ]; do
+until [ "$(docker inspect -f '{{.State.Health.Status}}' serviokargo-postgres 2>/dev/null)" = "healthy" ]; do
   echo "   waiting for postgres..."
   sleep 2
 done
