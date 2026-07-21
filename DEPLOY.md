@@ -9,7 +9,7 @@ You need a domain and a bank card (~30 min). Replace `kargo.servio.uz` below wit
 
 ## 2. Point your domain at the server
 In your domain's DNS settings add two **A records**, both to your server IP:
-`kargo.servio.uz` and `kargo-bot.servio.uz`. Wait ~10 minutes for DNS to spread.
+`kargo.servio.uz` and `bot.kargo.servio.uz`. Wait ~10 minutes for DNS to spread.
 
 ## 3. Log in and install Docker
 `ssh root@YOUR_SERVER_IP`, then:
@@ -38,8 +38,8 @@ chmod +x deploy.sh scripts/backup.sh
 ./deploy.sh
 ```
 This builds everything, creates the database tables, and starts the site.
-Open `https://kargotrack.uz` — HTTPS turns on by itself within a minute. Add
-your first company at `https://kargotrack.uz/sa` (use your `SUPERADMIN_TOKEN`).
+Open `https://kargo.servio.uz` — HTTPS turns on by itself within a minute. Add
+your first company at `https://kargo.servio.uz/sa` (use your `SUPERADMIN_TOKEN`).
 
 ## 7. Check the logs
 ```
