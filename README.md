@@ -39,7 +39,7 @@ the customer — throttled to respect Telegram rate limits, retried with backoff
 | Monorepo       | pnpm workspaces (Node ≥ 20, pnpm 10)                                     |
 | Admin panel    | Next.js 14 (App Router), Tailwind CSS, Radix UI                          |
 | Telegram bots  | grammY — one process serves all tenants' bots (webhook mode)             |
-| Database       | PostgreSQL (Docker images pin `postgres:18`) + Drizzle ORM migrations    |
+| Database       | PostgreSQL (Docker images pin `postgres:16`) + Drizzle ORM migrations    |
 | Job queue      | pg-boss (Postgres-backed, no Redis) for **all** outbound Telegram sends  |
 | Validation     | Zod on every external input                                              |
 | Tests / logs   | Vitest / pino                                                            |
