@@ -20,11 +20,23 @@ export interface DebtPayment {
   amountTiyin: number;
 }
 
-/** Statuses whose price counts toward debt. */
-const OWED_STATUSES: ReadonlySet<TrackStatus> = new Set<TrackStatus>([
+/**
+ * Statuses whose price counts toward debt.
+ *
+ * Exported because the panel also has to express this rule in SQL: the debtor
+ * count/total on every page load cannot pull the tenant's whole track table
+ * into Node (AUDIT.md T6), so it aggregates in Postgres with an `IN (…)` built
+ * from this very list. Keeping one array means the SQL cannot drift from the
+ * tested function — `debt.test.ts` asserts the two agree for every status.
+ */
+export const DEBT_OWED_STATUSES: readonly TrackStatus[] = [
   'READY_FOR_PICKUP',
   'DELIVERED',
-]);
+];
+
+const OWED_STATUSES: ReadonlySet<TrackStatus> = new Set<TrackStatus>(
+  DEBT_OWED_STATUSES,
+);
 
 /**
  * Net debt in tiyin. Positive = owed, negative = advance, 0 = settled.

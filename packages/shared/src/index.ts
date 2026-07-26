@@ -71,6 +71,7 @@ export { nextClientCode, CLIENT_CODE_SEQ_BASE } from './services/clientCode';
 export {
   computeDebtTiyin,
   describeDebt,
+  DEBT_OWED_STATUSES,
   type DebtTrack,
   type DebtPayment,
   type DebtKind,
@@ -113,6 +114,16 @@ export {
   type DayBucket,
   type TushumPoint,
 } from './services/dashboard';
+export {
+  TRACK_WORKLISTS,
+  WORKLIST_META,
+  PICKUP_STALE_DAYS,
+  isTrackWorklist,
+  stalePickupCutoff,
+  worklistLabel,
+  type TrackWorklist,
+  type WorklistLabel,
+} from './services/worklist';
 export {
   parseCodeCandidates,
   classifyCandidate,

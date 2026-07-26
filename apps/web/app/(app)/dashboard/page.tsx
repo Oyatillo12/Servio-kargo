@@ -7,9 +7,10 @@ import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/page-header';
 import { SectionCard } from '@/components/ui/section-card';
 import { requireAdmin } from '@/lib/auth';
-import { getDailyTushum, getDashboardStats } from '@/lib/queries';
+import { getDailyTushum, getDashboardStats, getWorklistCounts } from '@/lib/queries';
 
 import { TushumChart } from './tushum-chart';
+import { WorkQueue } from './work-queue';
 
 export const metadata = { title: 'Bosh sahifa — SERVIO Kargo' };
 
@@ -31,8 +32,9 @@ export default async function DashboardPage({
   const { tenant } = await requireAdmin();
   const period: DashboardPeriod = isPeriod(searchParams.p) ? searchParams.p : 'today';
 
-  const [stats, tushum] = await Promise.all([
+  const [stats, worklists, tushum] = await Promise.all([
     getDashboardStats(tenant.id, period),
+    getWorklistCounts(tenant.id),
     getDailyTushum(tenant.id),
   ]);
 
@@ -63,8 +65,16 @@ export default async function DashboardPage({
         }
       />
 
-      {/* Money hero — the two figures owners glance at most. */}
-      <div className="grid grid-cols-2 gap-2.5">
+      {/* Pending work first (AUDIT.md T19): the dashboard's top slot answers
+          "what do I do now", not "how was the month". The period toggle above
+          does not apply to it — a package unweighed since last week is still
+          today's job — which is why it sits in its own block. */}
+      <WorkQueue counts={worklists} />
+
+      {/* Money hero — the two figures owners glance at most. Single column on
+          phones: side by side, a 9-digit som figure had ~130px to live in and
+          either wrapped mid-number or shrank out of legibility. */}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <MoneyCard
           index={0}
           icon="💰"
@@ -160,29 +170,34 @@ function MoneyCard({
   const body = (
     <div
       className={cn(
-        'animate-fade-in-up min-w-0 rounded-xl border bg-white p-3.5 transition-colors',
+        // Label left / figure right on phones, stacked once the grid splits
+        // into two columns — the row layout is what buys the figure enough
+        // width to stay at full size and on one line.
+        'animate-fade-in-up flex min-w-0 items-center justify-between gap-3 rounded-xl border bg-white p-3.5 transition-colors sm:block',
         negative ? 'border-[#f3d6d4] hover:bg-[#fdf6f6]' : 'border-border',
       )}
       style={{ animationDelay: `${index * 45}ms` }}
     >
-      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+      <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
         <span className="text-sm leading-none">{icon}</span>
         <span className="truncate">{label}</span>
       </div>
-      <p
-        className={cn(
-          'mt-1.5 font-mono text-[21px] font-bold leading-tight tabular-nums',
-          negative ? 'text-[#b3261e]' : 'text-foreground',
-        )}
-      >
-        {value}
-        <span className="ml-1 text-[11px] font-medium text-muted-foreground">
-          so&apos;m
-        </span>
-      </p>
-      {sub ? (
-        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{sub}</p>
-      ) : null}
+      <div className="flex-none text-right sm:text-left">
+        <p
+          className={cn(
+            'whitespace-nowrap font-mono text-[21px] font-bold leading-tight tabular-nums sm:mt-1.5',
+            negative ? 'text-[#b3261e]' : 'text-foreground',
+          )}
+        >
+          {value}
+          <span className="ml-1 text-[11px] font-medium text-muted-foreground">
+            so&apos;m
+          </span>
+        </p>
+        {sub ? (
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{sub}</p>
+        ) : null}
+      </div>
     </div>
   );
   return href ? (

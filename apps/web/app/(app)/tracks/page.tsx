@@ -6,6 +6,8 @@ import {
   formatDate,
   formatKg,
   formatSom,
+  isTrackWorklist,
+  worklistLabel,
   type TrackStatus,
 } from '@kargotrack/shared';
 
@@ -15,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { ExportButton } from '@/components/export-button';
 import { PageHeader } from '@/components/page-header';
 import { cn } from '@/lib/utils';
+import { WORKLIST_ICONS } from '@/lib/worklist-ui';
 
 import { TracksTable, type TrackRowView } from './tracks-table';
 import { BatchFilter } from './batch-filter';
@@ -30,6 +33,8 @@ interface SearchParams {
   q?: string;
   status?: string;
   batch?: string;
+  /** Operational worklist from the dashboard (AUDIT.md T19). */
+  work?: string;
   page?: string;
 }
 
@@ -42,6 +47,11 @@ export default async function TracksPage({
 
   const q = searchParams.q?.trim() ?? '';
   const status = isStatus(searchParams.status) ? searchParams.status : undefined;
+  // A worklist already pins the status (e.g. `to_weigh` ⊂ CHINA_WAREHOUSE), so
+  // the two filters are alternatives, not layers: the status chips are replaced
+  // by the worklist banner while one is active. Unknown value → no filter,
+  // matching how `status` degrades, so a stale bookmark still opens.
+  const work = isTrackWorklist(searchParams.work) ? searchParams.work : undefined;
   const page = Math.max(1, Number(searchParams.page) || 1);
 
   const batchRows = await listBatches(tenant.id);
@@ -49,7 +59,14 @@ export default async function TracksPage({
     ? searchParams.batch
     : undefined;
 
-  const result = await listTracks({ tenantId: tenant.id, q, status, batchId, page });
+  const result = await listTracks({
+    tenantId: tenant.id,
+    q,
+    status,
+    batchId,
+    work,
+    page,
+  });
 
   const batchOptions: BatchOption[] = batchRows.map((b) => ({
     id: b.id,
@@ -73,7 +90,8 @@ export default async function TracksPage({
     dateText: formatDate(r.createdAt),
   }));
 
-  // Filter chip link, preserving the search term + batch filter.
+  // Filter chip link, preserving the search term + batch filter. `work` is
+  // deliberately dropped: picking a status chip means leaving the worklist.
   const chipHref = (target?: TrackStatus) => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
@@ -88,6 +106,7 @@ export default async function TracksPage({
   if (q) exportParams.set('q', q);
   if (status) exportParams.set('status', status);
   if (batchId) exportParams.set('batch', batchId);
+  if (work) exportParams.set('work', work);
   const exportHref = `/api/export/tracks${
     exportParams.toString() ? `?${exportParams}` : ''
   }`;
@@ -98,6 +117,7 @@ export default async function TracksPage({
     if (q) params.set('q', q);
     if (status) params.set('status', status);
     if (batchId) params.set('batch', batchId);
+    if (work) params.set('work', work);
     if (targetPage > 1) params.set('page', String(targetPage));
     const qs = params.toString();
     return qs ? `/tracks?${qs}` : '/tracks';
@@ -137,6 +157,7 @@ export default async function TracksPage({
         <form method="get" className="flex-1">
           <input type="hidden" name="status" value={status ?? ''} />
           {batchId ? <input type="hidden" name="batch" value={batchId} /> : null}
+          {work ? <input type="hidden" name="work" value={work} /> : null}
           <Input
             name="q"
             defaultValue={q}
@@ -154,10 +175,36 @@ export default async function TracksPage({
         ) : null}
       </div>
 
-      <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {chip('Barchasi', undefined, !status)}
-        {TRACK_STATUSES.map((s) => chip(STATUS_META[s].uz, s, status === s))}
-      </div>
+      {work ? (
+        /* Came from the dashboard's "Bugungi ish" (AUDIT.md T19). The status
+           chips are hidden rather than shown inactive: a worklist already
+           implies a status, so a chip tapped on top of it would look like a
+           second filter and return nothing. One obvious way out instead. */
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#f0e0c2] bg-[#fffbf3] px-3 py-2.5">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#fdf0d8] text-base leading-none">
+            {WORKLIST_ICONS[work]}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-semibold text-foreground">
+              {worklistLabel(work, 'uz').label}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {worklistLabel(work, 'uz').hint}
+            </p>
+          </div>
+          <Link
+            href={chipHref()}
+            className="flex-none rounded-full border border-input bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-secondary"
+          >
+            ✕ Filtrsiz
+          </Link>
+        </div>
+      ) : (
+        <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {chip('Barchasi', undefined, !status)}
+          {TRACK_STATUSES.map((s) => chip(STATUS_META[s].uz, s, status === s))}
+        </div>
+      )}
 
       <TracksTable rows={rows} batches={batchOptions} />
 

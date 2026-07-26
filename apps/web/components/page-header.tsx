@@ -20,16 +20,21 @@ export interface PageHeaderProps {
 export function PageHeader({ title, count, right, className }: PageHeaderProps) {
   return (
     <div
+      // Wrapping matters on phones: a right slot with two or three controls
+      // (count + Excel + "Yangi …") is wider than a 360px viewport next to the
+      // title, and without `flex-wrap` it pushed straight off the screen.
       className={cn(
-        'mb-3 flex items-baseline justify-between gap-3',
+        'mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2',
         className,
       )}
     >
-      <h1 className="text-xl font-bold text-foreground">{title}</h1>
+      <h1 className="min-w-0 truncate text-xl font-bold text-foreground">
+        {title}
+      </h1>
       {right ? (
-        <div className="flex-none self-center">{right}</div>
+        <div className="ml-auto flex-none">{right}</div>
       ) : count != null ? (
-        <span className="flex-none text-xs text-muted-foreground">
+        <span className="ml-auto flex-none text-xs text-muted-foreground">
           jami <span className="font-mono font-semibold">{count}</span>
         </span>
       ) : null}

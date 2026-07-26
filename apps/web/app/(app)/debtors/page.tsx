@@ -23,27 +23,34 @@ export default async function DebtorsPage() {
 
   return (
     <div>
+      {/* The total used to sit in the header's right slot next to the Excel
+          button, which overflowed the viewport on phones and squeezed the
+          figure into an unreadable strip. It gets its own full-width card. */}
       <PageHeader
         title="Qarzdorlar"
-        right={
-          <div className="flex items-center gap-2">
-            <span className="mr-1 text-xs text-muted-foreground">
-              jami{' '}
-              <span className="font-mono font-semibold text-[#b3261e]">
-                {debtors.length} · {formatSom(totalTiyin)} so&apos;m
-              </span>
-            </span>
-            <ExportButton href="/api/export/customers?debtors=1" />
-          </div>
-        }
+        right={<ExportButton href="/api/export/customers?debtors=1" />}
       />
 
       {debtors.length > 0 ? (
-        <div className="mb-4">
-          <BulkReminder
-            count={debtors.length}
-            totalDebtText={`${formatSom(totalTiyin)} so'm`}
-          />
+        <div className="mb-4 rounded-xl border border-[#f3d6d4] bg-[#fdf6f6] p-3.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[12px] text-muted-foreground">Jami qarz</span>
+            <span className="text-[12px] text-muted-foreground">
+              {debtors.length} ta qarzdor
+            </span>
+          </div>
+          <p className="mt-1 whitespace-nowrap font-mono text-[22px] font-bold leading-tight tabular-nums text-[#b3261e]">
+            {formatSom(totalTiyin)}
+            <span className="ml-1 text-[12px] font-medium text-muted-foreground">
+              so&apos;m
+            </span>
+          </p>
+          <div className="mt-3">
+            <BulkReminder
+              count={debtors.length}
+              totalDebtText={`${formatSom(totalTiyin)} so'm`}
+            />
+          </div>
         </div>
       ) : null}
 

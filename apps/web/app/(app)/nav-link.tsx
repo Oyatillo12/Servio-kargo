@@ -64,22 +64,6 @@ function useActive(href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/**
- * Mobile top-bar title: shows the current section's label (falls back to the
- * tenant name) so users have context beyond the small bottom-tab label.
- */
-export function MobileTitle({ fallback }: { fallback: string }) {
-  const pathname = usePathname();
-  const match = NAV_ITEMS.find(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
-  return (
-    <span className="truncate text-base font-bold tracking-tight text-foreground">
-      {match ? match.label : fallback}
-    </span>
-  );
-}
-
 /** Desktop sidebar navigation (design screen 14). */
 export function SidebarNav() {
   return (

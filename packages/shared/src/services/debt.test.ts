@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeDebtTiyin, describeDebt, type DebtTrack } from './debt';
+import { TRACK_STATUSES } from '../status';
+import {
+  DEBT_OWED_STATUSES,
+  computeDebtTiyin,
+  describeDebt,
+  type DebtTrack,
+} from './debt';
 
 const track = (over: Partial<DebtTrack>): DebtTrack => ({
   currentStatus: 'READY_FOR_PICKUP',
@@ -62,6 +68,25 @@ describe('computeDebtTiyin (SPEC §7.5)', () => {
     expect(computeDebtTiyin(tracks, [{ amountTiyin: 3_000_000 }])).toBe(
       -1_000_000,
     );
+  });
+});
+
+/**
+ * The panel aggregates debt in SQL (AUDIT.md T6) using `DEBT_OWED_STATUSES` as
+ * the `IN (…)` list. If someone adds a status to the set inside
+ * `computeDebtTiyin` without adding it to the exported array (or vice versa),
+ * the screen and the badge would quietly disagree — this pins them together.
+ */
+describe('DEBT_OWED_STATUSES matches what computeDebtTiyin counts', () => {
+  it.each(TRACK_STATUSES)('%s', (status) => {
+    const counted =
+      computeDebtTiyin([{ currentStatus: status, priceTiyin: 7, deletedAt: null }], []) ===
+      7;
+    expect(counted).toBe(DEBT_OWED_STATUSES.includes(status));
+  });
+
+  it('lists each status at most once', () => {
+    expect(new Set(DEBT_OWED_STATUSES).size).toBe(DEBT_OWED_STATUSES.length);
   });
 });
 

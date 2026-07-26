@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   EXPORT_MAX_ROWS,
   TRACK_STATUSES,
+  TRACK_WORKLISTS,
   buildTracksSheet,
   truncationNotice,
 } from '@kargotrack/shared';
@@ -23,16 +24,21 @@ const Query = z.object({
   q: z.string().trim().min(1).max(200).optional().catch(undefined),
   status: z.enum(TRACK_STATUSES).optional().catch(undefined),
   batch: z.string().uuid().optional().catch(undefined),
+  // The dashboard worklists (AUDIT.md T19) are filters like any other, so the
+  // Excel button on `/tracks?work=…` has to carry them or the file would be
+  // wider than the screen it came from.
+  work: z.enum(TRACK_WORKLISTS).optional().catch(undefined),
 });
 
 export async function GET(req: Request) {
   const { tenant } = await requireAdmin();
 
   const params = new URL(req.url).searchParams;
-  const { q, status, batch } = Query.parse({
+  const { q, status, batch, work } = Query.parse({
     q: params.get('q') ?? undefined,
     status: params.get('status') ?? undefined,
     batch: params.get('batch') ?? undefined,
+    work: params.get('work') ?? undefined,
   });
 
   const { rows, total } = await listTracksForExport({
@@ -40,6 +46,7 @@ export async function GET(req: Request) {
     q,
     status,
     batchId: batch,
+    work,
   });
 
   const sheet = buildTracksSheet(rows, {

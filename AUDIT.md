@@ -40,7 +40,7 @@ Bular haqiqatan tekshirildi, shunchaki da'vo emas:
 | ------------------ | ---------------------------------------------------------------- |
 | `pnpm typecheck` | ✅ 4/4 workspace toza |
 | `pnpm lint` | ✅ 0 warning |
-| `pnpm test` | ✅ 192 test / 21 fayl (T1 dan keyin; boshlang'ich holat 166/18) |
+| `pnpm test` | ✅ 252 test / 24 fayl (T19 dan keyin; boshlang'ich holat 166/18) |
 | Multi-tenancy | ✅ Har query `tenant_id` bilan chegaralangan — chin, bezak emas |
 | Pul hisobi | ✅ Integer tiyin, float yo'q, USD kursi trekda muzlatilgan |
 | Xavfsizlik asoslari | ✅ argon2id, HMAC sessiya, path-traversal himoyasi, rasm validatsiyasi |
@@ -63,7 +63,7 @@ T3 bilan `apps/bot` ga vitest qo'shildi (13 test, `rateLimiter`), lekin
 | ~~F4~~ | ~~Rate limiter hamma tenantga umumiy → multi-tenant adolatsizligi~~ | ✅ Yopildi | T3 |
 | ~~F3b~~ | ~~Per-chat kechikish global jadvalni surardi (T3 da topildi)~~ | ✅ Yopildi | T3 |
 | ~~F5~~ | ~~Xatolik kuzatuvi va web healthcheck yo'q~~ | ✅ Yopildi | T5 |
-| F6 | Layoutda `listDebtors` — har sahifada to'liq jadval skani | 🟠 Yuqori | T6 |
+| ~~F6~~ | ~~Layoutda `listDebtors` — har sahifada to'liq jadval skani~~ | ✅ Yopildi | T6 |
 | ~~F7~~ | ~~Kritik indekslar yo'q (`track_events.track_id` va boshq.)~~ | ✅ Yopildi | T4 |
 | F8 | Bulk operatsiyalar tranzaksiyasiz, per-row tsikl | 🟠 Yuqori | T7 |
 | F9 | `role` majburlanmaydi; admin qo'shish/parol UI yo'q | 🟠 Yuqori | T8 |
@@ -77,7 +77,7 @@ T3 bilan `apps/bot` ga vitest qo'shildi (13 test, `rateLimiter`), lekin
 | F17 | Bot sessiyasi xotirada — deploy flowni uzadi, >1 replika yo'q | 🟢 Past | T16 |
 | F18 | Panel faqat o'zbekcha | 🟢 Past | T17 |
 | F19 | Paneldan rasm yuklash yo'q | 🟢 Past | T18 |
-| F20 | Dashboard operatsion emas (daromad grafigi = vanity metrika) | 🟢 Past | T19 |
+| ~~F20~~ | ~~Dashboard operatsion emas (daromad grafigi = vanity metrika)~~ | ✅ Yopildi | T19 |
 | F21 | 7 ta hujjat, 17 commit — chirishga tayyor takror | 🟢 Past | T22 |
 
 ---
@@ -259,8 +259,8 @@ Postgres 18):
 1. Toza baza → `drizzle-kit migrate` → **7 migratsiya toza o'tdi**,
    9 jadval + 23 indeks joyida.
 2. Loyihaning `db:seed` i ishladi (1 tenant, 5 mijoz, 30 trek, 106 event).
-3. `apps/web/scripts/verify-export.ts` — **haqiqiy** `lib/queries.ts`
-   funksiyalarini, haqiqiy sheet builder'larni va haqiqiy `writeXlsx` ni
+3. Verifikatsiya harness'i (bir martalik, repoda saqlanmagan) — **haqiqiy**
+   `lib/queries.ts` funksiyalarini, haqiqiy sheet builder'larni va `writeXlsx` ni
    chaqiradi, keyin yozilgan `.xlsx` ni **qayta o'qib** kataklarni tekshiradi.
    Ikki tenant ataylab **bir xil** ma'lumot bilan yaratildi: bir xil mijoz
    ismi, bir xil telefon, bir xil trek kodi. **72/72 tekshiruv o'tdi:**
@@ -585,23 +585,45 @@ yo'q. Siz **ishonchlilik sotmoqchisiz, lekin uni o'lchamaysiz.**
 
 ## P1 — PILOT DAVOMIDA (~1–2 hafta)
 
-### ☐ T6 · Layoutdan `listDebtors`ni olib tashlash
+### ☑ T6 · Layoutdan `listDebtors`ni olib tashlash — **BAJARILDI** (2026-07-27)
 
-`apps/web/app/(app)/layout.tsx:19`:
-```ts
-const debtorCount = (await listDebtors(tenant.id)).length;
-```
-Bu **layout** — har sahifa yuklanishida ishlaydi. `listDebtors` →
-`listCustomersWithDebt` → `queries.ts:665–681` tenantning **barcha** treklari va
-**barcha** to'lovlarini Node xotirasiga tortadi. Dashboard buni yana takrorlaydi.
-50 000 trekda: har bosishda sekundlar + yuzlab MB — faqat nishondagi raqam uchun.
+**Vazifalar:**
+- [x] `getDebtTotals` — qarzdorlar soni **va** umumiy qarz bitta SQL aggregate
+      bilan (`lib/queries/customers.ts`); `countDebtors` — nishon uchun o'ram
+- [x] `layout.tsx` endi `countDebtors` chaqiradi
+- [x] `getDashboardStats` ichidagi `listDebtors` ham `getDebtTotals` ga o'tdi
+- [x] `computeDebtTiyin` qoidasi bitta joyda: `DEBT_OWED_STATUSES` eksport
+      qilindi, SQL `IN (…)` shu massivdan quriladi
+- [x] Test: har status uchun `computeDebtTiyin` va `DEBT_OWED_STATUSES` mos
+      kelishi (`debt.test.ts`, 8 ta yangi tekshiruv)
 
-- [ ] Qarzdor sonini bitta SQL aggregate bilan hisoblash (`countDebtors`)
-- [ ] `getDashboardStats` ichidagi `listDebtors` ni ham aggregate'ga o'tkazish
-      (`queries.ts:1376`)
-- [ ] `computeDebtTiyin` testlangan qoidasi buzilmasin — SQL natijasini shu
-      funksiya bilan taqqoslovchi test yozish
-- [ ] Yoki: nishonni `Suspense` ichiga olib, sahifa renderini bloklamaslik
+**Suspense qilinmadi.** Ro'yxatdagi muqobil variant edi, lekin u sekin
+query'ni yashiradi, tezlashtirmaydi: baza ishi o'sha-o'sha qoladi, faqat
+nishon kechroq chiqadi. Aggregate ishning o'zini olib tashlaydi — 50 000
+trekda **0.1 MB** heap (29 MB o'rniga), ya'ni yashiradigan narsa qolmadi.
+
+**Qoida takrorlanmadi, ko'chirildi.** SQL `computeDebtTiyin` ning so'zma-so'z
+tarjimasi: soft-deleted chiqmaydi (§7.8), NULL narx 0, to'lovlar ayiriladi,
+`> 0` filtri esa **avansni boshqa mijozning qarziga qo'shib yubormaydi**.
+`customers` jadvali umuman skanerlanmaydi — faqat qarzli treki yoki to'lovi
+bor mijozda net nolga teng bo'lmasligi mumkin, shuning uchun ikkita
+guruhlangan tomon `FULL JOIN` qilinadi.
+
+**O'lchov** (toza `postgres:16`, 50 000 trek / 6 000 mijoz / 20 000 to'lov,
+har biri 3 marta issiq; harness bir martalik, repoda saqlanmadi):
+
+| Nishon (har sahifa yuklanishida) | Vaqt | Node heap |
+| ---------------------------------- | --------- | --------- |
+| **Oldin** — `listDebtors(...).length` | 655 ms | +29.0 MB |
+| **Keyin** — `countDebtors` (aggregate) | **41 ms** | **+0.1 MB** |
+| Tezlanish | **16×** | **290×** |
+
+**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ **252 test**
+(239 shared + 13 bot; T3 dan keyin 229) · ✅ toza bazada 7 migratsiya + seed ·
+✅ jonli bazada 38/38 tekshiruv (T19 bilan birga, pastda) · ✅ Spec.md § 5.10
+yangilandi · yangi user-facing string yo'q.
+
+---
 
 ### ☐ T7 · Bulk operatsiyalarni tranzaksiya + chunkga o'tkazish
 
@@ -737,13 +759,106 @@ panel emas — sotuvda e'tiroz bo'ladi.
 Hozir faqat bot staff mode. Ofisdan tuzatish imkoni yo'q.
 - [ ] Trek detalida rasm yuklash/o'chirish (JPEG, 10 MB — bot bilan bir xil qoida)
 
-### ☐ T19 · Dashboardni operatsion qilish
-Hozir 6 karta + 14-kunlik daromad grafigi. Ertalab 9:00da adminga kerak
-bo'lgani: nima keldi, nimani tortish kerak, nima da'vosiz.
-- [ ] "Bugun tortilishi kerak: N" (og'irliksiz, CHINA_WAREHOUSE)
-- [ ] "Biriktirilmagan: N" (T11 ga havola)
-- [ ] "Olib ketilmagan > 7 kun: N"
-- [ ] Daromad grafigini olib tashlash yoki pastga surish (T21)
+### ☑ T19 · Dashboardni operatsion qilish — **BAJARILDI** (2026-07-27)
+
+**Vazifalar:**
+- [x] `packages/shared/src/services/worklist.ts` — 3 ta worklist kaliti,
+      uz+ru yorliqlar, 7 kunlik chegara, `stalePickupCutoff` + **14 test**
+- [x] "⚖️ Tortish kerak" (CHINA_WAREHOUSE, og'irliksiz)
+- [x] "🙋 Biriktirilmagan" (T11 ga kirish nuqtasi — `?work=unassigned`)
+- [x] "⏳ Olib ketilmagan" (7 kundan beri READY_FOR_PICKUP)
+- [x] `getWorklistCounts` — uchalasi **bitta** skanda, `FILTER` bilan
+- [x] `/tracks?work=…` — dashboard kartasi bosilganda aynan o'sha qatorlar
+- [x] "⬇️ Excel" ham `work` ni oladi — fayl ekrandan farq qilmaydi (T2 qoidasi)
+- [x] Daromad grafigi **pastga surildi**: operatsion blok endi eng tepada
+
+**Bir shart, ikki joyda emas — bitta joyda.** Har worklist yagona
+`trackWorklistCondition()` da yashaydi; dashboard uni `count(*) FILTER
+(WHERE …)` ichida, `/tracks` esa `WHERE` da ishlatadi. Shuning uchun
+karta hech qachon bo'sh ekranga olib borolmaydi. Bu T2 dagi `tracksFilter`
+naqshining o'zi.
+
+**"7 kun" qayerdan olinadi — muhim qaror.** `tracks` da status vaqti yo'q.
+`created_at` bo'yicha hisoblash noto'g'ri bo'lardi: u kod **import qilingan**
+kun, va qayta import qilingan kodda oylar farq qiladi. Shuning uchun
+`track_events` dagi **oxirgi** (`MAX`, `EXISTS` emas) `READY_FOR_PICKUP`
+yozuvi olinadi — READY → DELIVERED → yana READY bo'lgan trek yangi
+tayyorligi bo'yicha baholanadi. Audit yozuvi umuman bo'lmasa `created_at`
+zaxira sifatida ishlaydi (jonli bazada ikkala holat ham tekshirildi).
+Oyna — sof 7×24 soat, kalendar kuni emas: "bir haftadan beri turibdi" —
+davomiylik, unga vaqt mintaqasi kerak emas (§7.9 kun bucketlariga tegishli).
+
+**Worklistlar ataylab kesishadi.** Mijozsiz va tortilmagan trek ikkalasida
+ham ko'rinadi — har biri o'z savoliga javob beradi, "bo'linish" emas.
+Tekshiruvda buni birinchi urinishda o'tkazib yubordim (kutilgan 3, chiqdi 4);
+xato kodda emas, kutilgan sonda edi.
+
+**UI (mobil/desktop):** telefonda uchta baland qator (58 px, barmoq uchun),
+`sm` dan boshlab uch ustun — blok ekranning yarmini egallamaydi. Ish bo'lsa
+qatorlar sarg'ish (`#fffbf3`), soni to'q sariq; ish bo'lmasa oq va oqargan
+nol. Uchalasi nol bo'lsa blok bitta yashil `Navbat bo'sh` qatoriga yig'iladi.
+`/tracks` da worklist faolligida status chiplari **yashiriladi** va o'rniga
+banner + `✕ Filtrsiz` chiqadi: worklist allaqachon statusni belgilab
+qo'ygan, ustiga chip bosilsa ikkinchi filtr kabi ko'rinib bo'sh natija
+berardi.
+
+**Qo'lda tekshirilgan qadamlar** (toza `postgres:16`, 55433-port):
+
+1. Toza konteyner → `drizzle-kit migrate` (**7 migratsiya toza**) → `db:seed`.
+2. Verifikatsiya harness'i — **haqiqiy** `lib/queries/*` funksiyalarini
+   chaqiradi, ikkita tenantga **bir xil** ma'lumot quyadi.
+   **38/38 tekshiruv o'tdi:**
+
+   | Tekshirilgan | Natija |
+   | ------------------------------------------------------------- | ------ |
+   | T6: aggregate == `listDebtors` (soni va tiyini) — 2 tenantda | ✅ |
+   | T6: avans / faqat-to'lov / nol-net qarzdor hisoblanmaydi | ✅ |
+   | T6: soft-delete tiklandi/qaytarildi → ikkala yo'l bir xil ko'chdi | ✅ |
+   | T19: dashboard soni == `/tracks?work=` qatorlari (3 worklist × 2 tenant) | ✅ |
+   | T19: dashboard soni == Excel eksport qatorlari | ✅ |
+   | 7 kun **aniq chegara**: 8 kun ✅, 7 kun ✗, 6 kun ✗ | ✅ |
+   | READY → DELIVERED → READY (kecha) → stale **emas** (`MAX`) | ✅ |
+   | Audit yozuvsiz eski trek → `created_at` zaxirasi ishladi | ✅ |
+   | Topshirilgan trek eski READY yozuvi bilan → chiqmaydi | ✅ |
+   | Soft-deleted trek hech qaysi worklistda yo'q (§7.8) | ✅ |
+   | `now` surilganda chegara ham suriladi (+2 kun → +2 trek) | ✅ |
+   | worklist + qidiruv birga ishlaydi | ✅ |
+   | Boshqa tenant kodlari natijaga sizmaydi | ✅ |
+
+3. «Bugungi ish» bloki `renderToStaticMarkup` bilan haqiqiy HTML ga render
+   qilindi — **16/16**: uchala havola (`/tracks?work=…`), sonlar, nol
+   qatorning so'lg'inligi, bo'sh holat (havolasiz), `sm:grid-cols-3` va
+   `min-h-[58px]`.
+4. 50 000 trekda o'lchov (T6 jadvali yuqorida). Yangi blokning narxi:
+   **77 ms**, bitta skanda
+   (`unassigned` 10 ms + `to_weigh` 13 ms + `stale_pickup` 42 ms alohida
+   o'lchanganda). Dashboard barcha query'ni `Promise.all` bilan parallel
+   qiladi, ya'ni bu wall-clock ga qo'shilmaydi.
+
+**Yo'l-yo'lakay topilgan nozik joy.** Xom `sql` shablon ichida drizzle
+qiymatga ustun mapper'ini qo'llamaydi, postgres.js esa yalang'och `Date` ni
+serializatsiya qila olmaydi (`ERR_INVALID_ARG_TYPE`, faqat ishga tushirganda
+chiqadi — typecheck ushlamaydi). Chegara `::timestamptz` bilan aniq ISO
+matn sifatida beriladi.
+
+**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ **252 test** ·
+✅ toza bazada migratsiya + seed · ✅ yuqoridagi 4 qadam ·
+✅ Spec.md § 5.2 / § 5.10 yangilandi · ✅ yangi stringlar uz **va** ru da
+(`WORKLIST_META` — panel hozircha `uz` so'raydi, T17 uchun tayyor).
+
+**⚠️ Halol cheklov.** Tekshiruv **ma'lumot qatlamini** (haqiqiy query'lar,
+haqiqiy baza, ikki tenant) va «Bugungi ish» blokining **render natijasini**
+qamraydi, lekin brauzerda **qo'lda bosib chiqilmadi** — panelga kirish parol
+kiritishni talab qiladi. `/tracks` dagi worklist banneri render testiga
+kirmagan (u async sahifa ichida inline JSX). Pilotdan oldin bir marta bosib
+chiqing: Bosh sahifa → uchala karta → `✕ Filtrsiz` → «⬇️ Excel».
+
+Yuqoridagi uchala harness **bir martalik** edi va repoda saqlanmadi —
+`apps/web` da hamon doimiy test yo'q, ya'ni bu tekshiruvlar regressiyani
+ushlab tura olmaydi. Doimiy qoplama — **T24**.
+
+**T21 hali ochiq.** Grafik olib tashlanmadi, faqat pastga surildi —
+o'chirish T21 ning qarori.
 
 ### ☐ T20 · Telegram Mini App (raqobat uchun)
 Cargou'da bor, sizda yo'q. Bot yetadi, lekin demo taqqoslashda yutqazasiz.
@@ -846,10 +961,12 @@ Shuning uchun T5 va T13 — marketing vazifasi, texnik vazifa emas.
 
 P0 YOPILDI. Qoldi: panelni brauzerda qo'lda bosib chiqish → demo yozib olish.
 
-Pilot boshlanadi. Pilot davomida: T6 → T7 → T8 → T11 → T10 → T9 → T12
+Pilot boshlanadi. Pilot davomida: T6 ✅ → T7 → T8 → T11 → T10 → T9 → T12
 Birinchi to'lovdan keyin: T13 → T14 → T15 → T16
-Keyin: T17–T20, va T21–T23 tozalash.
+Keyin: T17–T18, T20 (T19 ✅), va T21–T23 tozalash.
 ```
 
-**Keyingi:** `T6` (layoutdan `listDebtors` ni olib tashlash) — kichik,
-xatarsiz, har sahifa yuklanishida sezilarli foyda. Undan keyin T7.
+**Keyingi:** `T7` (bulk operatsiyalarni tranzaksiya + chunkga o'tkazish) —
+500 trekda yarim qo'llanilgan holat xavfi eng katta ochiq nuqson.
+Undan keyin T8 (rollar) va T11 (biriktirilmagan ekrani — T19 dagi
+`?work=unassigned` allaqachon uning kirish nuqtasini berdi).

@@ -176,7 +176,12 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
 - **5.2 /tracks** — table: Kod, Mijoz (client_code + ism, link), Status
   (colored badge), Reys, Og'irlik, Narx, Sana. Header carries `⬇️ Excel`
   (5.11). Filters: status dropdown,
-  reys dropdown + search (code / customer name / phone). The search input
+  reys dropdown + search (code / customer name / phone), plus the operational
+  worklists of 5.10 as `?work=<unassigned|to_weigh|stale_pickup>`. A worklist
+  replaces the status chips with a labelled banner and a `✕ Filtrsiz` exit,
+  because each one already implies a status; it combines with search, reys and
+  the Excel button, which exports exactly the worklist on screen (5.11). The
+  search input
   works with a USB barcode scanner out of the box (scanner = keyboard input
   ending with Enter → run search). Row checkboxes → bulk bar with THREE
   actions: `Status o'zgartirish` → modal: status select + `{N} ta trek
@@ -237,12 +242,37 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
     o'rnatish` button.
 - **5.10 /dashboard (Bosh sahifa)** — the post-login landing page. Period
   toggle: `Bugun / 7 kun / 30 kun` (Asia/Tashkent day boundaries — careful
-  with the UTC offset). Six stat cards: 📦 Xitoyda qabul qilingan
+  with the UTC offset).
+
+  The **first** block is `Bugungi ish` — pending work, NOT period-scoped,
+  because a package unweighed since last week is still today's job. Three
+  counted rows, each a link to the same filter on `/tracks?work=…` (5.2):
+
+  | Worklist | Row | Selects |
+  | -------------- | ------------------ | ------------------------------------------------- |
+  | `to_weigh` | ⚖️ Tortish kerak | `CHINA_WAREHOUSE` and `weight_grams IS NULL` |
+  | `unassigned` | 🙋 Biriktirilmagan | `customer_id IS NULL` |
+  | `stale_pickup` | ⏳ Olib ketilmagan | `READY_FOR_PICKUP` for more than 7 days |
+
+  The worklists deliberately overlap (an unowned unweighed track is in two of
+  them); each answers its own question. "For more than 7 days" is measured
+  from the **latest** `READY_FOR_PICKUP` event in `track_events`, not from
+  `tracks.created_at` — a track that went ready → delivered → ready again is
+  judged by its current readiness; `created_at` is only the fallback when the
+  audit log has no such row. It is a rolling 7×24h window, not a calendar day.
+  All three counts come from one query built from the same conditions the
+  `/tracks` filter uses, so a card can never send the admin to an empty list.
+  When all three are zero the block collapses to a single `Navbat bo'sh` line.
+
+  Below it, six stat cards: 📦 Xitoyda qabul qilingan
   (CHINA_WAREHOUSE events in period), 🇺🇿 Toshkentga kelgan, 🎉 Topshirilgan
   (count + jami kg + jami summa), 💰 Tushum (payments sum in period),
   👥 Yangi mijozlar, 🔴 Jami qarzdorlik (current total, not period-based)
-  + qarzdorlar soni. Below the cards: one bar chart — daily tushum for the
+  + qarzdorlar soni. Last: one bar chart — daily tushum for the
   last 14 days. Read-only; single tenant-scoped aggregate queries, no N+1.
+  Debtor count/total are one SQL aggregate over the 7.5 rule (never a full
+  debtor list) — the same aggregate backs the nav badge, which runs on every
+  page load.
 - **5.11 Excel eksport** — a `⬇️ Excel` button in the header of every list
   screen downloads exactly the rows **currently filtered on screen**, never the
   whole table:
