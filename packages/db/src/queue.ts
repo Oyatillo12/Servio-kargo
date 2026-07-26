@@ -36,6 +36,19 @@ import {
 const RETRY_LIMIT = 5;
 const RETRY_BACKOFF = true;
 
+/**
+ * Jobs fetched per poll and handled concurrently (AUDIT.md T3/F3).
+ *
+ * Sending one message is ~1 DB read + a Telegram round trip; awaited one at a
+ * time that caps the whole system at a few messages a second no matter what
+ * the rate limiter allows. Handling a batch concurrently overlaps the waiting,
+ * and the limiter (which books its slot synchronously) still spaces the actual
+ * sends — so throughput rises to the Telegram ceiling instead of the latency
+ * ceiling. 20 keeps the in-flight count comfortably under the Postgres pool
+ * even with all three workers busy.
+ */
+const BATCH_SIZE = 20;
+
 let bossPromise: Promise<PgBoss> | undefined;
 
 /** Start (once) and return the shared pg-boss instance with the queue ensured. */
@@ -112,27 +125,84 @@ export interface JobMeta {
   retryLimit: number;
 }
 
-export type NotifyJobHandler = (job: NotifyJob, meta: JobMeta) => Promise<void>;
+/** A per-job handler; throwing asks pg-boss to retry that job with backoff. */
+type JobHandler<T> = (job: T, meta: JobMeta) => Promise<void>;
+
+/** `Error` doesn't survive JSON.stringify — keep the parts worth storing. */
+function failurePayload(reason: unknown): Record<string, unknown> {
+  return reason instanceof Error
+    ? { message: reason.message, stack: reason.stack, name: reason.name }
+    : { message: String(reason) };
+}
 
 /**
- * Register the notification worker. Processes one job at a time (batchSize 1) so
- * a failure retries just that job; the handler applies Telegram rate limits and
- * must re-throw on send failure so pg-boss retries with backoff.
+ * Run a fetched batch concurrently while keeping per-job failure isolation.
+ *
+ * This is the subtle part of batching. pg-boss treats the batch callback as
+ * all-or-nothing: if it throws, `manager.watch` fails *every* job id in the
+ * batch, so one unreachable chat would resend to the other 19 recipients on
+ * retry. So instead of throwing, the jobs that failed are failed explicitly by
+ * id — `fail()` applies the same retry/backoff a thrown error would — and the
+ * callback returns normally. pg-boss then completes the batch, but its
+ * completion SQL is guarded by `state = 'active'` and `fail()` has already
+ * moved those rows out of that state, so the failures are not resurrected as
+ * successes.
+ */
+async function runBatch<T>(
+  boss: PgBoss,
+  queue: string,
+  jobs: PgBoss.JobWithMetadata<T>[],
+  handler: JobHandler<T>,
+): Promise<void> {
+  const results = await Promise.allSettled(
+    jobs.map((job) =>
+      handler(job.data, {
+        id: job.id,
+        retryCount: job.retryCount,
+        retryLimit: job.retryLimit,
+      }),
+    ),
+  );
+
+  const failures: Array<{ id: string; reason: unknown }> = [];
+  results.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      failures.push({ id: jobs[i]!.id, reason: result.reason });
+    }
+  });
+  if (failures.length === 0) return;
+
+  // This must not reject. If it did, pg-boss would fail the WHOLE batch and
+  // retry it — re-sending to the recipients that already received their
+  // message. Losing one job's retry is the lesser harm, and it is logged.
+  await Promise.all(
+    failures.map(({ id, reason }) =>
+      boss.fail(queue, id, failurePayload(reason)).catch((failErr) => {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[queue] ${queue}: could not mark job ${id} failed`,
+          failErr,
+          reason,
+        );
+      }),
+    ),
+  );
+}
+
+export type NotifyJobHandler = JobHandler<NotifyJob>;
+
+/**
+ * Register the notification worker. A batch is handled concurrently and each
+ * job succeeds or retries on its own (see {@link runBatch}); the handler
+ * applies Telegram rate limits and must re-throw on send failure so pg-boss
+ * retries with backoff.
  */
 export function workNotifications(handler: NotifyJobHandler): Promise<string> {
   return getBoss().then((boss) =>
     boss.work<NotifyJob>(
       NOTIFY_QUEUE,
-      { batchSize: 1, includeMetadata: true, pollingIntervalSeconds: 1 },
-      async (jobs) => {
-        for (const job of jobs) {
-          await handler(job.data, {
-            id: job.id,
-            retryCount: job.retryCount,
-            retryLimit: job.retryLimit,
-          });
-        }
-      },
+      { batchSize: BATCH_SIZE, includeMetadata: true, pollingIntervalSeconds: 1 },
+      (jobs) => runBatch(boss, NOTIFY_QUEUE, jobs, handler),
     ),
   );
 }
@@ -162,26 +232,15 @@ export function enqueueReminder(
   );
 }
 
-export type ReminderJobHandler = (
-  job: ReminderJob,
-  meta: JobMeta,
-) => Promise<void>;
+export type ReminderJobHandler = JobHandler<ReminderJob>;
 
 /** Register the per-customer reminder worker (mirrors {@link workNotifications}). */
 export function workReminders(handler: ReminderJobHandler): Promise<string> {
   return getBoss().then((boss) =>
     boss.work<ReminderJob>(
       REMINDER_QUEUE,
-      { batchSize: 1, includeMetadata: true, pollingIntervalSeconds: 1 },
-      async (jobs) => {
-        for (const job of jobs) {
-          await handler(job.data, {
-            id: job.id,
-            retryCount: job.retryCount,
-            retryLimit: job.retryLimit,
-          });
-        }
-      },
+      { batchSize: BATCH_SIZE, includeMetadata: true, pollingIntervalSeconds: 1 },
+      (jobs) => runBatch(boss, REMINDER_QUEUE, jobs, handler),
     ),
   );
 }
@@ -220,40 +279,44 @@ export function scheduleReminderSweep(): Promise<void> {
 
 // --- Broadcasts (SPEC §5.8, §7.11) -----------------------------------------
 
+/** Rows per bulk `insert` — one round trip each, well under any statement cap. */
+const ENQUEUE_CHUNK = 1000;
+
 /**
- * Enqueue one broadcast delivery. No `singletonKey`: under the 'standard' policy
- * keys are ignored, so every recipient's job is kept (a broadcast fans out to
- * one job per customer, all through this throttled queue).
+ * Enqueue a whole broadcast fan-out (SPEC §7.11, AUDIT.md T3). One `boss.send`
+ * per recipient is one round trip per recipient: a 3 000-customer broadcast
+ * spent minutes just writing rows, with the admin's request hanging on it.
+ * `boss.insert` writes a chunk per statement instead.
+ *
+ * No `singletonKey`: BROADCAST_QUEUE runs the 'standard' policy, where keys are
+ * ignored, so every recipient's job is kept. (Under 'short' the opposite is
+ * true and a keyless bulk insert would collapse the whole fan-out into one job
+ * — see {@link enqueueReminder}.)
  */
-export function enqueueBroadcast(job: BroadcastJob): Promise<string | null> {
-  return getBoss().then((boss) =>
-    boss.send(BROADCAST_QUEUE, job, {
-      retryLimit: RETRY_LIMIT,
-      retryBackoff: RETRY_BACKOFF,
-    }),
-  );
+export async function enqueueBroadcasts(jobs: BroadcastJob[]): Promise<void> {
+  if (jobs.length === 0) return;
+  const boss = await getBoss();
+  for (let i = 0; i < jobs.length; i += ENQUEUE_CHUNK) {
+    await boss.insert(
+      jobs.slice(i, i + ENQUEUE_CHUNK).map((data) => ({
+        name: BROADCAST_QUEUE,
+        data,
+        retryLimit: RETRY_LIMIT,
+        retryBackoff: RETRY_BACKOFF,
+      })),
+    );
+  }
 }
 
-export type BroadcastJobHandler = (
-  job: BroadcastJob,
-  meta: JobMeta,
-) => Promise<void>;
+export type BroadcastJobHandler = JobHandler<BroadcastJob>;
 
 /** Register the per-customer broadcast worker (mirrors {@link workReminders}). */
 export function workBroadcasts(handler: BroadcastJobHandler): Promise<string> {
   return getBoss().then((boss) =>
     boss.work<BroadcastJob>(
       BROADCAST_QUEUE,
-      { batchSize: 1, includeMetadata: true, pollingIntervalSeconds: 1 },
-      async (jobs) => {
-        for (const job of jobs) {
-          await handler(job.data, {
-            id: job.id,
-            retryCount: job.retryCount,
-            retryLimit: job.retryLimit,
-          });
-        }
-      },
+      { batchSize: BATCH_SIZE, includeMetadata: true, pollingIntervalSeconds: 1 },
+      (jobs) => runBatch(boss, BROADCAST_QUEUE, jobs, handler),
     ),
   );
 }

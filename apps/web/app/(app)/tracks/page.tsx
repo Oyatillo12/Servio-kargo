@@ -12,6 +12,7 @@ import {
 import { requireAdmin } from '@/lib/auth';
 import { listBatches, listTracks } from '@/lib/queries';
 import { Input } from '@/components/ui/input';
+import { ExportButton } from '@/components/export-button';
 import { PageHeader } from '@/components/page-header';
 import { cn } from '@/lib/utils';
 
@@ -82,6 +83,15 @@ export default async function TracksPage({
     return qs ? `/tracks?${qs}` : '/tracks';
   };
 
+  // Excel export of exactly what the current filters select (AUDIT.md T2).
+  const exportParams = new URLSearchParams();
+  if (q) exportParams.set('q', q);
+  if (status) exportParams.set('status', status);
+  if (batchId) exportParams.set('batch', batchId);
+  const exportHref = `/api/export/tracks${
+    exportParams.toString() ? `?${exportParams}` : ''
+  }`;
+
   // Pagination link, preserving filters.
   const pageHref = (targetPage: number) => {
     const params = new URLSearchParams();
@@ -110,7 +120,18 @@ export default async function TracksPage({
 
   return (
     <div>
-      <PageHeader title="Treklar" count={result.total} />
+      <PageHeader
+        title="Treklar"
+        right={
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              jami{' '}
+              <span className="font-mono font-semibold">{result.total}</span>
+            </span>
+            <ExportButton href={exportHref} />
+          </div>
+        }
+      />
 
       <div className="mb-3 flex gap-2">
         <form method="get" className="flex-1">

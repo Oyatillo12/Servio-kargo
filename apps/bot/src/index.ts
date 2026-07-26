@@ -14,6 +14,7 @@ import { APP_NAME } from '@kargotrack/shared';
 import { createBot } from './bot';
 import { getConfig } from './config';
 import { logger } from './logger';
+import { captureError, flushSentry, initSentry } from './sentry';
 import { listTenants } from './queries';
 import { BotRegistry } from './registry';
 import { startServer } from './server';
@@ -60,6 +61,11 @@ async function startPolling(pollingToken?: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // ESM imports are hoisted, so this cannot run "before the imports" — it runs
+  // before any of OUR code does, which is what error reporting needs. Tracing
+  // is off (see sentry.ts), so no auto-instrumentation ordering applies.
+  initSentry();
+
   const config = getConfig();
   const registry = new BotRegistry();
 
@@ -67,21 +73,25 @@ async function main(): Promise<void> {
   startServer(config, registry);
 
   // Outbound notification worker (pg-boss). Failing to start must not crash the
-  // bot process (CLAUDE.md rule 8) — log and keep serving updates.
-  startNotificationWorker().catch((err) =>
-    logger.error({ err }, 'failed to start notification worker'),
-  );
+  // bot process (CLAUDE.md rule 8) — log and keep serving updates. A worker that
+  // never starts means notifications silently stop, so it is reported too.
+  startNotificationWorker().catch((err) => {
+    logger.error({ err }, 'failed to start notification worker');
+    captureError(err, { where: 'startNotificationWorker' });
+  });
 
   // Debt reminders (manual + weekly sweep). Same rule 8 guarantee — a failure to
   // start must not crash the bot process.
-  startReminderWorker().catch((err) =>
-    logger.error({ err }, 'failed to start reminder worker'),
-  );
+  startReminderWorker().catch((err) => {
+    logger.error({ err }, 'failed to start reminder worker');
+    captureError(err, { where: 'startReminderWorker' });
+  });
 
   // Broadcasts (admin → all customers). Same rule 8 guarantee.
-  startBroadcastWorker().catch((err) =>
-    logger.error({ err }, 'failed to start broadcast worker'),
-  );
+  startBroadcastWorker().catch((err) => {
+    logger.error({ err }, 'failed to start broadcast worker');
+    captureError(err, { where: 'startBroadcastWorker' });
+  });
 
   if (config.polling) {
     logger.info(`${APP_NAME} bot starting in POLLING mode`);
@@ -91,15 +101,22 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   logger.error({ err }, 'fatal startup error');
+  captureError(err, { where: 'startup' });
+  // This is the one path that does exit, so give the report time to leave.
+  await flushSentry();
   process.exit(1);
 });
 
 // The bot must never die — log and continue on unexpected errors (CLAUDE.md 8).
+// Sentry's own handlers for these are removed in sentry.ts precisely because
+// they can terminate the process; we report and keep running instead.
 process.on('uncaughtException', (err) => {
   logger.error({ err }, 'uncaughtException');
+  captureError(err, { where: 'uncaughtException' });
 });
 process.on('unhandledRejection', (reason) => {
   logger.error({ reason }, 'unhandledRejection');
+  captureError(reason, { where: 'unhandledRejection' });
 });

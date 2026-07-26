@@ -63,3 +63,22 @@ export function formatDate(date: Date): string {
     parts.find((p) => p.type === type)?.value ?? '';
   return `${get('day')}.${get('month')}.${get('year')}`;
 }
+
+/**
+ * Format a Date as `DD.MM.YYYY HH:mm` in Asia/Tashkent — the audit timeline and
+ * the Excel export both need the time, not just the date (§7.9).
+ */
+export function formatDateTime(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: DISPLAY_TZ,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  return `${get('day')}.${get('month')}.${get('year')} ${get('hour')}:${get('minute')}`;
+}

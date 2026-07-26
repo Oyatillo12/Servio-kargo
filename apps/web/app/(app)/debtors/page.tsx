@@ -4,6 +4,7 @@ import { formatSom } from '@kargotrack/shared';
 
 import { DebtCell } from '@/components/debt-cell';
 import { EmptyState } from '@/components/empty-state';
+import { ExportButton } from '@/components/export-button';
 import { PageHeader } from '@/components/page-header';
 import { ReminderButton } from '@/components/reminder-button';
 import { requireAdmin } from '@/lib/auth';
@@ -25,12 +26,15 @@ export default async function DebtorsPage() {
       <PageHeader
         title="Qarzdorlar"
         right={
-          <span className="text-xs text-muted-foreground">
-            jami{' '}
-            <span className="font-mono font-semibold text-[#b3261e]">
-              {debtors.length} · {formatSom(totalTiyin)} so&apos;m
+          <div className="flex items-center gap-2">
+            <span className="mr-1 text-xs text-muted-foreground">
+              jami{' '}
+              <span className="font-mono font-semibold text-[#b3261e]">
+                {debtors.length} · {formatSom(totalTiyin)} so&apos;m
+              </span>
             </span>
-          </span>
+            <ExportButton href="/api/export/customers?debtors=1" />
+          </div>
         }
       />
 

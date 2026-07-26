@@ -12,6 +12,7 @@ import type { KargoContext, SessionData } from './context';
 import { registerHandlers } from './handlers';
 import { logger } from './logger';
 import { getCustomerByTg, getTenantById } from './queries';
+import { captureError } from './sentry';
 
 export function createBot(tenantId: string, token: string): Bot<KargoContext> {
   const bot = new Bot<KargoContext>(token);
@@ -55,6 +56,15 @@ export function createBot(tenantId: string, token: string): Bot<KargoContext> {
     } else {
       logger.error({ err: e, updateId: ctx.update.update_id }, 'handler error');
     }
+
+    // Report every handler failure: a bug that breaks one flow for one tenant
+    // is exactly the kind of thing nobody notices until a customer complains.
+    // Identifiers only — no names, phones or codes (they are scrubbed anyway).
+    captureError(e, {
+      tenantId,
+      updateId: ctx.update.update_id,
+      updateType: Object.keys(ctx.update).find((k) => k !== 'update_id'),
+    });
 
     try {
       const s = ctx.s ?? t(ctx.session?.lang ?? 'uz');

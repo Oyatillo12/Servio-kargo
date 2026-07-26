@@ -9,6 +9,7 @@ import { requireAdmin } from '@/lib/auth';
 import {
   assignTracksToBatch,
   setTrackStatuses,
+  setTracksCustomer,
   softDeleteTrack,
 } from '@/lib/queries';
 
@@ -85,6 +86,47 @@ export async function assignTracksToBatchAction(input: {
 
   revalidatePath('/tracks');
   return { ok: true, assigned };
+}
+
+const assignCustomerSchema = z.object({
+  trackIds: z.array(z.string().uuid()).min(1).max(1000),
+  customerId: z.string().uuid().nullable(),
+});
+
+export interface AssignCustomerResult {
+  ok?: boolean;
+  error?: string;
+  /** Tracks whose owner actually changed. */
+  changed?: number;
+  /** Tracks that already belonged to this customer (§2 no-op). */
+  skipped?: number;
+}
+
+/**
+ * Bulk-attach the selected tracks to one customer (SPEC §5.2 "Mijozga
+ * biriktirish"), or detach them when `customerId` is null. This is the day-0
+ * path: a channel-history import lands 500 unassigned codes and the admin
+ * assigns them per customer. Tenant-scoped; no notifications (see §7.3).
+ */
+export async function assignTracksCustomerAction(input: {
+  trackIds: string[];
+  customerId: string | null;
+}): Promise<AssignCustomerResult> {
+  const { tenant, admin } = await requireAdmin();
+
+  const parsed = assignCustomerSchema.safeParse(input);
+  if (!parsed.success) return { error: 'Treklarni yoki mijozni tekshiring.' };
+
+  const res = await setTracksCustomer({
+    tenantId: tenant.id,
+    trackIds: parsed.data.trackIds,
+    customerId: parsed.data.customerId,
+    createdBy: admin.id,
+  });
+  if (res === 'NO_CUSTOMER') return { error: 'Mijoz topilmadi.' };
+
+  revalidatePath('/tracks');
+  return { ok: true, ...res };
 }
 
 export interface DeleteTrackResult {

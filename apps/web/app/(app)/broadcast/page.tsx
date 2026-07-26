@@ -1,5 +1,6 @@
+import { formatDateTime } from '@kargotrack/shared';
+
 import { requireAdmin } from '@/lib/auth';
-import { formatDateTime } from '@/lib/datetime';
 import { listBroadcasts, listCustomerIdsWithTelegram } from '@/lib/queries';
 
 import { BroadcastForm } from './broadcast-form';

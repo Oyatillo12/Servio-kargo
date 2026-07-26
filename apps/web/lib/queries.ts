@@ -24,7 +24,7 @@ import {
 
 import { getDb } from '@kargotrack/db';
 import {
-  enqueueBroadcast,
+  enqueueBroadcasts,
   enqueueNotification,
   enqueueReminder,
 } from '@kargotrack/db/queue';
@@ -53,23 +53,49 @@ import {
   computeDebtTiyin,
   computeTrackPrice,
   lastNDays,
+  nextClientCode,
   normalizeCode,
+  normalizePhone,
   periodRange,
+  planAssignCustomer,
   planBatchPropagation,
   planCreateTariff,
   planDelete,
   planSetActive,
   planStatusChange,
+  EXPORT_MAX_ROWS,
   TUSHUM_CHART_DAYS,
+  type AssignEventMeta,
   type BatchStatus,
+  type CustomerExportRow,
   type DashboardPeriod,
   type DebtTrack,
   type ImportCode,
+  type Lang,
+  type PaymentExportRow,
+  type TrackExportRow,
   type TrackStatus,
   type TushumPoint,
 } from '@kargotrack/shared';
 
+import {
+  CUSTOMER_PICKER_LIMIT,
+  type CustomerOption,
+} from './customer-types';
+
+export { CUSTOMER_PICKER_LIMIT, type CustomerOption };
+
 export const TRACKS_PAGE_SIZE = 20;
+
+/** Rows per bulk INSERT / ids per bulk UPDATE — stays far under the Postgres
+ * 65535-bind-parameter cap even with every track column bound. */
+const IMPORT_CHUNK = 1000;
+
+function chunked<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
 
 // --- Tracks list (SPEC §5.2) ------------------------------------------------
 
@@ -94,20 +120,21 @@ export interface TrackListResult {
   pages: number;
 }
 
-/**
- * Search (code / customer name / phone) + status filter + pagination. The code
- * search normalizes the query the same way codes are stored (CLAUDE.md rule 4)
- * so `yt-7583` matches `YT7583…`.
- */
-export async function listTracks(args: {
+/** Filter args shared by the paged tracks list and its Excel export. */
+export interface TrackFilter {
   tenantId: string;
   q?: string;
   status?: TrackStatus;
   batchId?: string;
-  page: number;
-}): Promise<TrackListResult> {
-  const db = getDb();
+}
 
+/**
+ * The tracks-list WHERE (search + status + batch + soft-delete). Built once and
+ * reused by {@link listTracks} and {@link listTracksForExport} so "⬇️ Excel"
+ * can never hand back a different row set than the screen it was clicked from.
+ * Callers must join `customers` — the search touches its columns.
+ */
+function tracksFilter(args: TrackFilter) {
   const conds = [eq(tracks.tenantId, args.tenantId), isNull(tracks.deletedAt)];
   if (args.status) conds.push(eq(tracks.currentStatus, args.status));
   if (args.batchId) conds.push(eq(tracks.batchId, args.batchId));
@@ -126,7 +153,18 @@ export async function listTracks(args: {
     );
     conds.push(or(...searchConds)!);
   }
-  const where = and(...conds);
+  return and(...conds);
+}
+
+/**
+ * Search (code / customer name / phone) + status filter + pagination. The code
+ * search normalizes the query the same way codes are stored (CLAUDE.md rule 4)
+ * so `yt-7583` matches `YT7583…`.
+ */
+export async function listTracks(args: TrackFilter & { page: number }): Promise<TrackListResult> {
+  const db = getDb();
+
+  const where = tracksFilter(args);
 
   const [totalRow] = await db
     .select({ value: count() })
@@ -162,6 +200,123 @@ export async function listTracks(args: {
     .offset(offset);
 
   return { rows, total, page, pages };
+}
+
+// --- Excel export (AUDIT.md T2) ---------------------------------------------
+
+/** What an export query returns: the capped rows plus how many matched. */
+export interface ExportQueryResult<T> {
+  rows: T[];
+  /** Rows matching the filter, before {@link EXPORT_MAX_ROWS} is applied. */
+  total: number;
+}
+
+/**
+ * Every track matching the current screen's filter, newest first, for the Excel
+ * export. Same tenant scope and same WHERE as {@link listTracks} — only the
+ * pagination differs. Capped at {@link EXPORT_MAX_ROWS}; the caller reports the
+ * shortfall from `total` rather than truncating silently.
+ */
+export async function listTracksForExport(
+  args: TrackFilter,
+): Promise<ExportQueryResult<TrackExportRow>> {
+  const db = getDb();
+  const where = tracksFilter(args);
+
+  const [totalRow] = await db
+    .select({ value: count() })
+    .from(tracks)
+    .leftJoin(customers, eq(tracks.customerId, customers.id))
+    .where(where);
+
+  const rows = await db
+    .select({
+      codeOriginal: tracks.codeOriginal,
+      currentStatus: tracks.currentStatus,
+      clientCode: customers.clientCode,
+      customerName: customers.fullName,
+      customerPhone: customers.phone,
+      batchName: batches.name,
+      weightGrams: tracks.weightGrams,
+      priceTiyin: tracks.priceTiyin,
+      createdAt: tracks.createdAt,
+    })
+    .from(tracks)
+    .leftJoin(customers, eq(tracks.customerId, customers.id))
+    .leftJoin(batches, eq(tracks.batchId, batches.id))
+    .where(where)
+    .orderBy(desc(tracks.createdAt))
+    .limit(EXPORT_MAX_ROWS);
+
+  return { rows, total: totalRow?.value ?? 0 };
+}
+
+/**
+ * Customers with debt for the Excel export. `onlyDebtors` mirrors the /debtors
+ * screen (net debt > 0, largest first, SPEC §5.6); otherwise the /customers
+ * order (client code) is kept.
+ */
+export async function listCustomersForExport(
+  tenantId: string,
+  opts: { q?: string; onlyDebtors?: boolean } = {},
+): Promise<ExportQueryResult<CustomerExportRow>> {
+  const all = await listCustomersWithDebt(tenantId, opts.q);
+  const matching = opts.onlyDebtors
+    ? all.filter((c) => c.debtTiyin > 0).sort((a, b) => b.debtTiyin - a.debtTiyin)
+    : all;
+
+  return {
+    total: matching.length,
+    rows: matching.slice(0, EXPORT_MAX_ROWS).map((c) => ({
+      clientCode: c.clientCode,
+      fullName: c.fullName,
+      phone: c.phone,
+      lang: c.lang,
+      hasTelegram: c.hasTelegram,
+      trackCount: c.trackCount,
+      debtTiyin: c.debtTiyin,
+      createdAt: c.createdAt,
+    })),
+  };
+}
+
+/**
+ * Payments for the Excel export, newest first. `customerId` narrows it to one
+ * customer's statement (the customer-detail button); membership in the tenant
+ * is enforced by the tenant_id predicate, so an id from another tenant simply
+ * matches nothing.
+ */
+export async function listPaymentsForExport(
+  tenantId: string,
+  opts: { customerId?: string } = {},
+): Promise<ExportQueryResult<PaymentExportRow>> {
+  const db = getDb();
+  const conds = [eq(payments.tenantId, tenantId)];
+  if (opts.customerId) conds.push(eq(payments.customerId, opts.customerId));
+  const where = and(...conds);
+
+  const [totalRow] = await db
+    .select({ value: count() })
+    .from(payments)
+    .where(where);
+
+  const rows = await db
+    .select({
+      createdAt: payments.createdAt,
+      clientCode: customers.clientCode,
+      customerName: customers.fullName,
+      customerPhone: customers.phone,
+      method: payments.method,
+      amountTiyin: payments.amountTiyin,
+      note: payments.note,
+    })
+    .from(payments)
+    .innerJoin(customers, eq(payments.customerId, customers.id))
+    .where(where)
+    .orderBy(desc(payments.createdAt))
+    .limit(EXPORT_MAX_ROWS);
+
+  return { rows, total: totalRow?.value ?? 0 };
 }
 
 // --- Track detail (SPEC §5.3) -----------------------------------------------
@@ -414,6 +569,284 @@ export async function setTrackStatuses(args: {
   return result;
 }
 
+// --- Track → customer assignment (SPEC §5.3, §7.3) --------------------------
+
+export interface AssignCustomerResult {
+  /** Tracks whose owner actually changed (an event was appended). */
+  changed: number;
+  /** Selected tracks that already had this owner — skipped as §2 no-ops. */
+  skipped: number;
+}
+
+/** The target customer id was not found in this tenant. */
+export type AssignCustomerError = 'NO_CUSTOMER';
+
+/**
+ * Attach the given (tenant-scoped, non-deleted) tracks to `customerId`, or
+ * detach them when it is `null` (SPEC §5.3, §7.3). Ownership changes append a
+ * `track_events` row carrying the track's *unchanged* status plus the
+ * `planAssignCustomer` meta, so the audit log records who a parcel belonged to
+ * and when that moved (CLAUDE.md rule 7).
+ *
+ * No notification is sent — see the rationale in `assignCustomer.ts`: this is
+ * the day-0 bulk-attach path and §4.2 messages belong to status changes.
+ *
+ * Follows the `applyImport` shape: one transaction, ids grouped into a single
+ * bulk UPDATE per chunk, so 500 tracks cost a handful of round trips instead of
+ * 1000 and can never half-apply.
+ */
+export async function setTracksCustomer(args: {
+  tenantId: string;
+  trackIds: string[];
+  customerId: string | null;
+  createdBy: string;
+}): Promise<AssignCustomerResult | AssignCustomerError> {
+  const db = getDb();
+  const result: AssignCustomerResult = { changed: 0, skipped: 0 };
+  if (args.trackIds.length === 0) return result;
+
+  // Never trust an id from the client: the target must be OUR tenant's customer
+  // (CLAUDE.md rule 1) or we would happily hand a parcel to another company.
+  if (args.customerId != null) {
+    const [target] = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(
+        and(
+          eq(customers.tenantId, args.tenantId),
+          eq(customers.id, args.customerId),
+        ),
+      )
+      .limit(1);
+    if (!target) return 'NO_CUSTOMER';
+  }
+
+  await db.transaction(async (tx) => {
+    const rows = await tx
+      .select({ id: tracks.id, customerId: tracks.customerId })
+      .from(tracks)
+      .where(
+        and(
+          eq(tracks.tenantId, args.tenantId),
+          inArray(tracks.id, args.trackIds),
+          isNull(tracks.deletedAt),
+        ),
+      );
+
+    const writes: { id: string; meta: AssignEventMeta }[] = [];
+    for (const row of rows) {
+      const plan = planAssignCustomer({
+        currentCustomerId: row.customerId,
+        newCustomerId: args.customerId,
+      });
+      if (!plan.willWrite) {
+        result.skipped += 1;
+        continue;
+      }
+      writes.push({ id: row.id, meta: plan.eventMeta! });
+    }
+    if (writes.length === 0) return;
+
+    // Every write in this call sets the same customer_id, so the UPDATE groups
+    // into one statement per chunk; only the audit meta differs per row.
+    for (const chunk of chunked(writes, IMPORT_CHUNK)) {
+      await tx
+        .update(tracks)
+        .set({ customerId: args.customerId })
+        .where(
+          and(
+            eq(tracks.tenantId, args.tenantId),
+            inArray(
+              tracks.id,
+              chunk.map((w) => w.id),
+            ),
+          ),
+        );
+    }
+
+    // The event's status column is NOT NULL, so re-read each row's current
+    // status (unchanged by this operation) to stamp the audit row with it.
+    const statusById = new Map(
+      (
+        await tx
+          .select({ id: tracks.id, currentStatus: tracks.currentStatus })
+          .from(tracks)
+          .where(
+            and(
+              eq(tracks.tenantId, args.tenantId),
+              inArray(
+                tracks.id,
+                writes.map((w) => w.id),
+              ),
+            ),
+          )
+      ).map((r) => [r.id, r.currentStatus]),
+    );
+
+    for (const chunk of chunked(writes, IMPORT_CHUNK)) {
+      await tx.insert(trackEvents).values(
+        chunk.map((w) => ({
+          trackId: w.id,
+          status: statusById.get(w.id)!,
+          meta: { source: 'panel', ...w.meta },
+          createdBy: args.createdBy,
+        })),
+      );
+    }
+    result.changed += writes.length;
+  });
+
+  return result;
+}
+
+/**
+ * Typeahead search for the assignment picker (SPEC §5.3): client_code, name or
+ * phone. Phone terms are matched on `phone_normalized` too, so `+998 90 123 45
+ * 67` finds a customer stored as `901234567` (§7.12). An empty term returns the
+ * most recent customers, which is the common case right after an import.
+ */
+export async function searchCustomers(
+  tenantId: string,
+  q?: string,
+  limit: number = CUSTOMER_PICKER_LIMIT,
+): Promise<CustomerOption[]> {
+  const db = getDb();
+
+  const conds = [eq(customers.tenantId, tenantId)];
+  const term = q?.trim();
+  if (term) {
+    const like = `%${term}%`;
+    const searchConds = [
+      ilike(customers.fullName, like),
+      ilike(customers.phone, like),
+      ilike(customers.clientCode, like),
+    ];
+    const phoneKey = normalizePhone(term);
+    if (phoneKey) {
+      searchConds.push(ilike(customers.phoneNormalized, `%${phoneKey}%`));
+    }
+    conds.push(or(...searchConds)!);
+  }
+
+  const rows = await db
+    .select({
+      id: customers.id,
+      clientCode: customers.clientCode,
+      fullName: customers.fullName,
+      phone: customers.phone,
+      tgUserId: customers.tgUserId,
+    })
+    .from(customers)
+    .where(and(...conds))
+    .orderBy(desc(customers.createdAt))
+    .limit(limit);
+
+  return rows.map((r) => ({
+    id: r.id,
+    clientCode: r.clientCode,
+    fullName: r.fullName,
+    phone: r.phone,
+    hasTelegram: r.tgUserId != null,
+  }));
+}
+
+export type CreateCustomerResult =
+  | { ok: true; customer: Customer }
+  | { ok: false; error: 'DUPLICATE_PHONE'; existing: CustomerOption };
+
+/**
+ * Create a customer from the panel (SPEC §5.5) — the counterpart of the bot's
+ * self-registration. `tg_user_id` stays NULL: the person has not opened the bot
+ * yet, and the bot links this row to their Telegram account by phone on /start
+ * (§7.12) instead of creating a second one.
+ *
+ * `client_code` is assigned exactly like the bot does (`nextClientCode`) and
+ * retried on the unique-index collision a concurrent registration can cause.
+ * A phone that already belongs to a customer is refused with that customer, so
+ * the admin can open them instead of creating a duplicate.
+ */
+export async function createCustomer(args: {
+  tenantId: string;
+  codePrefix: string;
+  phone: string | null;
+  fullName: string | null;
+}): Promise<CreateCustomerResult> {
+  const db = getDb();
+  const phoneNormalized = normalizePhone(args.phone);
+
+  if (phoneNormalized) {
+    const [dupe] = await db
+      .select({
+        id: customers.id,
+        clientCode: customers.clientCode,
+        fullName: customers.fullName,
+        phone: customers.phone,
+        tgUserId: customers.tgUserId,
+      })
+      .from(customers)
+      .where(
+        and(
+          eq(customers.tenantId, args.tenantId),
+          eq(customers.phoneNormalized, phoneNormalized),
+        ),
+      )
+      .limit(1);
+    if (dupe) {
+      return {
+        ok: false,
+        error: 'DUPLICATE_PHONE',
+        existing: {
+          id: dupe.id,
+          clientCode: dupe.clientCode,
+          fullName: dupe.fullName,
+          phone: dupe.phone,
+          hasTelegram: dupe.tgUserId != null,
+        },
+      };
+    }
+  }
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const codeRows = await db
+      .select({ clientCode: customers.clientCode })
+      .from(customers)
+      .where(eq(customers.tenantId, args.tenantId));
+    const clientCode = nextClientCode(
+      args.codePrefix,
+      codeRows.map((r) => r.clientCode),
+    );
+
+    try {
+      const [row] = await db
+        .insert(customers)
+        .values({
+          tenantId: args.tenantId,
+          tgUserId: null,
+          phone: args.phone,
+          phoneNormalized,
+          fullName: args.fullName,
+          clientCode,
+        })
+        .returning();
+      if (row) return { ok: true, customer: row };
+    } catch (err) {
+      // Only a client_code race is retryable here: tg_user_id is NULL (and
+      // Postgres treats NULLs as distinct) and phone carries no unique index.
+      if (!isUniqueViolation(err)) throw err;
+    }
+  }
+  throw new Error('createCustomer: exhausted client_code retries');
+}
+
+/** Postgres unique-violation SQLSTATE, as surfaced by node-postgres. */
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { code?: unknown }).code === '23505'
+  );
+}
+
 /** Soft-delete a track (SPEC §5.3 `O'chirish`). Tenant-scoped, idempotent. */
 export async function softDeleteTrack(args: {
   tenantId: string;
@@ -629,6 +1062,12 @@ export interface CustomerRow {
   phone: string | null;
   trackCount: number;
   debtTiyin: number;
+  // Not shown in the list UI — carried for the Excel export (AUDIT.md T2),
+  // which reads the same rows so the file matches the screen exactly.
+  lang: Lang;
+  /** Whether the customer has ever opened the bot (SPEC §7.12 linking). */
+  hasTelegram: boolean;
+  createdAt: Date;
 }
 
 /**
@@ -706,6 +1145,9 @@ export async function listCustomersWithDebt(
     clientCode: c.clientCode,
     fullName: c.fullName,
     phone: c.phone,
+    lang: c.lang,
+    hasTelegram: c.tgUserId != null,
+    createdAt: c.createdAt,
     trackCount: countByCustomer.get(c.id) ?? 0,
     debtTiyin: computeDebtTiyin(
       tracksByCustomer.get(c.id) ?? [],
@@ -846,9 +1288,16 @@ export async function sendBroadcast(
 ): Promise<number> {
   const recipientIds = await listCustomerIdsWithTelegram(tenantId);
   const broadcastId = await createBroadcast(tenantId, text);
-  for (const customerId of recipientIds) {
-    await enqueueBroadcast({ tenantId, broadcastId, customerId, text });
-  }
+  // Bulk-inserted in chunks, not one round trip per recipient — the admin's
+  // request waits on this (AUDIT.md T3).
+  await enqueueBroadcasts(
+    recipientIds.map((customerId) => ({
+      tenantId,
+      broadcastId,
+      customerId,
+      text,
+    })),
+  );
   return recipientIds.length;
 }
 
@@ -1125,16 +1574,6 @@ export interface ImportResult {
  * Every status change on an attached, non-deleted track enqueues a notification
  * (§4.2). New (unclaimed) tracks never notify.
  */
-/** Rows per bulk INSERT / ids per bulk UPDATE — stays far under the Postgres
- * 65535-bind-parameter cap even with every track column bound. */
-const IMPORT_CHUNK = 1000;
-
-function chunked<T>(items: readonly T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
-  return out;
-}
-
 export async function applyImport(
   tenantId: string,
   status: TrackStatus,

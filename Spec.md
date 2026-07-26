@@ -174,18 +174,28 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
 
 - **5.1 /login** — telefon + parol. Xato: `Telefon yoki parol noto'g'ri`.
 - **5.2 /tracks** — table: Kod, Mijoz (client_code + ism, link), Status
-  (colored badge), Reys, Og'irlik, Narx, Sana. Filters: status dropdown,
+  (colored badge), Reys, Og'irlik, Narx, Sana. Header carries `⬇️ Excel`
+  (5.11). Filters: status dropdown,
   reys dropdown + search (code / customer name / phone). The search input
   works with a USB barcode scanner out of the box (scanner = keyboard input
-  ending with Enter → run search). Row checkboxes → bulk bar with TWO
+  ending with Enter → run search). Row checkboxes → bulk bar with THREE
   actions: `Status o'zgartirish` → modal: status select + `{N} ta trek
-  tanlandi, {M} ta mijozga xabar yuboriladi` → confirm; and `Reysga
-  biriktirish` → modal: batch select → confirm.
+  tanlandi, {M} ta mijozga xabar yuboriladi` → confirm; `Reysga
+  biriktirish` → modal: batch select → confirm; and `Mijozga biriktirish`
+  → customer picker (7.3) → confirm. The customer picker states plainly
+  that no message is sent.
 - **5.3 /tracks/[id]** — status select, tariff select (defaults to tenant's
   default tariff), weight input (kg, up to 2 decimals → stored grams, auto
   price per 7.4), price field with `Qo'lda kiritish` toggle (manual override,
   7.4), batch display, photo preview, event timeline (status, date, who),
-  customer card link. `O'chirish` = soft delete with confirm.
+  customer card. `O'chirish` = soft delete with confirm.
+  The customer card is also the assignment control (7.3): unattached →
+  `Biriktirish`; attached → `O'zgartirish` / `Ajratish` next to the profile
+  and call shortcuts. Both open the customer picker: search by
+  client_code / ism / telefon, plus `Yangi mijoz qo'shish` inline (5.5) for
+  the common case that the owner is not in the system yet.
+  Assignment events appear in the timeline as `Mijozga biriktirildi` /
+  `Mijozdan ajratildi` / `Mijoz o'zgartirildi`, not as a status.
 - **5.4 /import** — 3 steps:
   1. Upload `.xlsx` OR paste raw text (textarea).
   2. Preview: counts + expandable lists — `Yangi: {n}`, `Yangilanadi: {n}`
@@ -193,10 +203,17 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
      all + OPTIONAL `Reys` select (attach all imported tracks to a batch).
   3. Apply → result: created / updated / `{M} ta xabar navbatga qo'yildi`.
 - **5.5 /customers** — search; columns: Kod, Ism, Telefon, Treklar, Qarz
-  (red if > 0). **/customers/[id]** — info, tracks, payments history,
+  (red if > 0). Header carries `⬇️ Excel` (5.11).
+  `Yangi mijoz` button → telefon (majburiy) + ism (ixtiyoriy);
+  `client_code` avtomatik, `tg_user_id` NULL until the person opens the bot
+  (7.12). A phone that already belongs to a customer is refused, and that
+  customer is offered instead — no silent duplicate.
+  **/customers/[id]** — info, tracks, payments history (with `⬇️ Excel` for
+  that customer's statement, 5.11),
   `To'lov qo'shish` (summa so'mda, usul: naqd/Click/Payme/boshqa, izoh),
   `Eslatma yuborish` button.
-- **5.6 /debtors** — customers with debt > 0, sorted desc.
+- **5.6 /debtors** — customers with debt > 0, sorted desc. Header carries
+  `⬇️ Excel` (5.11).
   Per-row `Eslatma` + top `Barchasiga eslatma yuborish` (confirm with count).
 - **5.7 /batches (Reyslar)** — list: Nomi, Transport (Avia/Avto/Poyezd),
   ETA, Status, Treklar soni. `Yangi reys` form: nomi (e.g. `AVIA-21.07`),
@@ -226,6 +243,29 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
   👥 Yangi mijozlar, 🔴 Jami qarzdorlik (current total, not period-based)
   + qarzdorlar soni. Below the cards: one bar chart — daily tushum for the
   last 14 days. Read-only; single tenant-scoped aggregate queries, no N+1.
+- **5.11 Excel eksport** — a `⬇️ Excel` button in the header of every list
+  screen downloads exactly the rows **currently filtered on screen**, never the
+  whole table:
+
+  | Screen | File | Contents |
+  | ---------------- | -------------------------- | ------------------------------------------- |
+  | `/tracks` | `treklar-YYYY-MM-DD.xlsx` | search + status + reys filters applied |
+  | `/customers` | `mijozlar-YYYY-MM-DD.xlsx` | search applied, with the qarz column |
+  | `/debtors` | `qarzdorlar-YYYY-MM-DD.xlsx` | debt > 0, largest first |
+  | `/customers/[id]` | `tolovlar-YYYY-MM-DD.xlsx` | that customer's payment statement |
+
+  Rules:
+  - Soft-deleted tracks never appear (7.8), and debt/track counts exclude them.
+  - Money is written as a **number in so'm** and weight as a **number in kg**,
+    with the unit in the column header — a formatted `"1 250 000"` string is
+    text to Excel and `SUM()` over it returns 0. A negative qarz (avans, 7.5)
+    keeps its sign so the column still totals correctly.
+  - Timestamps are `DD.MM.YYYY HH:mm` text in Asia/Tashkent (7.9), not Excel
+    date serials, which carry no timezone.
+  - Column headers exist in uz and ru; the panel requests uz.
+  - The date in the file name is the Tashkent calendar day.
+  - Max 50 000 rows per file. Beyond that the file itself carries a warning
+    row naming the true total — an export is never silently partial.
 
 ## 6. Super-admin (`/sa`, guarded by SUPERADMIN_TOKEN env)
 
@@ -247,9 +287,22 @@ default tariff + owner.
   chosen status. Backward status moves are allowed (mistake correction) and
   logged like any change. If a batch was selected, set batch_id on ALL rows
   in the import (new and existing).
-- **7.3 Claiming:** track with `customer_id IS NULL` → attach to the claiming
-  customer. Attached to someone else → refuse (see 4.3). Codes are unique per
-  tenant, collisions across tenants are fine.
+- **7.3 Claiming & admin assignment:** track with `customer_id IS NULL` →
+  attach to the claiming customer. Attached to someone else → refuse (see
+  4.3). Codes are unique per tenant, collisions across tenants are fine.
+  The admin overrides all of this from the panel (5.2 bulk / 5.3 single):
+  attach, detach, or reassign to a different customer — the correction path
+  for a code claimed by the wrong person. Rules:
+  - Same owner as before → no-op: no write, no audit row.
+  - Any real change appends a `track_events` row carrying the track's
+    **unchanged** current status plus
+    `meta = {action: attach|detach|reassign, fromCustomerId, toCustomerId}`.
+    History is appended, never overwritten (CLAUDE.md rule 7).
+  - **No notification is sent.** 4.2 messages belong to *status* changes. A
+    day-0 import that attaches 500 historical tracks to their owners must not
+    blast 500 "yukingiz tayyor" messages about parcels already collected. The
+    customer sees the tracks in 📦 Mening yuklarim immediately, which is the
+    point. Soft-deleted tracks are never assigned (7.8).
 - **7.4 Pricing:**
   - Each track has a `tariff_id` (set to the tenant's default tariff when
     weight is first entered, changeable on track detail).
@@ -284,11 +337,41 @@ default tariff + owner.
 - **7.11 Broadcast:** goes to all tenant customers through the same throttled
   queue; record kept in `broadcasts` with final sent count. No segmentation
   in MVP.
+- **7.12 Phone matching & customer linking:** the same number arrives spelled
+  three ways — Telegram's `998901234567`, an admin's `+998 90 123-45-67`, an
+  import's `901234567`. Store `customers.phone_normalized` = digits only, then
+  the LAST 9 (the UZ national number length; shorter inputs kept whole, no
+  digits → NULL). Always written together with `phone`.
+  - Panel customer creation refuses a phone whose key already exists in the
+    tenant (5.5), so an admin cannot fork a customer in two.
+  - On `/start`, before creating anything, the bot looks for a customer in
+    this tenant with the same phone key **and `tg_user_id IS NULL`** — a
+    record the admin entered by hand — and links that one (sets `tg_user_id`,
+    keeps the office spelling of the name if there is one). Without this the
+    person gets a second, empty profile and their imported tracks, debt and
+    payments all stay on the first one.
+  - The lookup is scoped to `tg_user_id IS NULL` so a row already bound to
+    another Telegram account is never stolen, and the UPDATE re-asserts that
+    condition so two racing `/start`s cannot both claim it.
+  - `phone_normalized` is deliberately **not** uniquely indexed: production
+    data predates the column and a company may hold two records for one
+    number until an admin merges them. Duplicates are refused in the
+    application, where a clash can be reported instead of aborting a bot
+    registration mid-flow.
 
 ## 8. Non-functional requirements
 
 - Outbound sending ≤ 25 msg/sec global per bot, ≤ 1 msg/sec per chat;
   retry ×5 with exponential backoff; failed-after-retries jobs logged.
+  **Per bot** is literal: the budget is keyed by bot token, so one tenant's
+  broadcast cannot consume another tenant's allowance, and the 1 msg/sec
+  window is per (bot, chat) pair. A send deferred by the per-chat window must
+  not push unrelated chats back — the schedule is a set of booked slots, not a
+  single moving mark.
+- The queue workers take jobs in batches and handle a batch concurrently, so
+  throughput is bounded by the send limits above rather than by per-message
+  latency. A job that fails is retried on its own; the rest of its batch must
+  still complete, or a retry would re-send messages that already arrived.
 - Photos: JPEG, max 10 MB; reject others with a clear staff-mode error.
 - Auth: argon2id; session cookie httpOnly, secure, 30 days.
 - Any bot handler error → pino log + `error_generic` reply only when the

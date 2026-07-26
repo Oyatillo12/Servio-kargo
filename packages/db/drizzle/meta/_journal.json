@@ -36,6 +36,20 @@
       "when": 1784490254416,
       "tag": "0004_careless_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785070864553,
+      "tag": "0005_chubby_master_mold",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785073049900,
+      "tag": "0006_magenta_marvel_boy",
+      "breakpoints": true
     }
   ]
 }

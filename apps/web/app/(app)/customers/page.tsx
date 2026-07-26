@@ -2,10 +2,13 @@ import Link from 'next/link';
 
 import { DebtCell } from '@/components/debt-cell';
 import { EmptyState } from '@/components/empty-state';
+import { ExportButton } from '@/components/export-button';
 import { PageHeader } from '@/components/page-header';
 import { Input } from '@/components/ui/input';
 import { requireAdmin } from '@/lib/auth';
 import { listCustomersWithDebt } from '@/lib/queries';
+
+import { NewCustomerButton } from './new-customer-button';
 
 export const metadata = { title: 'Mijozlar — SERVIO Kargo' };
 
@@ -20,7 +23,21 @@ export default async function CustomersPage({
 
   return (
     <div>
-      <PageHeader title="Mijozlar" count={customers.length} />
+      <PageHeader
+        title="Mijozlar"
+        right={
+          <div className="flex items-center gap-2">
+            <span className="mr-1 text-xs text-muted-foreground">
+              jami{' '}
+              <span className="font-mono font-semibold">{customers.length}</span>
+            </span>
+            <ExportButton
+              href={`/api/export/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`}
+            />
+            <NewCustomerButton />
+          </div>
+        }
+      />
 
       <form method="get" className="mb-4">
         <Input
@@ -34,7 +51,11 @@ export default async function CustomersPage({
       {customers.length === 0 ? (
         <EmptyState
           title="Mijoz topilmadi"
-          hint="Qidiruvni o'zgartirib ko'ring."
+          hint={
+            q
+              ? "Qidiruvni o'zgartirib ko'ring."
+              : "«Yangi mijoz» tugmasi bilan qo'shing — mijoz botga kirganda telefoni bo'yicha ulanadi."
+          }
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-white">

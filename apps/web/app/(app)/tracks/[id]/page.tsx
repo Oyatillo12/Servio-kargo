@@ -1,25 +1,33 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Phone } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 import {
   PIPELINE_ORDER,
+  formatDateTime,
   formatKg,
   formatSom,
   formatUsd,
+  isAssignEventMeta,
   type TrackStatus,
 } from '@kargotrack/shared';
 
 import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
 import { requireAdmin } from '@/lib/auth';
-import { formatDateTime } from '@/lib/datetime';
 import { getTrackDetail, listActiveTariffs } from '@/lib/queries';
 import { statusView } from '@/lib/status-ui';
 import { cn } from '@/lib/utils';
 
+import { CustomerCard } from './customer-card';
 import { WeightForm, type TariffOption } from './weight-form';
 import { TrackActions } from './track-actions';
+
+/** Uzbek labels for the ownership-change events the timeline mixes in (§5.3). */
+const ASSIGN_LABEL: Record<string, string> = {
+  attach: 'Mijozga biriktirildi',
+  detach: 'Mijozdan ajratildi',
+  reassign: 'Mijoz o‘zgartirildi',
+};
 
 export const metadata = { title: 'Trek — SERVIO Kargo' };
 
@@ -120,13 +128,6 @@ export default async function TrackDetailPage({
       ? String(Math.round(track.priceTiyin / 100))
       : '';
 
-  const initials = (customer?.fullName ?? '')
-    .split(' ')
-    .map((p) => p.charAt(0))
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
   return (
     <div className="mx-auto max-w-md space-y-3">
       <Link
@@ -215,12 +216,21 @@ export default async function TrackDetailPage({
             {events.map((e, i) => {
               const v = statusView(e.status);
               const last = i === events.length - 1;
+              // An ownership change reuses the track's unchanged status in the
+              // status column, so read `meta.action` to label it as what it
+              // really was — otherwise the timeline shows the same status twice.
+              const assignLabel = isAssignEventMeta(e.meta)
+                ? ASSIGN_LABEL[e.meta.action]
+                : undefined;
               return (
                 <li key={e.id} className="flex gap-3">
                   <div className="flex flex-none flex-col items-center">
                     <span
-                      className="mt-1 h-2.5 w-2.5 rounded-full"
-                      style={{ background: v.dot }}
+                      className={cn(
+                        'mt-1 h-2.5 w-2.5 rounded-full',
+                        assignLabel && 'ring-2 ring-inset ring-white',
+                      )}
+                      style={{ background: assignLabel ? '#8a93a8' : v.dot }}
                     />
                     {!last ? (
                       <span className="my-1 w-0 flex-1 border-l-2 border-dotted border-input" />
@@ -228,7 +238,7 @@ export default async function TrackDetailPage({
                   </div>
                   <div className={cn('min-w-0', last ? 'pb-0' : 'pb-3.5')}>
                     <p className="text-[13.5px] font-semibold text-foreground">
-                      {v.label}
+                      {assignLabel ?? v.label}
                     </p>
                     <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
                       {formatDateTime(e.createdAt)}
@@ -244,41 +254,20 @@ export default async function TrackDetailPage({
         )}
       </div>
 
-      {/* Customer card */}
-      <div className="rounded-xl border border-border bg-white p-3.5">
-        {customer ? (
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-accent text-sm font-bold text-primary">
-              {initials || '—'}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-foreground">
-                {customer.fullName ?? 'Ismi yo‘q'}
-              </p>
-              <p className="truncate font-mono text-[12px] text-muted-foreground">
-                {customer.clientCode}
-                {customer.phone ? ` · ${customer.phone}` : ''}
-              </p>
-            </div>
-            <div className="flex flex-none items-center gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/customers/${customer.id}`}>Profil</Link>
-              </Button>
-              {customer.phone ? (
-                <Button asChild variant="outline" size="icon" aria-label="Qo'ng'iroq">
-                  <a href={`tel:${customer.phone}`}>
-                    <Phone className="h-4 w-4" />
-                  </a>
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Mijozga biriktirilmagan.
-          </p>
-        )}
-      </div>
+      {/* Customer card + attach/detach (SPEC §5.3, §7.3) */}
+      <CustomerCard
+        trackId={track.id}
+        customer={
+          customer
+            ? {
+                id: customer.id,
+                clientCode: customer.clientCode,
+                fullName: customer.fullName,
+                phone: customer.phone,
+              }
+            : null
+        }
+      />
 
       {/* Status change + delete */}
       <TrackActions

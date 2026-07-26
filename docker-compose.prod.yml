@@ -2,11 +2,21 @@
 #   docker compose -f docker-compose.prod.yml up -d --build
 # All secrets/config come from the .env file next to this one (see .env.example).
 
+# Docker's default json-file driver grows without bound and will eventually fill
+# the VPS disk, taking Postgres down with it. Every service caps its logs
+# (AUDIT.md T5).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
 services:
   postgres:
     image: postgres:16
     container_name: serviokargo-postgres
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -27,12 +37,29 @@ services:
     image: kargotrack-web
     container_name: serviokargo-web
     restart: unless-stopped
+    logging: *default-logging
     env_file: .env
     volumes:
       - uploads:/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
+    # Without this, a hung Next.js process keeps "running" forever and Docker
+    # never restarts it (AUDIT.md T5). The image is debian-slim with no curl or
+    # wget, so the probe uses Node's global fetch. /login renders without a
+    # session, so a 200 means the render pipeline is actually alive.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     # No published ports: Caddy proxies to it on the internal network.
 
   bot:
@@ -42,17 +69,33 @@ services:
     image: kargotrack-bot
     container_name: serviokargo-bot
     restart: unless-stopped
+    logging: *default-logging
     env_file: .env
     volumes:
       - uploads:/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
+    # The bot already serves GET /health; wire it up so a wedged process gets
+    # restarted instead of silently accepting webhooks it never processes.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:'+(process.env.PORT||8443)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   caddy:
     image: caddy:2
     container_name: serviokargo-caddy
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - '80:80'
       - '443:443'

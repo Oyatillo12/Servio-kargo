@@ -29,6 +29,7 @@ import {
   computeDebtTiyin,
   computeTrackPrice,
   nextClientCode,
+  normalizePhone,
   planStaffWeighing,
   type DebtTrack,
 } from '@kargotrack/shared';
@@ -90,6 +91,12 @@ export async function getCustomerByTg(
  * Register (or return the existing) customer for a Telegram user. Assigns
  * `client_code = prefix + '-' + sequence` and retries on the unique-index
  * collision that a concurrent registration could cause.
+ *
+ * Before creating anything it looks for a record the admin entered by hand
+ * (`tg_user_id IS NULL`) carrying the same phone and **links** that one instead
+ * (SPEC §7.12). Without this the customer would get a second, empty profile —
+ * their imported tracks, debt and payments would all stay on the first one and
+ * "Mening yuklarim" would come back empty on day 0.
  */
 export async function registerCustomer(args: {
   tenant: Tenant;
@@ -100,16 +107,70 @@ export async function registerCustomer(args: {
 }): Promise<Customer> {
   const db = getDb();
   const { tenant, tgUserId, phone, fullName, lang } = args;
+  const phoneNormalized = normalizePhone(phone);
 
   // A concurrent contact may have already created this customer.
   const existing = await getCustomerByTg(tenant.id, tgUserId);
   if (existing) {
     const [updated] = await db
       .update(customers)
-      .set({ phone, fullName, lang })
+      .set({ phone, phoneNormalized, fullName, lang })
       .where(eq(customers.id, existing.id))
       .returning();
     return updated ?? existing;
+  }
+
+  // Claim a hand-entered record with this phone (SPEC §7.12). Scoped to
+  // tg_user_id IS NULL so we never steal a row that belongs to another
+  // Telegram account that happens to share a number. `fullName` is only
+  // overwritten when the admin left it blank — the office spelling of the name
+  // is usually the one printed on the invoice.
+  if (phoneNormalized) {
+    const [pending] = await db
+      .select()
+      .from(customers)
+      .where(
+        and(
+          eq(customers.tenantId, tenant.id),
+          eq(customers.phoneNormalized, phoneNormalized),
+          isNull(customers.tgUserId),
+        ),
+      )
+      .orderBy(asc(customers.createdAt))
+      .limit(1);
+
+    if (pending) {
+      try {
+        const [linked] = await db
+          .update(customers)
+          .set({
+            tgUserId,
+            phone,
+            phoneNormalized,
+            fullName: pending.fullName ?? fullName,
+            lang,
+          })
+          .where(
+            // Re-assert tg_user_id IS NULL: two /start flows racing on the same
+            // pending row must not both think they claimed it.
+            and(eq(customers.id, pending.id), isNull(customers.tgUserId)),
+          )
+          .returning();
+        if (linked) {
+          logger.info(
+            { tenantId: tenant.id, customerId: linked.id },
+            'linked telegram user to hand-entered customer by phone',
+          );
+          return linked;
+        }
+      } catch (err) {
+        // The loser of a race hits customers_tenant_tg_user_uq — fall through
+        // and pick up the row the winner just claimed.
+        if (!isUniqueViolation(err)) throw err;
+      }
+      const raced = await getCustomerByTg(tenant.id, tgUserId);
+      if (raced) return raced;
+    }
   }
 
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -129,6 +190,7 @@ export async function registerCustomer(args: {
           tenantId: tenant.id,
           tgUserId,
           phone,
+          phoneNormalized,
           fullName,
           clientCode,
           lang,
@@ -246,6 +308,88 @@ export async function listTenantDebtorIds(tenantId: string): Promise<string[]> {
     if (debt > 0) debtorIds.push(customerId);
   }
   return debtorIds;
+}
+
+// --- Queue-worker contexts (AUDIT.md T3) ------------------------------------
+
+/**
+ * Everything the notification worker needs for one message, in one round trip.
+ *
+ * It used to run four sequential queries (tenant → track → customer → batch),
+ * each a full network round trip before the send could even start. At a few
+ * hundred messages that is most of the wall clock, and with the batched worker
+ * it is also four pooled connections held per in-flight job instead of one.
+ *
+ * The FROM side is `tenants` so a missing track and a missing customer stay
+ * distinguishable from a missing tenant — the three cases are logged (and
+ * dropped) differently. Every join is tenant-scoped (CLAUDE.md rule 1).
+ */
+export interface NotifyContext {
+  tenant: Tenant;
+  track: Track | null;
+  customer: Customer | null;
+  /** The track's batch, for the §4.2 IN_TRANSIT ETA line. */
+  batch: Batch | null;
+}
+
+export async function getNotifyContext(
+  tenantId: string,
+  trackId: string,
+  customerId: string,
+): Promise<NotifyContext | undefined> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      tenant: tenants,
+      track: tracks,
+      customer: customers,
+      batch: batches,
+    })
+    .from(tenants)
+    .leftJoin(
+      tracks,
+      and(eq(tracks.id, trackId), eq(tracks.tenantId, tenants.id)),
+    )
+    .leftJoin(
+      customers,
+      and(eq(customers.id, customerId), eq(customers.tenantId, tenants.id)),
+    )
+    .leftJoin(
+      batches,
+      and(eq(batches.id, tracks.batchId), eq(batches.tenantId, tenants.id)),
+    )
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
+  return row ? { ...row } : undefined;
+}
+
+/**
+ * Tenant + customer for the reminder and broadcast workers, in one round trip
+ * (same rationale as {@link getNotifyContext}). `undefined` means the tenant is
+ * gone; a null `customer` means the customer is.
+ */
+export interface SendContext {
+  tenant: Tenant;
+  customer: Customer | null;
+}
+
+export async function getSendContext(
+  tenantId: string,
+  customerId: string,
+): Promise<SendContext | undefined> {
+  const db = getDb();
+  const [row] = await db
+    .select({ tenant: tenants, customer: customers })
+    .from(tenants)
+    .leftJoin(
+      customers,
+      and(eq(customers.id, customerId), eq(customers.tenantId, tenants.id)),
+    )
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
+  return row ? { ...row } : undefined;
 }
 
 /** A single track by id (tenant-scoped), including soft-deleted rows. */

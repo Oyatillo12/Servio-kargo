@@ -37,11 +37,10 @@ import {
 
 import { getConfig } from './config';
 import { logger } from './logger';
+import { captureError } from './sentry';
 import {
-  getBatchById,
-  getCustomerById,
-  getTenantById,
-  getTrackById,
+  getNotifyContext,
+  getSendContext,
   incrementBroadcastSent,
   listCustomerPayments,
   listCustomerTracks,
@@ -73,20 +72,20 @@ function isPermanentSendError(err: unknown): boolean {
 }
 
 async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
-  const tenant = await getTenantById(job.tenantId);
-  if (!tenant) {
+  // One round trip for tenant + track + customer + batch (AUDIT.md T3).
+  const ctx = await getNotifyContext(job.tenantId, job.trackId, job.customerId);
+  if (!ctx) {
     logger.warn({ job }, 'notify: tenant gone, dropping');
     return;
   }
+  const { tenant, track, customer, batch } = ctx;
 
-  const track = await getTrackById(job.tenantId, job.trackId);
   // Skip soft-deleted or missing tracks (SPEC §7.8: hidden from notifications).
   if (!track || track.deletedAt) {
     logger.warn({ trackId: job.trackId }, 'notify: track missing/deleted, dropping');
     return;
   }
 
-  const customer = await getCustomerById(job.tenantId, job.customerId);
   if (!customer?.tgUserId) {
     logger.warn({ customerId: job.customerId }, 'notify: no telegram id, dropping');
     return;
@@ -94,12 +93,9 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
 
   // §4.2: IN_TRANSIT carries the batch ETA line when the track's batch has one.
   let eta: string | undefined;
-  if (job.status === 'IN_TRANSIT' && track.batchId) {
-    const batch = await getBatchById(job.tenantId, track.batchId);
-    if (batch?.etaDate) {
-      const [y, m, d] = batch.etaDate.split('-');
-      eta = d && m && y ? `${d}.${m}.${y}` : batch.etaDate;
-    }
+  if (job.status === 'IN_TRANSIT' && batch?.etaDate) {
+    const [y, m, d] = batch.etaDate.split('-');
+    eta = d && m && y ? `${d}.${m}.${y}` : batch.etaDate;
   }
 
   const s = t(customer.lang);
@@ -119,7 +115,7 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
   const api = apiFor(tenant.botToken);
   const chatId = customer.tgUserId;
 
-  await limiter.acquire(chatId);
+  await limiter.acquire(tenant.botToken, chatId);
   try {
     // Attach the warehouse photo to the status notification when one exists, so
     // the customer's next update after a staff upload carries it (§3.8, §4.2).
@@ -143,6 +139,14 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
     }
     if (meta.retryCount >= meta.retryLimit) {
       logger.error({ jobId: meta.id, chatId, err }, 'notify: failed after retries');
+      // A notification that never arrives is the product failing at its one job.
+      captureError(err, {
+        queue: 'notify',
+        jobId: meta.id,
+        tenantId: job.tenantId,
+        trackId: job.trackId,
+        status: job.status,
+      });
     }
     throw err; // transient → let pg-boss retry with backoff
   }
@@ -165,13 +169,13 @@ async function handleReminderJob(
   job: ReminderJob,
   meta: JobMeta,
 ): Promise<void> {
-  const tenant = await getTenantById(job.tenantId);
-  if (!tenant) {
+  const ctx = await getSendContext(job.tenantId, job.customerId);
+  if (!ctx) {
     logger.warn({ job }, 'reminder: tenant gone, dropping');
     return;
   }
+  const { tenant, customer } = ctx;
 
-  const customer = await getCustomerById(job.tenantId, job.customerId);
   if (!customer?.tgUserId) {
     logger.warn({ customerId: job.customerId }, 'reminder: no telegram id, dropping');
     return;
@@ -204,7 +208,7 @@ async function handleReminderJob(
   const api = apiFor(tenant.botToken);
   const chatId = customer.tgUserId;
 
-  await limiter.acquire(chatId);
+  await limiter.acquire(tenant.botToken, chatId);
   try {
     await api.sendMessage(chatId, message);
   } catch (err) {
@@ -217,6 +221,12 @@ async function handleReminderJob(
     }
     if (meta.retryCount >= meta.retryLimit) {
       logger.error({ jobId: meta.id, chatId, err }, 'reminder: failed after retries');
+      captureError(err, {
+        queue: 'reminder',
+        jobId: meta.id,
+        tenantId: job.tenantId,
+        reason: job.reason,
+      });
     }
     throw err; // transient → let pg-boss retry with backoff
   }
@@ -270,13 +280,13 @@ async function handleBroadcastJob(
   job: BroadcastJob,
   meta: JobMeta,
 ): Promise<void> {
-  const tenant = await getTenantById(job.tenantId);
-  if (!tenant) {
+  const ctx = await getSendContext(job.tenantId, job.customerId);
+  if (!ctx) {
     logger.warn({ job }, 'broadcast: tenant gone, dropping');
     return;
   }
+  const { tenant, customer } = ctx;
 
-  const customer = await getCustomerById(job.tenantId, job.customerId);
   if (!customer?.tgUserId) {
     logger.warn(
       { customerId: job.customerId },
@@ -288,7 +298,7 @@ async function handleBroadcastJob(
   const api = apiFor(tenant.botToken);
   const chatId = customer.tgUserId;
 
-  await limiter.acquire(chatId);
+  await limiter.acquire(tenant.botToken, chatId);
   try {
     await api.sendMessage(chatId, job.text);
     await incrementBroadcastSent(job.tenantId, job.broadcastId);
@@ -302,6 +312,12 @@ async function handleBroadcastJob(
     }
     if (meta.retryCount >= meta.retryLimit) {
       logger.error({ jobId: meta.id, chatId, err }, 'broadcast: failed after retries');
+      captureError(err, {
+        queue: 'broadcast',
+        jobId: meta.id,
+        tenantId: job.tenantId,
+        broadcastId: job.broadcastId,
+      });
     }
     throw err; // transient → let pg-boss retry with backoff
   }

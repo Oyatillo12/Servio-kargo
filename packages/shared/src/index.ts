@@ -16,6 +16,9 @@ export {
   TRACK_CODE_MAX_LENGTH,
 } from './normalize';
 
+// Phone normalization for customer matching (SPEC §7.12)
+export { normalizePhone, samePhone, PHONE_KEY_LENGTH } from './phone';
+
 // Status pipeline + display metadata (SPEC §2)
 export {
   TRACK_STATUSES,
@@ -28,7 +31,13 @@ export {
 } from './status';
 
 // Display formatters (SPEC §4 / §7.9)
-export { formatSom, formatKg, formatUsd, formatDate } from './format';
+export {
+  formatSom,
+  formatKg,
+  formatUsd,
+  formatDate,
+  formatDateTime,
+} from './format';
 
 // Pure services
 export {
@@ -137,11 +146,41 @@ export {
   type StatusTransitionPlan,
 } from './services/statusChange';
 export {
+  planAssignCustomer,
+  isAssignEventMeta,
+  ASSIGN_ACTIONS,
+  type AssignAction,
+  type AssignCustomerInput,
+  type AssignCustomerPlan,
+  type AssignEventMeta,
+} from './services/assignCustomer';
+export {
   parseStaffWeighing,
   planStaffWeighing,
   type StaffWeighing,
   type StaffWeighingPlan,
 } from './services/staff';
+
+// Excel export sheet shaping (AUDIT.md T2)
+export {
+  buildTracksSheet,
+  buildCustomersSheet,
+  buildPaymentsSheet,
+  exportFileName,
+  truncationNotice,
+  somFromTiyin,
+  kgFromGrams,
+  EXPORT_LABELS,
+  EXPORT_MAX_ROWS,
+  type ExportCell,
+  type ExportSheet,
+  type TrackExportRow,
+  type CustomerExportRow,
+  type PaymentExportRow,
+} from './services/export';
+
+// Observability — PII scrubbing for outbound error reports (AUDIT.md T5)
+export { scrubText, scrubValue, REDACTED } from './observability/scrub';
 
 // i18n (SPEC §4)
 export {

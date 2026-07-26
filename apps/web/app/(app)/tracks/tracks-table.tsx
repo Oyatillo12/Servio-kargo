@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 
 import { StatusChangeDialog, type StatusTarget } from './status-change-dialog';
 import { BatchAssignDialog, type BatchOption } from './batch-assign-dialog';
+import { CustomerAssignDialog } from './customer-assign-dialog';
 
 export interface TrackRowView {
   id: string;
@@ -41,6 +42,7 @@ export function TracksTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [customerOpen, setCustomerOpen] = useState(false);
 
   const allSelected = rows.length > 0 && selected.size === rows.length;
 
@@ -87,7 +89,7 @@ export function TracksTable({
   return (
     <div>
       {selected.size > 0 ? (
-        <div className="sticky top-[60px] z-[5] mb-3 flex items-center justify-between rounded-xl bg-primary px-3 py-2.5 text-white shadow-sm md:top-2">
+        <div className="sticky top-[60px] z-[5] mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary px-3 py-2.5 text-white shadow-sm md:top-2">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -100,7 +102,15 @@ export function TracksTable({
               {selected.size} ta tanlandi
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="border-transparent bg-white/15 text-white hover:bg-white/25"
+              onClick={() => setCustomerOpen(true)}
+            >
+              Mijozga biriktirish
+            </Button>
             <Button
               variant="secondary"
               size="sm"
@@ -254,6 +264,13 @@ export function TracksTable({
         batches={batches}
         open={batchOpen}
         onOpenChange={setBatchOpen}
+        onDone={() => setSelected(new Set())}
+      />
+
+      <CustomerAssignDialog
+        trackIds={[...selected]}
+        open={customerOpen}
+        onOpenChange={setCustomerOpen}
         onDone={() => setSelected(new Set())}
       />
     </div>

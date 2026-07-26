@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { formatDate, formatSom, t } from '@kargotrack/shared';
 
 import { DebtCell } from '@/components/debt-cell';
+import { ExportButton } from '@/components/export-button';
 import { ReminderButton } from '@/components/reminder-button';
 import { StatusBadge } from '@/components/status-badge';
 import { requireAdmin } from '@/lib/auth';
@@ -87,9 +88,17 @@ export default async function CustomerDetailPage({
 
       {/* Payment history */}
       <div className="rounded-xl border border-border bg-white p-3.5">
-        <h2 className="mb-2 text-[13.5px] font-semibold text-foreground">
-          To&apos;lovlar tarixi
-        </h2>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-[13.5px] font-semibold text-foreground">
+            To&apos;lovlar tarixi
+          </h2>
+          {payments.length > 0 ? (
+            <ExportButton
+              href={`/api/export/payments?customer=${customer.id}`}
+              label="Excel"
+            />
+          ) : null}
+        </div>
         {payments.length === 0 ? (
           <p className="text-sm text-muted-foreground">To&apos;lovlar yo&apos;q.</p>
         ) : (

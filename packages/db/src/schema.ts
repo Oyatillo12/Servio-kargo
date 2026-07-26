@@ -12,7 +12,7 @@
  * - Every domain table carries tenant_id — CLAUDE.md rule 1.
  */
 
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
@@ -154,18 +154,26 @@ export const batches = pgTable('batches', {
     .defaultNow(),
 });
 
-export const adminUsers = pgTable('admin_users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id')
-    .notNull()
-    .references(() => tenants.id, { onDelete: 'cascade' }),
-  phone: text('phone').notNull(),
-  passwordHash: text('password_hash').notNull(),
-  role: adminRole('role').notNull().default('staff'),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const adminUsers = pgTable(
+  'admin_users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    phone: text('phone').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    role: adminRole('role').notNull().default('staff'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // Login looks admins up by phone alone (phone is NOT unique across tenants,
+    // so every match is argon2-verified) — without this the login path seq-scans.
+    phoneIdx: index('admin_users_phone_idx').on(t.phone),
+  }),
+);
 
 export const customers = pgTable(
   'customers',
@@ -176,6 +184,11 @@ export const customers = pgTable(
       .references(() => tenants.id, { onDelete: 'cascade' }),
     tgUserId: bigint('tg_user_id', { mode: 'number' }),
     phone: text('phone'),
+    // Comparison key for `phone` — last 9 digits (SPEC §7.12,
+    // `normalizePhone`). Always written together with `phone`; it is what the
+    // panel's duplicate check and the bot's "link my hand-entered record"
+    // lookup match on, because the same number arrives spelled three ways.
+    phoneNormalized: text('phone_normalized'),
     fullName: text('full_name'),
     clientCode: text('client_code').notNull(),
     lang: lang('lang').notNull().default('uz'),
@@ -193,6 +206,14 @@ export const customers = pgTable(
     tgUserUq: uniqueIndex('customers_tenant_tg_user_uq').on(
       t.tenantId,
       t.tgUserId,
+    ),
+    // Deliberately NOT unique: production data predates the column and a
+    // company may legitimately hold two records for one number until an admin
+    // merges them. Duplicates are refused in the app (createCustomer), where a
+    // clash can be reported instead of aborting a bot registration mid-flow.
+    phoneIdx: index('customers_tenant_phone_idx').on(
+      t.tenantId,
+      t.phoneNormalized,
     ),
   }),
 );
@@ -242,38 +263,99 @@ export const tracks = pgTable(
     ),
     customerIdx: index('tracks_customer_idx').on(t.customerId),
     batchIdx: index('tracks_batch_idx').on(t.batchId),
+    // The tracks list (SPEC §5.2) is always
+    //   tenant_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 20
+    // These two are PARTIAL on `deleted_at IS NULL` on purpose. It is not about
+    // index size (few rows are soft-deleted) — it is that a partial index whose
+    // predicate matches the query lets the planner walk the index in order and
+    // stop at the LIMIT. With a plain index the planner instead bitmap-scans
+    // every row of the tenant and top-N sorts: measured 56 ms vs 0.75 ms on
+    // 40 000 tracks. Every list/filter/detail read filters soft-deletes (§7.8),
+    // so the predicate is always present. The import path deliberately *includes*
+    // soft-deleted rows, but it matches on `tracks_tenant_code_uq` instead.
+    //
+    // `.nullsFirst()` is REQUIRED, not cosmetic: SQL `ORDER BY x DESC` means
+    // DESC NULLS FIRST, while Drizzle's bare `.desc()` emits DESC NULLS *LAST*.
+    // The two don't match, so the planner silently falls back to a full sort —
+    // measured 47.9 ms (NULLS LAST) vs 0.60 ms (NULLS FIRST) for the same index.
+    tenantCreatedIdx: index('tracks_tenant_created_idx')
+      .on(t.tenantId, t.createdAt.desc().nullsFirst())
+      .where(sql`${t.deletedAt} IS NULL`),
+    // Status filter chips + every "count by status" read.
+    tenantStatusIdx: index('tracks_tenant_status_idx')
+      .on(t.tenantId, t.currentStatus)
+      .where(sql`${t.deletedAt} IS NULL`),
   }),
 );
 
-export const trackEvents = pgTable('track_events', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  trackId: uuid('track_id')
-    .notNull()
-    .references(() => tracks.id, { onDelete: 'cascade' }),
-  status: trackStatus('status').notNull(),
-  meta: jsonb('meta'),
-  // Free-form actor: 'system', an admin_user id, or a telegram id.
-  createdBy: text('created_by'),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const trackEvents = pgTable(
+  'track_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    trackId: uuid('track_id')
+      .notNull()
+      .references(() => tracks.id, { onDelete: 'cascade' }),
+    status: trackStatus('status').notNull(),
+    meta: jsonb('meta'),
+    // Free-form actor: 'system', an admin_user id, or a telegram id.
+    createdBy: text('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // This is the fastest-growing table (a row per status change) and Postgres
+    // does NOT index foreign keys automatically. Without this, the track-detail
+    // timeline and the ON DELETE CASCADE both seq-scan the whole log: measured
+    // 18.5 ms vs 0.14 ms on 160 000 events. `.nullsFirst()` matches SQL's
+    // `ORDER BY created_at DESC` — see the note on tracks_tenant_created_idx.
+    trackIdx: index('track_events_track_idx').on(
+      t.trackId,
+      t.createdAt.desc().nullsFirst(),
+    ),
+    // Dashboard §5.10 counts events by status inside a period. `track_events`
+    // carries no tenant_id, so this index cannot be tenant-scoped — it still
+    // turns a full-log scan into a range scan, but the rows of every tenant
+    // share it. AUDIT.md T4: if the dashboard is still slow at scale, the fix is
+    // to denormalize `tenant_id` onto this table and index (tenant, status, at).
+    statusCreatedIdx: index('track_events_status_created_idx').on(
+      t.status,
+      t.createdAt,
+    ),
+  }),
+);
 
-export const payments = pgTable('payments', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id')
-    .notNull()
-    .references(() => tenants.id, { onDelete: 'cascade' }),
-  customerId: uuid('customer_id')
-    .notNull()
-    .references(() => customers.id, { onDelete: 'cascade' }),
-  amountTiyin: bigint('amount_tiyin', { mode: 'number' }).notNull(),
-  method: paymentMethod('method').notNull().default('cash'),
-  note: text('note'),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const payments = pgTable(
+  'payments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    amountTiyin: bigint('amount_tiyin', { mode: 'number' }).notNull(),
+    method: paymentMethod('method').notNull().default('cash'),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // Debt (§7.5) reads payments per tenant and per customer; the leading
+    // tenant_id serves both the tenant-wide sweep and the customer detail.
+    tenantCustomerIdx: index('payments_tenant_customer_idx').on(
+      t.tenantId,
+      t.customerId,
+    ),
+    // Dashboard tushum card + the 14-day chart: tenant + created_at range.
+    tenantCreatedIdx: index('payments_tenant_created_idx').on(
+      t.tenantId,
+      t.createdAt,
+    ),
+  }),
+);
 
 /**
  * Broadcast history (SPEC §5.8, §7.11). One row per admin broadcast; `sent_count`
