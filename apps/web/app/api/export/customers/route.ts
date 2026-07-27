@@ -9,7 +9,7 @@ import {
   type Lang,
 } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { xlsxResponse } from '@/lib/export-http';
 import { listCustomersForExport } from '@/lib/queries';
 
@@ -24,7 +24,7 @@ const Query = z.object({
 });
 
 export async function GET(req: Request) {
-  const { tenant } = await requireAdmin();
+  const { tenant } = await requireCapability('export.data');
   const lang = (await getLocale()) as Lang;
 
   const params = new URL(req.url).searchParams;

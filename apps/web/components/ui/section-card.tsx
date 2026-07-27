@@ -22,8 +22,8 @@ const SectionCard = React.forwardRef<HTMLDivElement, SectionCardProps>(
     <div
       ref={ref}
       className={cn(
-        'rounded-xl border border-border bg-white',
-        !flush && 'p-3.5',
+        'rounded-lg border border-border bg-white',
+        !flush && 'p-4',
         className,
       )}
       {...props}
@@ -32,18 +32,18 @@ const SectionCard = React.forwardRef<HTMLDivElement, SectionCardProps>(
         <div
           className={cn(
             'flex items-start justify-between gap-3',
-            flush && 'p-3.5 pb-0',
+            flush && 'p-4 pb-0',
             children && !flush && 'mb-3',
           )}
         >
           <div className="min-w-0">
             {title ? (
-              <h2 className="text-[13.5px] font-semibold text-foreground">
+              <h2 className="text-[15px] font-semibold text-foreground">
                 {title}
               </h2>
             ) : null}
             {description ? (
-              <p className="mt-0.5 text-[12px] text-muted-foreground">
+              <p className="mt-1 text-[13px] text-muted-foreground">
                 {description}
               </p>
             ) : null}

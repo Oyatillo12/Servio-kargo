@@ -31,13 +31,13 @@ export function PageHeader({ title, count, right, className }: PageHeaderProps) 
         className,
       )}
     >
-      <h1 className="min-w-0 truncate text-xl font-bold text-foreground">
+      <h1 className="min-w-0 truncate text-[20px] font-semibold text-foreground">
         {title}
       </h1>
       {count != null || right ? (
         <div className="ml-auto flex flex-none items-center gap-2">
           {count != null ? (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[13px] text-muted-foreground">
               {t('total')}{' '}
               <span className="font-mono font-semibold tabular-nums">{count}</span>
             </span>

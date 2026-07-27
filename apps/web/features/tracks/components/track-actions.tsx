@@ -6,7 +6,7 @@ import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
-import type { TrackStatus } from '@kargotrack/shared';
+import { can, type TrackStatus } from '@kargotrack/shared';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -22,17 +22,26 @@ import { Spinner } from '@/components/ui/spinner';
 import { StatusChangeDialog } from './status-change-dialog';
 import { softDeleteTrackAction } from '../actions';
 
-/** Status-change + soft-delete controls on the track detail page (SPEC §5.3). */
+/**
+ * Status-change + soft-delete controls on the track detail page (SPEC §5.3).
+ *
+ * Delete is owner-only and simply absent for everyone else: unlike an in-page
+ * toggle, there is nothing here a manager could ask to be allowed — deleting a
+ * track is the owner's call by definition — and a permanently greyed bin next to
+ * the button they came for is just clutter. `softDeleteTrackAction` re-checks.
+ */
 export function TrackActions({
   trackId,
   code,
   currentStatus,
   customerId,
+  role,
 }: {
   trackId: string;
   code: string;
   currentStatus: TrackStatus;
   customerId: string | null;
+  role: string;
 }) {
   const t = useTranslations('trackDetail');
   const tTracks = useTranslations('tracks');
@@ -61,14 +70,16 @@ export function TrackActions({
       <Button className="flex-1" onClick={() => setStatusOpen(true)}>
         {tTracks('bulkChangeStatus')}
       </Button>
-      <Button
-        variant="destructive"
-        size="icon"
-        aria-label={tCommon('delete')}
-        onClick={() => setDeleteOpen(true)}
-      >
-        <Trash2 className="h-4 w-4" aria-hidden />
-      </Button>
+      {can(role, 'tracks.delete') ? (
+        <Button
+          variant="destructive"
+          size="icon"
+          aria-label={tCommon('delete')}
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+        </Button>
+      ) : null}
 
       <StatusChangeDialog
         targets={[{ id: trackId, currentStatus, customerId }]}

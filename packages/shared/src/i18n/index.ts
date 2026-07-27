@@ -200,6 +200,16 @@ export interface Strings {
   staffPhotoTooLarge(maxMb: number): string;
   staffPhotoError: string;
 
+  // --- §5.12 linking a Telegram account to an employee record ---
+  /** Confirms the link; `name` is the employee's name, else their phone. */
+  staffLinked(name: string): string;
+  /** The code matched nothing live in this company. */
+  staffLinkNotFound: string;
+  /** The code was issued more than 24 hours ago. */
+  staffLinkExpired: string;
+  /** Somebody in this company already uses this Telegram account. */
+  staffLinkTaken: string;
+
   // --- §4.2 status notifications (strings ready for the deferred sender) ---
   notifChinaWarehouse(code: string): string;
   /** `eta` (DD.MM.YYYY) appends the batch ETA line when the batch has one. */

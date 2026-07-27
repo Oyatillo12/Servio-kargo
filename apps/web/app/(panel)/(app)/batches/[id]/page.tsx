@@ -6,7 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import { isBatchStatus } from '@kargotrack/shared';
 
 import { StatusBadge } from '@/components/shared/status-badge';
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { getBatchDetail } from '@/lib/queries';
 import {
   BatchControls,
@@ -24,7 +24,7 @@ export default async function BatchDetailPage({
 }: {
   params: { id: string };
 }) {
-  const { tenant } = await requireAdmin();
+  const { tenant } = await requireCapability('batches.manage');
   const t = await getTranslations('batches');
   const tCommon = await getTranslations('common');
 

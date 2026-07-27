@@ -172,6 +172,34 @@ export {
   type StaffWeighingPlan,
 } from './services/staff';
 
+// Roles + panel invitations (SPEC §1 / §5.12, AUDIT.md T8)
+export {
+  ADMIN_ROLES,
+  CAPABILITIES,
+  ROLE_CAPABILITIES,
+  can,
+  canAll,
+  canSignIn,
+  canUseStaffMode,
+  toAdminRole,
+  type AdminRole,
+  type Capability,
+} from './services/permissions';
+export {
+  INVITE_CODE_ALPHABET,
+  INVITE_CODE_LENGTH,
+  INVITE_TTL_MS,
+  MIN_PASSWORD_LENGTH,
+  checkInvite,
+  formatInviteCode,
+  generateInviteCode,
+  inviteExpiry,
+  isValidPassword,
+  normalizeInviteCode,
+  type InviteRejection,
+  type InviteState,
+} from './services/invite';
+
 // Excel export sheet shaping (AUDIT.md T2)
 export {
   buildTracksSheet,

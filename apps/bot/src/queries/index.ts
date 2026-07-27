@@ -14,3 +14,4 @@ export * from './customers';
 export * from './contexts';
 export * from './tracks';
 export * from './weighing';
+export * from './staff';

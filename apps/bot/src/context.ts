@@ -6,7 +6,7 @@
 
 import type { Context, SessionFlavor } from 'grammy';
 
-import type { Customer, Tenant } from '@kargotrack/db/schema';
+import type { AdminUser, Customer, Tenant } from '@kargotrack/db/schema';
 import type { Lang, Strings } from '@kargotrack/shared';
 
 /** Transient per-chat state for the multi-step flows. */
@@ -27,6 +27,15 @@ export interface KargoFlavor {
   tenant: Tenant;
   /** The customer for `ctx.from`, if already registered. */
   customer?: Customer;
+  /**
+   * The EMPLOYEE for `ctx.from`, if they have linked this Telegram account
+   * (SPEC §3.8). The same `admin_users` row the panel signs in, so a role change
+   * or a deactivation lands on both surfaces at once — it used to be a bare id
+   * in `tenants.settings.staff_tg_ids` with no role and no way to revoke it.
+   *
+   * Independent of `customer`: an owner may well be their own first customer.
+   */
+  staff?: AdminUser;
   /** Effective language: customer's, else session choice, else 'uz'. */
   lang: Lang;
   /** Resolved string catalogue for `lang`. */

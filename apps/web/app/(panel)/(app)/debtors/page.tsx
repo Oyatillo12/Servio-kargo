@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { ExportButton } from '@/components/shared/export-button';
 import { ReminderButton } from '@/components/shared/reminder-button';
 import { PageHeader } from '@/components/layout/page-header';
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { listDebtors } from '@/lib/queries';
 import { sendReminderAction } from '@/features/debtors/actions';
 import { BulkReminder } from '@/features/debtors/components/bulk-reminder';
@@ -19,7 +19,7 @@ export async function generateMetadata() {
 }
 
 export default async function DebtorsPage() {
-  const { tenant } = await requireAdmin();
+  const { tenant } = await requireCapability('money.reports');
   const t = await getTranslations('debtors');
   const tCommon = await getTranslations('common');
 

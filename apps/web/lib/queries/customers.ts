@@ -10,6 +10,7 @@ import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { getDb } from '@kargotrack/db';
 import { enqueueReminder } from '@kargotrack/db/queue';
 import {
+  adminUsers,
   customers,
   payments,
   tracks,
@@ -271,10 +272,16 @@ export async function listCustomersWithDebt(
 
 // --- Customer detail + payments (SPEC §5.5) ---------------------------------
 
+/** A payment plus the employee who took it (AUDIT.md T8). */
+export interface PaymentWithAuthor extends Payment {
+  /** Name (or phone) of the employee who recorded it; null for pre-T8 rows. */
+  authorName: string | null;
+}
+
 export interface CustomerDetail {
   customer: Customer;
   tracks: Track[];
-  payments: Payment[];
+  payments: PaymentWithAuthor[];
   debtTiyin: number;
 }
 
@@ -307,13 +314,22 @@ export async function getCustomerDetail(
     )
     .orderBy(desc(tracks.createdAt));
 
-  const custPayments = await db
-    .select()
+  // Joined rather than resolved afterwards: cash accountability is the reason
+  // this column exists, so the name travels with the row it explains.
+  const paymentRows = await db
+    .select({ payment: payments, authorName: adminUsers.fullName, authorPhone: adminUsers.phone })
     .from(payments)
+    .leftJoin(adminUsers, eq(adminUsers.id, payments.createdBy))
     .where(
       and(eq(payments.tenantId, tenantId), eq(payments.customerId, customerId)),
     )
     .orderBy(desc(payments.createdAt));
+
+  const custPayments: PaymentWithAuthor[] = paymentRows.map((r) => ({
+    ...r.payment,
+    // Falls back to the phone — a name is optional on an employee row.
+    authorName: r.authorName ?? r.authorPhone,
+  }));
 
   const debtTiyin = computeDebtTiyin(
     custTracks.map((t) => ({
@@ -327,13 +343,20 @@ export async function getCustomerDetail(
   return { customer, tracks: custTracks, payments: custPayments, debtTiyin };
 }
 
-/** Record a payment for a customer (amount in tiyin). Tenant-scoped (§5.5). */
+/**
+ * Record a payment for a customer (amount in tiyin). Tenant-scoped (§5.5).
+ *
+ * `createdBy` is required, not optional: cash crosses a counter in this
+ * business, and an unattributable payment row is the one thing an owner cannot
+ * audit around. Making the caller pass it is what keeps that true.
+ */
 export async function createPayment(args: {
   tenantId: string;
   customerId: string;
   amountTiyin: number;
   method: Payment['method'];
   note: string | null;
+  createdBy: string;
 }): Promise<void> {
   await getDb().insert(payments).values({
     tenantId: args.tenantId,
@@ -341,6 +364,7 @@ export async function createPayment(args: {
     amountTiyin: args.amountTiyin,
     method: args.method,
     note: args.note,
+    createdBy: args.createdBy,
   });
 }
 

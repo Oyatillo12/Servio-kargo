@@ -35,7 +35,14 @@ function SaveButton() {
 }
 
 /** Record-a-payment form (SPEC §5.5): amount in so'm, method chips, optional note. */
-export function PaymentForm({ customerId }: { customerId: string }) {
+export function PaymentForm({
+  customerId,
+  onSaved,
+}: {
+  customerId: string;
+  /** Called after a successful save — lets a host sheet close itself. */
+  onSaved?: () => void;
+}) {
   const t = useTranslations('customerDetail');
   const formRef = useRef<HTMLFormElement>(null);
   const [method, setMethod] = useState<string>('cash');
@@ -46,9 +53,10 @@ export function PaymentForm({ customerId }: { customerId: string }) {
       toast.success(t('paymentSaved'));
       formRef.current?.reset();
       setMethod('cash');
+      onSaved?.();
     }
     if (state.error) toast.error(state.error);
-  }, [state, t]);
+  }, [state, t, onSaved]);
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-3">
@@ -83,11 +91,11 @@ export function PaymentForm({ customerId }: { customerId: string }) {
                 aria-checked={active}
                 onClick={() => setMethod(m.value)}
                 className={cn(
-                  'flex-1 rounded-lg border py-2.5 text-[13px] font-semibold transition-colors',
+                  'flex-1 rounded-md border py-2.5 text-[13px] font-semibold transition-colors',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
                   active
                     ? 'border-primary bg-primary text-white'
-                    : 'border-input bg-white text-slate-600 hover:bg-secondary',
+                    : 'border-input bg-white text-muted-foreground hover:bg-secondary',
                 )}
               >
                 {t(m.labelKey)}

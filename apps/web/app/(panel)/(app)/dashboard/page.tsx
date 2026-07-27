@@ -1,19 +1,23 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 
-import { DASHBOARD_PERIODS, formatKg, formatSom } from '@kargotrack/shared';
+import { DASHBOARD_PERIODS, can } from '@kargotrack/shared';
 import type { DashboardPeriod } from '@kargotrack/shared';
 
 import { cn } from '@/lib/utils';
-import { PageHeader } from '@/components/layout/page-header';
-import { SectionCard } from '@/components/ui/section-card';
+import { PanelSection, SectionStack } from '@/components/ui/panel-section';
 import { requireAdmin } from '@/lib/auth';
 import {
+  getCashByStaff,
   getDailyTushum,
   getDashboardStats,
   getWorklistCounts,
+  type CashByStaffRow,
 } from '@/lib/queries';
-import { MoneyCard } from '@/features/dashboard/components/money-card';
+import { CargoFlow } from '@/features/dashboard/components/cargo-flow';
+import { CashByStaff } from '@/features/dashboard/components/cash-by-staff';
+import { DashboardActions } from '@/features/dashboard/components/dashboard-actions';
+import { MoneyBlock } from '@/features/dashboard/components/money-block';
 import { TushumChart } from '@/features/dashboard/components/tushum-chart';
 import { WorkQueue } from '@/features/dashboard/components/work-queue';
 
@@ -38,174 +42,137 @@ export default async function DashboardPage({
 }: {
   searchParams: { p?: string };
 }) {
-  const { tenant } = await requireAdmin();
+  const { tenant, role } = await requireAdmin();
   const t = await getTranslations('dashboard');
-  const tCommon = await getTranslations('common');
 
   const period: DashboardPeriod = isPeriod(searchParams.p)
     ? searchParams.p
     : 'today';
 
-  const [stats, worklists, tushum] = await Promise.all([
+  // The dashboard is the one screen every role lands on, so the money half is
+  // gated rather than the page. A warehouse hand still gets the work queue and
+  // the cargo flow — the two blocks that describe their actual job — and the
+  // 14-day payment scan behind the chart is not even run for them.
+  const showMoney = can(role, 'money.reports');
+
+  // Cash-by-employee is the owner's closing-the-day read, not a manager's:
+  // seeing colleagues' takings is a different decision from seeing the total.
+  const showCashByStaff = can(role, 'team.manage');
+
+  const [stats, worklists, tushum, cashByStaff] = await Promise.all([
     getDashboardStats(tenant.id, period),
     getWorklistCounts(tenant.id),
-    getDailyTushum(tenant.id),
+    showMoney ? getDailyTushum(tenant.id) : Promise.resolve([]),
+    showCashByStaff
+      ? getCashByStaff(tenant.id, period)
+      : Promise.resolve<CashByStaffRow[]>([]),
   ]);
 
   const periodLabel = t(PERIOD_KEY[period]);
 
   return (
-    <div className="space-y-2.5">
-      <PageHeader
-        title={t('pageTitle')}
-        right={
-          /* Period toggle (§5.10). */
-          <div
-            role="tablist"
-            aria-label={t('pageTitle')}
-            className="flex gap-1 rounded-full border border-input bg-white p-0.5"
-          >
-            {DASHBOARD_PERIODS.map((p) => (
-              <Link
-                key={p}
-                role="tab"
-                aria-selected={p === period}
-                href={p === 'today' ? '/dashboard' : `/dashboard?p=${p}`}
-                className={cn(
-                  'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                  p === period
-                    ? 'bg-primary text-white'
-                    : 'text-slate-600 hover:bg-secondary',
-                )}
-              >
-                {t(PERIOD_KEY[p])}
-              </Link>
-            ))}
-          </div>
-        }
-      />
-
-      {/* Pending work first (AUDIT.md T19): the dashboard's top slot answers
-          "what do I do now", not "how was the month". The period toggle above
-          does not apply to it — a package unweighed since last week is still
-          today's job — which is why it sits in its own block. */}
-      <WorkQueue counts={worklists} />
-
-      {/* Money hero — the two figures owners glance at most. Single column on
-          phones: side by side, a 9-digit som figure had ~130px to live in and
-          either wrapped mid-number or shrank out of legibility. */}
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        <MoneyCard
-          index={0}
-          icon="💰"
-          label={t('revenue', { period: periodLabel })}
-          value={formatSom(stats.tushumTiyin)}
-          unit={tCommon('som')}
-        />
-        <MoneyCard
-          index={1}
-          href="/debtors"
-          icon="🔴"
-          label={t('debt')}
-          value={formatSom(stats.debtTiyin)}
-          unit={tCommon('som')}
-          sub={t('debtorCount', { count: stats.debtorCount })}
-          negative
-        />
+    <>
+      {/* Title row: period on the left with the heading it qualifies, actions
+          right. On phones the actions live in the top bar instead — see
+          `DashboardActions` — so this row stays a title and a toggle. */}
+      <div className="mb-3 flex items-center gap-3 md:mb-4">
+        <h1 className="min-w-0 flex-none text-[20px] font-semibold text-foreground">
+          {t('pageTitle')}
+        </h1>
+        <PeriodToggle current={period} />
+        <div className="ms-auto">
+          <DashboardActions role={role} />
+        </div>
       </div>
 
-      {/* Cargo pipeline — the journey China → Tashkent → delivered. */}
-      <div className="animate-fade-in-up" style={{ animationDelay: '90ms' }}>
-        <SectionCard title={t('cargoFlow')}>
-          <div className="flex items-start">
-            <PipelineStage
-              emoji="📦"
-              label={t('inChina')}
-              value={stats.chinaReceived}
-            />
-            <PipelineConnector />
-            <PipelineStage
-              emoji="🇺🇿"
-              label={t('inTashkent')}
-              value={stats.tashkentArrived}
-            />
-            <PipelineConnector />
-            <PipelineStage
-              emoji="🎉"
-              label={t('delivered')}
-              value={stats.delivered.count}
-            />
-          </div>
-          <div className="mt-3 flex flex-wrap items-baseline gap-x-1.5 border-t border-[#eef0f4] pt-2.5 text-[11.5px] text-muted-foreground">
-            <span>{t('deliveredTotals')}</span>
-            <span className="font-mono font-medium text-foreground">
-              {formatKg(stats.delivered.weightGrams)} {tCommon('kg')}
-            </span>
-            <span>·</span>
-            <span className="font-mono font-medium text-foreground">
-              {formatSom(stats.delivered.priceTiyin)} {tCommon('som')}
-            </span>
-          </div>
-        </SectionCard>
-      </div>
+      {/* Six columns so both desktop rows (4+2 and 4+2) land on the same grid;
+          a plain stack of full-bleed sections on phones. */}
+      <SectionStack className="md:grid md:grid-cols-6 md:items-start">
+        <WorkQueue counts={worklists} />
 
-      {/* New customers — compact single stat. */}
-      <div className="animate-fade-in-up" style={{ animationDelay: '135ms' }}>
-        <SectionCard>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-accent text-base leading-none">
-                👥
+        {showMoney ? (
+          <MoneyBlock
+            revenueTiyin={stats.tushumTiyin}
+            periodLabel={periodLabel}
+            debtTiyin={stats.debtTiyin}
+            debtorCount={stats.debtorCount}
+          />
+        ) : null}
+
+        <CargoFlow
+          inChina={stats.chinaReceived}
+          inTashkent={stats.tashkentArrived}
+          delivered={stats.delivered.count}
+          deliveredWeightGrams={stats.delivered.weightGrams}
+          deliveredPriceTiyin={stats.delivered.priceTiyin}
+        />
+
+        {/* Ahead of the chart on phones — one number is cheaper to read than a
+            14-day bar chart, and the chart is the natural end of the screen.
+            `md:order-last` puts it back on the chart's right on desktop. */}
+        <PanelSection
+          flush
+          className="md:order-last md:col-span-2 md:self-stretch"
+        >
+          <div className="flex h-full items-center gap-3 px-4 py-3 md:py-4">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[15px] font-medium text-foreground">
+                {t('newCustomers')}
               </span>
-              <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-foreground">
-                  {t('newCustomers')}
-                </p>
-                <p className="text-[11px] text-muted-foreground">{periodLabel}</p>
-              </div>
-            </div>
-            <p className="flex-none font-mono text-xl font-bold tabular-nums text-foreground">
+              <span className="block truncate text-[13px] text-faint">
+                {periodLabel}
+              </span>
+            </span>
+            <span
+              className={cn(
+                'flex-none text-[18px] font-semibold md:text-[24px]',
+                stats.newCustomers > 0 ? 'text-foreground' : 'text-faint',
+              )}
+            >
               {stats.newCustomers}
-            </p>
+            </span>
           </div>
-        </SectionCard>
-      </div>
+        </PanelSection>
 
-      <TushumChart points={tushum} />
-    </div>
+        {showCashByStaff ? (
+          <CashByStaff rows={cashByStaff} periodLabel={periodLabel} />
+        ) : null}
+
+        {showMoney ? <TushumChart points={tushum} /> : null}
+      </SectionStack>
+    </>
   );
 }
 
-function PipelineStage({
-  emoji,
-  label,
-  value,
-}: {
-  emoji: string;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
-      <span
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-lg leading-none"
-        aria-hidden
-      >
-        {emoji}
-      </span>
-      <span className="font-mono text-lg font-bold tabular-nums text-foreground">
-        {value}
-      </span>
-      <span className="truncate text-[11px] text-muted-foreground">{label}</span>
-    </div>
-  );
-}
+/** Period segmented control (SPEC §5.10): one bordered box, no gaps. */
+async function PeriodToggle({ current }: { current: DashboardPeriod }) {
+  const t = await getTranslations('dashboard');
 
-/** Dotted route connector between pipeline stages (brand motif). */
-function PipelineConnector() {
   return (
-    <div className="flex flex-none items-start pt-5" aria-hidden>
-      <span className="w-5 border-t-2 border-dotted border-[#c3c9d6] sm:w-8" />
+    <div
+      role="tablist"
+      className="flex flex-none overflow-hidden rounded-md border border-input bg-white"
+    >
+      {DASHBOARD_PERIODS.map((p, i) => {
+        const active = p === current;
+        return (
+          <Link
+            key={p}
+            role="tab"
+            aria-selected={active}
+            href={p === 'today' ? '/dashboard' : `/dashboard?p=${p}`}
+            className={cn(
+              'px-2.5 py-1.5 text-[13px] transition-colors md:px-3',
+              i > 0 && 'border-s border-n-200',
+              active
+                ? 'bg-primary font-semibold text-white'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+            )}
+          >
+            {t(PERIOD_KEY[p])}
+          </Link>
+        );
+      })}
     </div>
   );
 }

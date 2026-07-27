@@ -7,7 +7,13 @@ import 'server-only';
 import { and, count, eq, gte, isNull, lt, sql, sum } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
-import { customers, payments, trackEvents, tracks } from '@kargotrack/db/schema';
+import {
+  adminUsers,
+  customers,
+  payments,
+  trackEvents,
+  tracks,
+} from '@kargotrack/db/schema';
 import {
   bucketDailyTushum,
   lastNDays,
@@ -194,4 +200,58 @@ export async function getDailyTushum(
     );
 
   return bucketDailyTushum(buckets, rows);
+}
+
+export interface CashByStaffRow {
+  adminUserId: string | null;
+  /** Name, else phone, else null for payments recorded before T8. */
+  name: string | null;
+  totalTiyin: number;
+  count: number;
+}
+
+/**
+ * Today's cash, split by the employee who took it (AUDIT.md T8, SPEC §5.10).
+ *
+ * The reason the panel is worth paying for in a business that runs on cash: an
+ * owner can close the day against what each person actually collected instead of
+ * against one undifferentiated total. Owner-only — `money.reports` gates it, and
+ * a manager seeing their colleagues' takings is a different product decision.
+ *
+ * Grouped in SQL, not in Node: this is a single aggregate over one day's rows
+ * and it renders on the landing page of every owner's session.
+ */
+export async function getCashByStaff(
+  tenantId: string,
+  period: DashboardPeriod,
+  now: Date = new Date(),
+): Promise<CashByStaffRow[]> {
+  const { startUtc, endUtc } = periodRange(now, period);
+
+  const rows = await getDb()
+    .select({
+      adminUserId: payments.createdBy,
+      fullName: adminUsers.fullName,
+      phone: adminUsers.phone,
+      totalTiyin: sql<number>`sum(${payments.amountTiyin})::bigint`,
+      count: count(),
+    })
+    .from(payments)
+    .leftJoin(adminUsers, eq(adminUsers.id, payments.createdBy))
+    .where(
+      and(
+        eq(payments.tenantId, tenantId),
+        gte(payments.createdAt, startUtc),
+        lt(payments.createdAt, endUtc),
+      ),
+    )
+    .groupBy(payments.createdBy, adminUsers.fullName, adminUsers.phone)
+    .orderBy(sql`sum(${payments.amountTiyin}) DESC`);
+
+  return rows.map((r) => ({
+    adminUserId: r.adminUserId,
+    name: r.fullName ?? r.phone,
+    totalTiyin: Number(r.totalTiyin ?? 0),
+    count: Number(r.count),
+  }));
 }

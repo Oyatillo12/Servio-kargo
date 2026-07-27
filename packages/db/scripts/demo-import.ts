@@ -191,7 +191,6 @@ async function main(): Promise<void> {
       workingHours: 'Dushanba–Shanba, 09:00–18:00',
       contactPhone: '+998 90 000 00 00',
       settings: {
-        staff_tg_ids: [],
         reminders: { weekly_enabled: false, weekday: 1, hour: 10 },
         demo: true,
       },

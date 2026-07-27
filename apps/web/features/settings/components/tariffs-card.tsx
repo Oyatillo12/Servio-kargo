@@ -2,14 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { Check, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SectionCard } from '@/components/ui/section-card';
+import { PanelSection } from '@/components/ui/panel-section';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -33,19 +33,31 @@ export interface TariffView {
   name: string;
   isDefault: boolean;
   active: boolean;
-  /** Formatted price with unit, e.g. "55 000 so'm/kg" or "3.5 $/kg". */
-  priceText: string;
+  /** Formatted amount only, e.g. "55 000" or "3.5$". */
+  priceValue: string;
+  /** Unit suffix rendered muted after the amount, e.g. "so'm/kg" or "/kg". */
+  priceUnit: string;
   /** Editable raw price (so'm for UZS, dollars for USD). */
   editValue: string;
 }
 
-/** Tariffs block (SPEC §5.9): CRUD list with default radio + active toggle. */
+/**
+ * Tariffs block (SPEC §5.9, design 2a/2b): one row per tariff — the radio picks
+ * the default applied to new tracks, the switch takes a tariff out of use
+ * without deleting the history priced with it.
+ *
+ * The name/price area is the edit target, not a pencil icon: on a phone the
+ * design gives the whole row to the tap (a 16px icon at the end of a 380px row
+ * is a miss waiting to happen), and the pencil only appears from `md` where
+ * there is a pointer. Deleting lives inside the edit dialog for the same
+ * reason — and because it is the one destructive control here.
+ */
 export function TariffsCard({
   tariffs,
   unitLabel,
 }: {
   tariffs: TariffView[];
-  /** "so'm/kg" or "$/kg" depending on currency. */
+  /** "so'm/kg" or "$/kg" — shown on the price field's label. */
   unitLabel: string;
 }) {
   const t = useTranslations('settings');
@@ -69,35 +81,37 @@ export function TariffsCard({
   }
 
   return (
-    <SectionCard
+    <PanelSection
+      flush
       title={t('tariffsTitle')}
+      className="md:col-span-4"
       action={
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="xs"
           onClick={() => setAddOpen(true)}
           disabled={busy}
         >
-          <Plus className="h-4 w-4" aria-hidden />
+          <Plus strokeWidth={2} aria-hidden />
           {t('tariffNew')}
         </Button>
       }
-      className="space-y-2.5"
     >
       {tariffs.length === 0 ? (
-        <p className="text-[13px] text-muted-foreground">{t('tariffsEmpty')}</p>
+        <p className="border-t border-n-divider px-4 py-4 text-[13px] text-muted-foreground">
+          {t('tariffsEmpty')}
+        </p>
       ) : (
         tariffs.map((tf) => (
           <div
             key={tf.id}
             className={cn(
-              'flex items-center gap-3 rounded-lg border px-3 py-2.5',
-              tf.isDefault ? 'border-primary bg-accent/40' : 'border-border',
+              'flex min-h-[56px] items-center gap-3 border-t border-n-divider px-4 py-2 md:min-h-[52px]',
               !tf.active && 'opacity-60',
             )}
           >
-            {/* Default radio */}
+            {/* Default selector */}
             <button
               type="button"
               role="radio"
@@ -111,31 +125,45 @@ export function TariffsCard({
               }
               disabled={busy || tf.isDefault}
               className={cn(
-                'flex h-5 w-5 flex-none items-center justify-center rounded-full border-2',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
-                tf.isDefault
-                  ? 'border-primary bg-primary text-white'
-                  : 'border-input',
+                'flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full border-[1.5px] transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                tf.isDefault ? 'border-primary' : 'border-input hover:border-faint',
               )}
             >
               {tf.isDefault ? (
-                <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+                <span className="h-2 w-2 rounded-full bg-primary" aria-hidden />
               ) : null}
             </button>
 
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13.5px] font-semibold text-foreground">
-                {tf.name}
-                {tf.isDefault ? (
-                  <span className="ml-1.5 text-[11px] font-medium text-primary">
-                    · {t('tariffDefault')}
+            <button
+              type="button"
+              onClick={() => setEditing(tf)}
+              disabled={busy}
+              className={cn(
+                'flex min-w-0 flex-1 items-center gap-3 self-stretch rounded-sm text-start',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              )}
+            >
+              <span className="min-w-0 flex-1 md:flex md:items-center md:gap-2">
+                <span className="flex items-center gap-1.5">
+                  <span className="truncate text-[15px] font-medium text-foreground">
+                    {tf.name}
                   </span>
-                ) : null}
-              </p>
-              <p className="font-mono text-[12px] text-muted-foreground">
-                {tf.priceText}
-              </p>
-            </div>
+                  {tf.isDefault ? (
+                    <span className="flex-none rounded-sm border border-primary/30 px-1.5 py-px text-[11px] font-semibold uppercase tracking-[0.05em] text-primary">
+                      {t('tariffDefault')}
+                    </span>
+                  ) : null}
+                </span>
+                {/* Under the name on phones, pushed to the right on desktop. */}
+                <span className="mt-0.5 block text-[13px] text-muted-foreground md:ms-auto md:mt-0 md:text-[15px] md:font-semibold md:text-foreground">
+                  {tf.priceValue}{' '}
+                  <span className="text-faint md:text-[12px] md:font-medium">
+                    {tf.priceUnit}
+                  </span>
+                </span>
+              </span>
+            </button>
 
             <Switch
               checked={tf.active}
@@ -148,37 +176,36 @@ export function TariffsCard({
                 )
               }
             />
+
             <button
               type="button"
               aria-label={`${tCommon('edit')} — ${tf.name}`}
               onClick={() => setEditing(tf)}
               disabled={busy}
-              className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="hidden h-8 w-8 flex-none items-center justify-center rounded-md text-faint transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:inline-flex"
             >
-              <Pencil className="h-4 w-4" aria-hidden />
+              <Pencil className="h-4 w-4" strokeWidth={1.5} aria-hidden />
             </button>
-            <button
-              type="button"
-              aria-label={`${tCommon('delete')} — ${tf.name}`}
-              onClick={() =>
-                run(() => deleteTariffAction(tf.id), t('tariffDeleted'))
-              }
-              disabled={busy || tf.isDefault}
-              className="rounded p-1 text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden />
-            </button>
+            <ChevronRight
+              className="h-4 w-4 flex-none text-faint md:hidden"
+              strokeWidth={1.5}
+              aria-hidden
+            />
           </div>
         ))
       )}
+
+      <p className="border-t border-n-divider px-4 py-3 text-[13px] text-faint">
+        {t('tariffsHint')}
+      </p>
 
       <TariffDialog
         open={addOpen}
         onOpenChange={setAddOpen}
         title={t('tariffNewTitle')}
         unitLabel={unitLabel}
-        showDefault
         busy={busy}
+        showDefault
         onSubmit={(name, price, isDefault) =>
           run(
             () => createTariffAction({ name, price, isDefault }),
@@ -195,6 +222,13 @@ export function TariffsCard({
         busy={busy}
         initialName={editing?.name ?? ''}
         initialPrice={editing?.editValue ?? ''}
+        canDelete={editing != null && !editing.isDefault}
+        onDelete={() => {
+          const id = editing?.id;
+          if (!id) return;
+          setEditing(null);
+          run(() => deleteTariffAction(id), t('tariffDeleted'));
+        }}
         onSubmit={(name, price) => {
           const id = editing?.id;
           if (!id) return;
@@ -204,7 +238,7 @@ export function TariffsCard({
           );
         }}
       />
-    </SectionCard>
+    </PanelSection>
   );
 }
 
@@ -215,8 +249,10 @@ function TariffDialog({
   unitLabel,
   busy,
   showDefault = false,
+  canDelete = false,
   initialName = '',
   initialPrice = '',
+  onDelete,
   onSubmit,
 }: {
   open: boolean;
@@ -225,8 +261,10 @@ function TariffDialog({
   unitLabel: string;
   busy: boolean;
   showDefault?: boolean;
+  canDelete?: boolean;
   initialName?: string;
   initialPrice?: string;
+  onDelete?: () => void;
   onSubmit: (name: string, price: string, isDefault: boolean) => void;
 }) {
   const t = useTranslations('settings');
@@ -276,7 +314,7 @@ function TariffDialog({
             />
           </div>
           {showDefault ? (
-            <label className="flex items-center gap-2 text-[13px] text-slate-700">
+            <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
               <input
                 type="checkbox"
                 checked={isDefault}
@@ -285,6 +323,19 @@ function TariffDialog({
               />
               {t('tariffMakeDefaultCheckbox')}
             </label>
+          ) : null}
+
+          {canDelete ? (
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full"
+              onClick={onDelete}
+              disabled={busy}
+            >
+              <Trash2 aria-hidden />
+              {tCommon('delete')}
+            </Button>
           ) : null}
         </div>
         <DialogFooter>

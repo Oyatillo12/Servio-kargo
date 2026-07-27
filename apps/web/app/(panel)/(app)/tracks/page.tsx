@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import {
   STATUS_META,
   TRACK_STATUSES,
+  can,
   formatDate,
   formatKg,
   formatSom,
@@ -14,7 +15,7 @@ import {
   type TrackStatus,
 } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { listBatches, listTracks } from '@/lib/queries';
 import { ExportButton } from '@/components/shared/export-button';
 import { FilterChips, type FilterChip } from '@/components/shared/filter-chips';
@@ -52,7 +53,7 @@ export default async function TracksPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { tenant } = await requireAdmin();
+  const { tenant, role } = await requireCapability('tracks.view');
   const t = await getTranslations('tracks');
   const tCommon = await getTranslations('common');
   const locale = (await getLocale()) as Lang;
@@ -155,7 +156,7 @@ export default async function TracksPage({
       <PageHeader
         title={t('pageTitle')}
         count={result.total}
-        right={<ExportButton href={exportHref} />}
+        right={can(role, 'export.data') ? <ExportButton href={exportHref} /> : null}
       />
 
       <div className="mb-3 flex gap-2">
@@ -182,9 +183,12 @@ export default async function TracksPage({
            are hidden rather than shown inactive: a worklist already implies a
            status, so a chip tapped on top of it would look like a second filter
            and return nothing. One obvious way out instead. */
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#f0e0c2] bg-[#fffbf3] px-3 py-2.5">
-          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#fdf0d8] text-base leading-none">
-            {WORKLIST_ICONS[work]}
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[#f0e0c2] bg-[#fffbf3] px-3 py-2.5">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#fdf0d8] text-warning">
+            {(() => {
+              const Icon = WORKLIST_ICONS[work];
+              return <Icon className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />;
+            })()}
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-semibold text-foreground">
@@ -212,7 +216,7 @@ export default async function TracksPage({
         />
       )}
 
-      <TracksTable rows={rows} batches={batchOptions} />
+      <TracksTable rows={rows} batches={batchOptions} role={role} />
 
       <Pagination page={result.page} pages={result.pages} buildHref={pageHref} />
     </div>

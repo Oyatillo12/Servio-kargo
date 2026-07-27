@@ -11,7 +11,7 @@ import {
   type Lang,
 } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { xlsxResponse } from '@/lib/export-http';
 import { listTracksForExport } from '@/lib/queries';
 
@@ -34,7 +34,7 @@ const Query = z.object({
 });
 
 export async function GET(req: Request) {
-  const { tenant } = await requireAdmin();
+  const { tenant } = await requireCapability('export.data');
   // The spreadsheet leaves the building — an owner forwards it to an
   // accountant — so it is written in the language the admin is working in.
   const lang = (await getLocale()) as Lang;

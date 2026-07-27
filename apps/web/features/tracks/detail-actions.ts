@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { parseSomToTiyin } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { authorize, requireAdmin } from '@/lib/auth';
 import { setTrackPricing, setTracksCustomer } from '@/lib/queries';
 
 export interface WeightState {
@@ -42,7 +42,9 @@ export async function setWeightAction(input: {
     return { error: (await getTranslations('common'))('errorGeneric') };
   }
 
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('tracks.weigh');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const raw = parsed.data.weight.trim().replace(',', '.');
 
   let weightGrams: number | null = null;
@@ -104,7 +106,9 @@ export async function attachCustomerAction(input: {
   trackId: string;
   customerId: string;
 }): Promise<AssignCustomerState> {
-  const { tenant, admin } = await requireAdmin();
+  const auth = await authorize('tracks.assign');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant, admin } = auth.ctx;
   const t = await getTranslations('trackDetail');
 
   const parsed = attachSchema.safeParse(input);
@@ -129,7 +133,9 @@ export async function attachCustomerAction(input: {
 export async function detachCustomerAction(
   trackId: string,
 ): Promise<AssignCustomerState> {
-  const { tenant, admin } = await requireAdmin();
+  const auth = await authorize('tracks.assign');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant, admin } = auth.ctx;
 
   const parsed = z.string().uuid().safeParse(trackId);
   if (!parsed.success) {

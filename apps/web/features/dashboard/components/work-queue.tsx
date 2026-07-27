@@ -1,103 +1,101 @@
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, CircleCheck } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { worklistLabel, type Lang, type TrackWorklist } from '@kargotrack/shared';
 
-import { SectionCard } from '@/components/ui/section-card';
+import { PanelSection } from '@/components/ui/panel-section';
 import { cn } from '@/lib/utils';
 import type { WorklistCounts } from '@/lib/queries';
 import { WORKLIST_ICONS, WORKLIST_ORDER } from '@/lib/worklist-ui';
 
 /**
- * The operational queue that opens the dashboard (AUDIT.md T19). The six §5.10
- * cards report how the month went; at 9:00 the admin needs the opposite: what
- * has to be weighed, what nobody has claimed, what has been sitting on the
- * shelf for a week. Every row is a link into `/tracks?work=…` filtered by the
- * same condition the count was made with, so tapping a number lands on exactly
- * those rows.
+ * The operational queue that opens the dashboard (AUDIT.md T19, design 1a/1b).
+ * The money figures report how the month went; at 9:00 the admin needs the
+ * opposite: what has to be weighed, what nobody has claimed, what has been
+ * sitting on the shelf for a week.
+ *
+ * A list of full-width rows, not a grid of tiles: three queues in a row read as
+ * three unrelated stats, while stacked rows read as a to-do list you work down.
+ * Each row links into `/tracks?work=…` filtered by the same condition the count
+ * was made with, so tapping a number lands on exactly those tracks.
  */
 export function WorkQueue({ counts }: { counts: WorklistCounts }) {
   const t = useTranslations('dashboard');
   const pending = WORKLIST_ORDER.reduce((n, key) => n + counts[key], 0);
 
   return (
-    <SectionCard
+    <PanelSection
+      flush
+      className="md:col-span-4"
       title={t('workQueueTitle')}
-      description={pending > 0 ? t('workQueuePending', { count: pending }) : undefined}
-      className="animate-fade-in-up"
+      meta={pending > 0 ? t('workQueuePending', { count: pending }) : undefined}
     >
       {pending === 0 ? (
-        <div className="flex items-center gap-2.5 rounded-lg bg-[#e2f6e8] px-3 py-3">
-          <span
-            className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#c2e8cf] text-[13px] font-bold text-[#177338]"
+        <div className="flex min-h-[56px] items-center gap-3 border-t border-n-divider px-4 py-2.5">
+          <CircleCheck
+            className="h-[18px] w-[18px] flex-none text-success"
+            strokeWidth={1.5}
             aria-hidden
-          >
-            ✓
+          />
+          <span className="min-w-0">
+            <span className="block text-[15px] font-medium text-foreground">
+              {t('workQueueEmpty')}
+            </span>
+            <span className="block text-[13px] text-faint">
+              {t('workQueueEmptyHint')}
+            </span>
           </span>
-          <p className="text-[13px] font-medium text-[#177338]">
-            {t('workQueueEmpty')}
-          </p>
         </div>
       ) : (
-        // One tall row per queue on phones (thumb-sized targets), three columns
-        // from `sm` up so the block never grows taller than the fold on desktop.
-        <div className="grid gap-2 sm:grid-cols-3">
-          {WORKLIST_ORDER.map((key) => (
-            <WorkTile key={key} work={key} count={counts[key]} />
-          ))}
-        </div>
+        WORKLIST_ORDER.map((key) => (
+          <WorkRow key={key} work={key} count={counts[key]} />
+        ))
       )}
-    </SectionCard>
+    </PanelSection>
   );
 }
 
-function WorkTile({ work, count }: { work: TrackWorklist; count: number }) {
+function WorkRow({ work, count }: { work: TrackWorklist; count: number }) {
   const locale = useLocale() as Lang;
   const { label, hint } = worklistLabel(work, locale);
-  const waiting = count > 0;
+  const Icon = WORKLIST_ICONS[work];
 
   return (
     <Link
       href={`/tracks?work=${work}`}
       className={cn(
-        'flex min-h-[58px] items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        waiting
-          ? 'border-[#f0e0c2] bg-[#fffbf3] hover:bg-[#fff6e6]'
-          : 'border-border bg-white hover:bg-secondary',
+        'flex min-h-[56px] items-center gap-3 border-t border-n-divider px-4 py-2.5 transition-colors md:min-h-[48px]',
+        'hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
       )}
     >
-      <span
-        className={cn(
-          'flex h-9 w-9 flex-none items-center justify-center rounded-full text-base leading-none',
-          waiting ? 'bg-[#fdf0d8]' : 'bg-secondary',
-        )}
+      <Icon
+        className="h-[18px] w-[18px] flex-none text-faint"
+        strokeWidth={1.5}
         aria-hidden
-      >
-        {WORKLIST_ICONS[work]}
-      </span>
+      />
 
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-semibold text-foreground">
+      {/* Two lines on a phone, one on desktop where there is room for both. */}
+      <span className="min-w-0 flex-1 md:flex md:items-baseline md:gap-3">
+        <span className="block truncate text-[15px] font-medium text-foreground">
           {label}
         </span>
-        <span className="block truncate text-[11px] text-muted-foreground">
-          {hint}
-        </span>
+        <span className="block truncate text-[13px] text-faint">{hint}</span>
       </span>
 
       <span
         className={cn(
-          'flex-none font-mono text-xl font-bold leading-none tabular-nums',
-          waiting ? 'text-[#a35a00]' : 'text-slate-300',
+          'flex-none text-[18px] font-semibold leading-none',
+          // Amber only for the queue that is a service failure in progress:
+          // a parcel ready for a week is a customer who was not told.
+          work === 'stale_pickup' ? 'text-warning' : 'text-foreground',
         )}
       >
         {count}
       </span>
       <ChevronRight
-        className="h-4 w-4 flex-none text-slate-300"
-        strokeWidth={2}
+        className="h-4 w-4 flex-none text-faint"
+        strokeWidth={1.5}
         aria-hidden
       />
     </Link>

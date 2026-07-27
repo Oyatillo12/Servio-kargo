@@ -7,17 +7,34 @@
  */
 
 import type { Track } from '@kargotrack/db/schema';
-import { formatKg, formatSom, type StaffWeighing } from '@kargotrack/shared';
+import {
+  canUseStaffMode,
+  formatKg,
+  formatSom,
+  type StaffWeighing,
+} from '@kargotrack/shared';
 
 import type { KargoContext } from '../context';
 import { logger } from '../logger';
 import { applyStaffWeighing } from '../queries';
 
-/** Whether the interacting user is one of the tenant's staff (SPEC §3.8). */
+/**
+ * Whether the interacting user may use staff mode (SPEC §3.8).
+ *
+ * Reads the `admin_users` row the loading middleware attached, not the retired
+ * `tenants.settings.staff_tg_ids` list. That matters beyond tidiness: access now
+ * ends the moment an owner deactivates the person in the panel, and the row
+ * carries a role, so the same predicate can gate more than weighing later
+ * (AUDIT.md T8). Every role qualifies — an owner weighs parcels too.
+ */
 export function isStaff(ctx: KargoContext): boolean {
-  const fromId = ctx.from?.id;
-  const staffIds = ctx.tenant.settings?.staff_tg_ids ?? [];
-  return fromId != null && staffIds.includes(fromId);
+  const staff = ctx.staff;
+  if (!staff) return false;
+  return canUseStaffMode({
+    tgUserId: staff.tgUserId,
+    active: staff.active,
+    role: staff.role,
+  });
 }
 
 export interface StaffWeighOptions {

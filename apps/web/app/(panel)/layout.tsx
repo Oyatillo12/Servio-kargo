@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 
 import { Toaster } from '@/components/ui/sonner';
-import { fontVariables } from '@/lib/fonts';
+import { panelFontVariables } from '@/lib/fonts';
 
 import '../globals.css';
 
@@ -32,7 +32,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={fontVariables}>
+    <html lang={locale} className={panelFontVariables}>
       <body className="font-sans">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}

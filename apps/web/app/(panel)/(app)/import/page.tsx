@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { listBatches } from '@/lib/queries';
 import { PageHeader } from '@/components/layout/page-header';
 import { ImportWizard } from '@/features/import/components/import-wizard';
@@ -11,7 +11,7 @@ export async function generateMetadata() {
 }
 
 export default async function ImportPage() {
-  const { tenant } = await requireAdmin();
+  const { tenant } = await requireCapability('import.run');
   const t = await getTranslations('import');
 
   const batches = await listBatches(tenant.id);

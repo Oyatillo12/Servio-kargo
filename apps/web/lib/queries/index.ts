@@ -24,3 +24,5 @@ export * from './broadcasts';
 export * from './batches';
 export * from './import';
 export * from './dashboard';
+export * from './team';
+export * from './actors';

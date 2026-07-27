@@ -159,6 +159,7 @@ export const EXPORT_LABELS: Record<Lang, ExportLabels> = {
       'Telefon',
       'Usul',
       "Summa (so'm)",
+      'Qabul qildi',
       'Izoh',
     ],
     yes: 'Ha',
@@ -196,6 +197,7 @@ export const EXPORT_LABELS: Record<Lang, ExportLabels> = {
       'Телефон',
       'Способ',
       'Сумма (сум)',
+      'Принял',
       'Примечание',
     ],
     yes: 'Да',
@@ -297,6 +299,8 @@ export interface PaymentExportRow {
   customerPhone: string | null;
   method: 'cash' | 'click' | 'payme' | 'other';
   amountTiyin: number;
+  /** Employee who took the money (AUDIT.md T8); null for pre-T8 rows. */
+  authorName: string | null;
   note: string | null;
 }
 
@@ -319,6 +323,9 @@ export function buildPaymentsSheet(
       r.customerPhone,
       method[r.method],
       somFromTiyin(r.amountTiyin),
+      // An owner forwards this file to an accountant (§5.11); without the
+      // cashier's name the statement cannot be reconciled against a shift.
+      r.authorName,
       r.note,
     ]),
   };

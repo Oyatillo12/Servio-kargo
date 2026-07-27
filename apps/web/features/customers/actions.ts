@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { parseSomToTiyin } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { authorize, requireAdmin } from '@/lib/auth';
 import { createPayment, getCustomerDetail } from '@/lib/queries';
 
 export interface PaymentState {
@@ -44,7 +44,9 @@ export async function recordPaymentAction(
   const amountTiyin = parseSomToTiyin(parsed.data.amount);
   if (amountTiyin == null) return { error: t('invalidAmount') };
 
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('payments.record');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant, admin } = auth.ctx;
 
   // Scope check: the customer must belong to the session tenant (rule 1).
   const detail = await getCustomerDetail(tenant.id, parsed.data.customerId);
@@ -59,10 +61,14 @@ export async function recordPaymentAction(
     amountTiyin,
     method: parsed.data.method,
     note: note ? note : null,
+    createdBy: admin.id,
   });
 
   revalidatePath(`/customers/${parsed.data.customerId}`);
   revalidatePath('/customers');
   revalidatePath('/debtors');
+  // Payments can now be recorded straight from the dashboard, whose revenue
+  // and debt figures are exactly what this changes.
+  revalidatePath('/dashboard');
   return { ok: true };
 }

@@ -64,6 +64,13 @@
       "when": 1785141546685,
       "tag": "0008_freezing_magdalene",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785141547685,
+      "tag": "0009_team_roles",
+      "breakpoints": true
     }
   ]
 }

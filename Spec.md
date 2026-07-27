@@ -11,8 +11,25 @@ If anything below conflicts with CLAUDE.md, stop and ask before implementing.
 
 - **Customer** — the cargo company's client. Interacts ONLY via the tenant's
   Telegram bot. Never sees the web panel.
-- **Tenant admin** (`owner` / `staff`) — cargo company employees. Web admin
-  panel + "staff photo mode" inside the bot.
+- **Tenant admin** — a cargo company employee. One `admin_users` row per
+  person, used by BOTH surfaces: the web panel (phone + password) and the bot's
+  staff mode (`tg_user_id`). Three roles, named after the job, not a power
+  level — the matrix lives in `packages/shared/services/permissions.ts` and is
+  the single answer to "may they?" on both surfaces:
+  - `owner` — everything, including tariffs, currency, employees, broadcast
+    and deletion. Shown to users as **Administrator** / **Администратор**: the
+    person running the panel is not necessarily the company's proprietor, and
+    "Egasi" read as a claim about ownership rather than about access. The enum
+    value stays `owner` — it is an identifier, not a label.
+  - `manager` — the daily operation: import, assignment, weighing, payments,
+    debt chasing. Cannot reprice the company, message every customer at once,
+    delete history, or grant access.
+  - `warehouse` — weighing, photos, statuses, customer lookup, and ONE
+    customer's balance at handover. No cash, no company figures.
+
+  Permission is enforced server-side in every Server Action, not by hiding
+  controls. Employees are never deleted (their tracks and payments name them);
+  they are deactivated, which also ends every session and their bot access.
 - **Super-admin** — platform owner (me). Onboards tenants via a hidden area.
 
 ## 2. Status pipeline
@@ -101,8 +118,12 @@ copy — being greeted as a new arrival reads as having been logged out. The
 buttons are removed from the message once a language is picked.
 
 ### 3.8 Staff mode (photo + weighing)
-If `from.id` ∈ `tenant.settings.staff_tg_ids`, two extra behaviors on top of
-the normal customer menu:
+If `from.id` matches an ACTIVE `admin_users` row of this tenant
+(`admin_users.tg_user_id`), two extra behaviors on top of the normal customer
+menu. Every role qualifies — an owner weighs parcels too. An employee links
+their account by sending their invitation code to the bot (5.12); an owner
+revokes it by deactivating them or unlinking their Telegram, and both take
+effect on the next update.
 1. **Photo**: a photo with caption = track code → download to
    `/data/uploads/{tenantId}/{trackId}.jpg`, link to track, confirm.
 2. **Weighing**: caption or plain text of the form `CODE 3.2` (weight in kg,
@@ -325,7 +346,9 @@ two copies would drift the moment one side is edited.
   - **🇨🇳 Xitoy ombori manzili**: textarea, hint `{client_code} — mijoz kodi
     o'rniga qo'yiladi`.
   - **Ma'lumot matni** (info_text): textarea — taqiqlangan yuklar, qoidalar.
-  - Xodim Telegram IDlari (comma-separated).
+  - **Xodimlar** — a link to 5.12. Employees used to be edited right here as
+    a list of raw Telegram ids in `settings.staff_tg_ids`: no names, no roles,
+    and no way to revoke panel access. That field is retired.
   - Haftalik avto-eslatma (toggle + kun + soat, default Dushanba 10:00).
   - Bot username (read-only), webhook holati indikatori + `Webhookni qayta
     o'rnatish` button.
@@ -392,6 +415,47 @@ two copies would drift the moment one side is edited.
   - The date in the file name is the Tashkent calendar day.
   - Max 50 000 rows per file. Beyond that the file itself carries a warning
     row naming the true total — an export is never silently partial.
+
+- **5.12 /settings/team (Xodimlar)** — owner only. One row per employee:
+  name, role, phone, whether Telegram is linked, and when they last signed in.
+  Per row (`⋮`): change role, issue an access code, revoke a pending code,
+  unlink Telegram, sign them out of every device, deactivate / reactivate.
+
+  **An owner never sets a colleague's password.** Knowing it would let them act
+  as that person, which would quietly void `created_by` on payments and track
+  events. Instead the owner enters a phone, a name and a role, and gets a
+  6-character code (`ABC-234`) valid for 24 hours:
+  1. the employee opens `/login` → «Menda taklif kodi bor»;
+  2. enters their phone, the code, and a password they choose;
+  3. a warehouse employee sends the same code to the bot, which links their
+     Telegram (3.8). Panel and bot access are independent — a warehouse hand
+     may only ever use the bot, and their row carries no password until invited.
+
+  The code alphabet omits `O`/`0` and `I`/`1`: it is dictated down a phone to a
+  noisy warehouse. It is stored in the clear so the owner can re-read it an
+  hour later, which is safe — 6 characters of 32 symbols (~10^9), scoped to one
+  phone in one tenant, expiring in 24 hours, dead on first use.
+
+  **Guard rails:** the last active owner cannot be demoted or deactivated (a
+  company with no owner has no way back in), and nobody can deactivate
+  themselves. Deactivating, changing a password, redeeming an invite and «sign
+  out everywhere» all bump `admin_users.session_epoch`, which invalidates every
+  cookie ever issued for that person — sessions are stateless 30-day tokens, so
+  without it a departing employee's phone kept working for a month. Changing a
+  ROLE does not bump it: the role is read from the row on every request, so it
+  applies immediately without signing a working colleague out mid-shift.
+
+  Every employee, whatever their role, can change their own password from the
+  account menu (current password required).
+
+- **5.13 Audit trail** — `track_events.created_by`, `payments.created_by`,
+  `customers.created_by` and `broadcasts.created_by` name the employee.
+  The track timeline resolves them to a person, `staff:<telegram id>` included,
+  and marks bot-originated actions `· bot` — same employee, and an owner
+  reading the trail cares where it happened. The payment ledger and the
+  payments export both carry the cashier's name; the dashboard shows the
+  period's cash split by employee (owner only), which is how a cash business
+  closes its day.
 
 ## 6. Super-admin (`/sa`, guarded by SUPERADMIN_TOKEN env)
 

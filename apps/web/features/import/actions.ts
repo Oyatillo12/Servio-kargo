@@ -15,7 +15,7 @@ import {
   type TrackStatus,
 } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { authorize, requireAdmin } from '@/lib/auth';
 import { applyImport, getExistingNormalizedCodes } from '@/lib/queries';
 import { readXlsxCandidates } from '@/lib/xlsx';
 
@@ -37,7 +37,9 @@ export interface PreviewResult {
 export async function previewImportAction(
   formData: FormData,
 ): Promise<PreviewResult> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('import.run');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('import');
 
   const status = statusSchema.safeParse(formData.get('status'));
@@ -103,7 +105,9 @@ export async function applyImportAction(input: {
   batchId?: string | null;
   codes: ImportCode[];
 }): Promise<ApplyResult> {
-  const { tenant, admin } = await requireAdmin();
+  const auth = await authorize('import.run');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant, admin } = auth.ctx;
 
   const parsed = applySchema.safeParse(input);
   if (!parsed.success) {

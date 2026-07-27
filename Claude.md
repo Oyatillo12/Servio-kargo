@@ -62,20 +62,38 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
    Status changes APPEND to `track_events` (audit log). Never overwrite history.
 8. **The bot must never die.** Wrap every handler with error middleware; one malformed
    update must not crash the process. Log and continue.
+9. **Roles are enforced, not displayed.** Every mutating Server Action calls
+   `authorize(capability)` and every protected page calls
+   `requireCapability(...)`; hiding a button is a courtesy, not a control —
+   a Server Action is a POST endpoint any signed-in user can call. The matrix
+   lives in `packages/shared/services/permissions.ts` and is the ONLY place
+   that answers "may they?", for the panel and the bot alike. Appended as rule 9
+   rather than inserted, so the "CLAUDE.md rule N" citations throughout the
+   codebase keep pointing at what they were written against.
 
 ## Data Model (core tables)
 - `tenants` — id, name, bot_token (unique), bot_username, currency ('UZS'|'USD'),
   usd_rate_tiyin (som per 1 USD, in tiyin; used when currency=USD),
-  pickup_address, settings jsonb (reminder toggles, staff_tg_ids[],
-  china_address_template, info_text, working_hours, contact_phone), created_at
+  pickup_address, settings jsonb (reminder toggles, china_address_template,
+  info_text, working_hours, contact_phone), created_at
+  - `settings.staff_tg_ids` is RETIRED — employees live in `admin_users` with a
+    role that both surfaces read (migration 0009 copied it across).
 - `tariffs` — id, tenant_id, name, price_per_kg_minor (tiyin if tenant is UZS,
   cents if USD), is_default, active, sort. Every tenant always has exactly one
   active default tariff.
 - `batches` — id, tenant_id, name, transport ('avia'|'avto'|'train'),
   eta_date (nullable), status (CHINA_WAREHOUSE|IN_TRANSIT|TASHKENT_WAREHOUSE),
   created_at
-- `admin_users` — id, tenant_id, phone, password_hash (argon2), role ('owner'|'staff'),
-  lang ('uz'|'ru', panel UI language — independent of `customers.lang`)
+- `admin_users` — id, tenant_id, phone (nullable), password_hash (argon2,
+  nullable), tg_user_id (nullable — the SAME row serves the bot's staff mode),
+  full_name, role ('owner'|'manager'|'warehouse'), lang ('uz'|'ru', panel UI
+  language — independent of `customers.lang`), active, session_epoch,
+  last_login_at. Phone and password are null together: bot-only staff are real.
+  Employees are deactivated, never deleted — their tracks and payments name them.
+  - UNIQUE (tenant_id, phone) and (tenant_id, tg_user_id), both partial on NOT NULL
+- `admin_invites` — id, tenant_id, admin_user_id, code, expires_at, accepted_at,
+  created_by. An owner never sets a colleague's password; they issue a code and
+  the invitee sets their own (SPEC 5.12).
 - `customers` — id, tenant_id, tg_user_id, phone, full_name, client_code
   (e.g. "DK-1042" = tenant prefix + sequence), lang ('uz'|'ru'), created_at
 - `tracks` — id, tenant_id, customer_id (nullable — codes can arrive before a customer
@@ -86,7 +104,7 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
   - UNIQUE index on (tenant_id, code_normalized)
 - `track_events` — id, track_id, status, meta jsonb, created_by, created_at
 - `payments` — id, tenant_id, customer_id, amount_tiyin, method
-  ('cash'|'click'|'payme'|'other'), note, created_at
+  ('cash'|'click'|'payme'|'other'), note, created_by (admin_users), created_at
 - `broadcasts` — id, tenant_id, text, sent_count, created_at
 - Debt per customer = SUM(price_tiyin of tracks in READY_FOR_PICKUP or DELIVERED,
   excluding soft-deleted) − SUM(payments). Always in som. Implement as a service

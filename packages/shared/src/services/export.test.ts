@@ -50,6 +50,7 @@ const payment = (over: Partial<PaymentExportRow> = {}): PaymentExportRow => ({
   customerPhone: '+998901234567',
   method: 'cash',
   amountTiyin: 5_000_000,
+  authorName: 'Dilnoza Saidova',
   note: 'oldindan',
   ...over,
 });
@@ -187,8 +188,17 @@ describe('buildPaymentsSheet', () => {
       '+998901234567',
       'naqd',
       50_000,
+      'Dilnoza Saidova',
       'oldindan',
     ]);
+  });
+
+  it('leaves the cashier empty for a payment recorded before T8', () => {
+    // Rows written before `payments.created_by` existed have nobody to name;
+    // the column stays blank rather than inventing an attribution.
+    expect(
+      buildPaymentsSheet([payment({ authorName: null })]).rows[0]![6],
+    ).toBeNull();
   });
 
   it('labels the method in Russian too', () => {
@@ -199,7 +209,7 @@ describe('buildPaymentsSheet', () => {
   });
 
   it('leaves a missing note empty', () => {
-    expect(buildPaymentsSheet([payment({ note: null })]).rows[0]![6]).toBeNull();
+    expect(buildPaymentsSheet([payment({ note: null })]).rows[0]![7]).toBeNull();
   });
 });
 

@@ -14,8 +14,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 
-import { PRIMARY_NAV, SECONDARY_NAV, type NavItem } from './nav-items';
-import { useIsActive } from './sidebar-nav';
+import { primaryNavFor, secondaryNavFor, type NavItem } from './nav-items';
+import { useIsActive } from './nav-active';
 
 /** Red count bubble reused by the tab bar and the sheet rows. */
 function CountBadge({ count, className }: { count: number; className?: string }) {
@@ -33,63 +33,60 @@ function CountBadge({ count, className }: { count: number; className?: string })
 }
 
 /**
- * Mobile bottom tab bar (design screen 02): four primary tabs + a "more"
- * button that opens the secondary items in a bottom-sheet. `moreBadge` shows a
- * count dot on the more button (e.g. pending debtors, which live in the sheet).
+ * Mobile bottom tab bar (design screen 1b): five 60px tabs on white above one
+ * hairline rule. The current tab is stated by indigo icon + label alone —
+ * the design has no pill, underline or fill down here, because the bar sits
+ * over scrolling content and any filled shape competes with the page.
+ *
+ * Four primary sections plus "more", which opens the rest in a bottom sheet;
+ * `moreBadge` carries the pending-debtor count, since Debtors lives in there.
+ *
+ * Both halves are filtered by `role`. When a role reaches nothing outside the
+ * bar — a warehouse hand does not — "more" is dropped rather than opening an
+ * empty sheet.
  */
-export function BottomNav({ moreBadge = 0 }: { moreBadge?: number }) {
+export function BottomNav({
+  moreBadge = 0,
+  role,
+}: {
+  moreBadge?: number;
+  role: string;
+}) {
   const t = useTranslations('nav');
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const moreActive = SECONDARY_NAV.some(
+  const primary = primaryNavFor(role);
+  const secondary = secondaryNavFor(role);
+
+  const moreActive = secondary.some(
     (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
   );
 
   return (
     <>
-      <nav className="flex border-t border-border bg-white px-1 pb-[max(env(safe-area-inset-bottom),0.375rem)] pt-1">
-        {PRIMARY_NAV.map((item) => (
+      <nav className="flex h-[60px] border-t border-n-200 bg-white pb-[env(safe-area-inset-bottom)]">
+        {primary.map((item) => (
           <BottomLink key={item.href} item={item} />
         ))}
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label={t('more')}
-          aria-expanded={open}
-          className="relative flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span
-            className={cn(
-              'absolute top-0 h-[3px] w-8 rounded-full bg-primary transition-opacity',
-              moreActive ? 'opacity-100' : 'opacity-0',
-            )}
-          />
-          <span className="relative">
-            <MoreHorizontal
-              className={cn(
-                'h-[22px] w-[22px]',
-                moreActive ? 'text-primary' : 'text-slate-400',
-              )}
-              strokeWidth={1.8}
-              aria-hidden
-            />
-            <CountBadge
-              count={moreBadge}
-              className="absolute -right-2 -top-1.5 h-4 min-w-4 text-[10px]"
-            />
-          </span>
-          <span
-            className={cn(
-              'text-[11px]',
-              moreActive
-                ? 'font-bold text-primary'
-                : 'font-medium text-slate-500',
-            )}
+        {secondary.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label={t('more')}
+            aria-expanded={open}
+            className={cn(tabClass, moreActive ? activeClass : idleClass)}
           >
+            <span className="relative">
+              <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
+              <CountBadge
+                count={moreBadge}
+                className="absolute -right-2 -top-1.5 h-4 min-w-4 text-[10px]"
+              />
+            </span>
             {t('more')}
-          </span>
-        </button>
+          </button>
+        ) : null}
       </nav>
 
       <Sheet open={open} onOpenChange={setOpen}>
@@ -101,7 +98,7 @@ export function BottomNav({ moreBadge = 0 }: { moreBadge?: number }) {
             <SheetTitle>{t('more')}</SheetTitle>
           </SheetHeader>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            {SECONDARY_NAV.map((item) => (
+            {secondary.map((item) => (
               <MoreLink
                 key={item.href}
                 item={item}
@@ -116,6 +113,11 @@ export function BottomNav({ moreBadge = 0 }: { moreBadge?: number }) {
   );
 }
 
+const tabClass =
+  'flex flex-1 flex-col items-center justify-center gap-[3px] text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring';
+const activeClass = 'font-semibold text-primary';
+const idleClass = 'font-medium text-muted-foreground active:text-foreground';
+
 function BottomLink({ item }: { item: NavItem }) {
   const t = useTranslations('nav');
   const active = useIsActive(item.href);
@@ -125,30 +127,10 @@ function BottomLink({ item }: { item: NavItem }) {
     <Link
       href={item.href}
       aria-current={active ? 'page' : undefined}
-      className="relative flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className={cn(tabClass, active ? activeClass : idleClass)}
     >
-      <span
-        className={cn(
-          'absolute top-0 h-[3px] w-8 rounded-full bg-primary transition-opacity',
-          active ? 'opacity-100' : 'opacity-0',
-        )}
-      />
-      <Icon
-        className={cn(
-          'h-[22px] w-[22px]',
-          active ? 'text-primary' : 'text-slate-400',
-        )}
-        strokeWidth={1.8}
-        aria-hidden
-      />
-      <span
-        className={cn(
-          'text-[11px]',
-          active ? 'font-bold text-primary' : 'font-medium text-slate-500',
-        )}
-      >
-        {t(item.key)}
-      </span>
+      <Icon className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
+      {t(item.key)}
     </Link>
   );
 }
@@ -172,21 +154,18 @@ function MoreLink({
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex items-center gap-3 rounded-xl border px-3.5 py-3 transition-colors',
+        'flex min-h-[52px] items-center gap-3 rounded-md border px-3.5 py-3 transition-colors',
         active
-          ? 'border-transparent bg-accent text-primary'
-          : 'border-border bg-white text-foreground hover:bg-secondary',
+          ? 'border-primary/30 bg-accent text-primary'
+          : 'border-input bg-white text-foreground active:bg-secondary',
       )}
     >
       <Icon
-        className={cn(
-          'h-5 w-5 shrink-0',
-          active ? 'text-primary' : 'text-slate-500',
-        )}
-        strokeWidth={1.8}
+        className={cn('h-[18px] w-[18px] shrink-0', !active && 'text-faint')}
+        strokeWidth={1.5}
         aria-hidden
       />
-      <span className="flex-1 text-sm font-semibold">{t(item.key)}</span>
+      <span className="flex-1 text-[14px] font-medium">{t(item.key)}</span>
       <CountBadge count={badge} className="h-5 min-w-5 px-1.5 text-[11px]" />
     </Link>
   );

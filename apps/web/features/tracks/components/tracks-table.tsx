@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
-import type { TrackStatus } from '@kargotrack/shared';
+import { can, type TrackStatus } from '@kargotrack/shared';
 
 import { StatusBadge } from '@/components/shared/status-badge';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -46,9 +46,11 @@ export interface TrackRowView {
 export function TracksTable({
   rows,
   batches,
+  role,
 }: {
   rows: TrackRowView[];
   batches: BatchOption[];
+  role: string;
 }) {
   const t = useTranslations('tracks');
   const tCommon = useTranslations('common');
@@ -129,6 +131,7 @@ export function TracksTable({
       {selected.size > 0 ? (
         <BulkBar
           count={selected.size}
+          canAssign={can(role, 'tracks.assign')}
           onClear={() => setSelected(new Set())}
           onCustomer={() => setCustomerOpen(true)}
           onBatch={() => setBatchOpen(true)}
@@ -293,12 +296,15 @@ export function TracksTable({
  */
 function BulkBar({
   count,
+  canAssign,
   onClear,
   onCustomer,
   onBatch,
   onStatus,
 }: {
   count: number;
+  /** Warehouse staff move parcels but do not decide whose they are. */
+  canAssign: boolean;
   onClear: () => void;
   onCustomer: () => void;
   onBatch: () => void;
@@ -325,22 +331,26 @@ function BulkBar({
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          className="border-transparent bg-white/15 text-white hover:bg-white/25"
-          onClick={onCustomer}
-        >
-          {t('bulkAssignCustomer')}
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="border-transparent bg-white/15 text-white hover:bg-white/25"
-          onClick={onBatch}
-        >
-          {t('bulkAssignBatch')}
-        </Button>
+        {canAssign ? (
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="border-transparent bg-white/15 text-white hover:bg-white/25"
+              onClick={onCustomer}
+            >
+              {t('bulkAssignCustomer')}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="border-transparent bg-white/15 text-white hover:bg-white/25"
+              onClick={onBatch}
+            >
+              {t('bulkAssignBatch')}
+            </Button>
+          </>
+        ) : null}
         <Button
           variant="secondary"
           size="sm"

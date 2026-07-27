@@ -41,6 +41,7 @@
 
     --primary: 243 56% 34%; /* Indigo 800 #2B2687 */
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 243 56% 26%;
 
     --secondary: 240 14% 95%;
     --secondary-foreground: 243 49% 15%;
@@ -53,12 +54,90 @@
 
     --destructive: 4 60% 50%; /* Xato #CC3D33 */
     --destructive-foreground: 0 0% 100%;
+    --warning: 38 85% 42%; /* Ogohlantirish #C77E10 */
+    --success: 146 63% 33%; /* Muvaffaqiyat #1F8A4C */
+    --faint: 240 6% 56%; /* Kulrang 500 #8A8A96 */
 
     --border: 240 9% 85%; /* Kulrang 300 #D5D5DC */
     --input: 240 9% 82%;
     --ring: 243 56% 34%;
 
     --radius: 0.625rem; /* 10px */
+  }
+
+  /*
+   * Admin-panel theme (Claude Design "SERVIO Kargo Dashboard", screen 1e).
+   *
+   * Scoped to a class rather than `:root` because the panel and the public
+   * landing page are separate root layouts sharing this stylesheet, and the
+   * landing keeps the older SERVIO indigo/copper brand. `lib/fonts.ts` puts
+   * `theme-panel` on the panel's <html>; nothing else opts in.
+   *
+   * The system is deliberately monochrome: separation comes from 1px n-200
+   * borders and background steps (n-0 / n-100), never from shadows — those are
+   * reserved for floating layers (dropdowns, sheets, toasts). Colour always
+   * means state: red = debt, amber = needs attention, green = done,
+   * indigo = action and selection.
+   */
+  .theme-panel {
+    /* Neutral ramp (hex, for the odd literal that is not a shadcn token) */
+    --n-900: #1a1d21;
+    --n-600: #5c6270;
+    --n-400: #8a909c;
+    --n-200: #e4e6ea;
+    --n-100: #f5f6f8;
+    --n-0: #ffffff;
+    /* Hairlines lighter than n-200: rows inside a card, list separators. */
+    --n-divider: #edeef1;
+    /* The 8px bands that separate full-bleed sections on phones. */
+    --n-band: #f2f3f5;
+
+    --font-sans: var(--font-panel-sans);
+
+    --background: 210 14% 97%; /* canvas #F7F8F9 */
+    --foreground: 214 12% 12%; /* n-900 */
+
+    --card: 0 0% 100%;
+    --card-foreground: 214 12% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 214 12% 12%;
+
+    --primary: 235 51% 48%; /* accent-600 #3B45B8 */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 235 54% 38%; /* #2C3494 */
+
+    --secondary: 220 18% 97%; /* n-100 */
+    --secondary-foreground: 214 12% 12%;
+
+    --muted: 220 18% 97%;
+    --muted-foreground: 222 10% 40%; /* n-600 */
+    /* n-400 — placeholders, zero values, chevrons. */
+    --faint: 220 8% 58%;
+
+    --accent: 230 55% 96%; /* selected nav row #EEF0FA */
+    --accent-foreground: 235 51% 48%;
+
+    --destructive: 4 77% 40%; /* red-600 #B42318 */
+    --destructive-foreground: 0 0% 100%;
+    --warning: 40 100% 30%; /* amber-600 #9A6700 */
+    --success: 145 64% 29%; /* green-600 #1B7A43 */
+
+    --border: 220 13% 91%; /* n-200 */
+    --input: 220 12% 86%; /* #D6D9DF — field/button outlines read stronger */
+    --ring: 235 51% 48%;
+
+    /* 8px cards (lg) · 6px buttons (md) · 4px fields (sm) */
+    --radius: 0.5rem;
+
+    /* The sidebar sits on white, like the header — not on the canvas. */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 10% 40%;
+    --sidebar-primary: 235 51% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 230 55% 96%;
+    --sidebar-accent-foreground: 235 51% 48%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 235 51% 48%;
   }
 }
 
@@ -71,6 +150,25 @@
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
+  }
+  /* Every figure in the panel is a quantity that gets compared down a column —
+   * counts, weights, som totals. Proportional digits make those columns jitter. */
+  .theme-panel body {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Empty segment of the cargo-flow bar: a stage with nothing in it reads as
+   * "no cargo here", not as a stage that does not exist. */
+  .hatch {
+    background-image: repeating-linear-gradient(
+      135deg,
+      #e9ebef 0px,
+      #e9ebef 4px,
+      #f7f8fa 4px,
+      #f7f8fa 8px
+    );
   }
 }
 

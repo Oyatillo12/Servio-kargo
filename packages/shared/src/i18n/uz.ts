@@ -185,6 +185,16 @@ export const uz: Strings = {
     `❌ Rasm hajmi juda katta. Ruxsat etilgan eng katta hajm — ${maxMb} MB.`,
   staffPhotoError: "Rasmni yuklab bo'lmadi, birozdan so'ng qayta urinib ko'ring.",
 
+  // --- §5.12 xodimni Telegramga ulash ---
+  staffLinked: (name) =>
+    `✅ ${name}, siz xodim sifatida ulandingiz. Endi trek kodi va vaznni yuborishingiz mumkin, masalan: SF1234567890 3.2`,
+  staffLinkNotFound:
+    "❓ Bunday kod topilmadi. Kodni administratoringizdan qayta so'rang.",
+  staffLinkExpired:
+    "⌛ Kod muddati tugagan. Administratoringizdan yangi kod so'rang.",
+  staffLinkTaken:
+    "⚠️ Bu Telegram akkaunt allaqachon boshqa xodimga ulangan.",
+
   // --- §4.2 notifications ---
   notifChinaWarehouse: (code) =>
     `📦 ${code} — yukingiz Xitoy omboriga qabul qilindi.`,

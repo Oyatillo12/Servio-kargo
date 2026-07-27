@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 
 import { formatDateTime } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { listBroadcasts, listCustomerIdsWithTelegram } from '@/lib/queries';
 import { PageHeader } from '@/components/layout/page-header';
 import { BroadcastForm } from '@/features/broadcast/components/broadcast-form';
@@ -19,7 +19,7 @@ function preview(text: string): string {
 }
 
 export default async function BroadcastPage() {
-  const { tenant } = await requireAdmin();
+  const { tenant } = await requireCapability('broadcast.send');
   const t = await getTranslations('broadcast');
 
   const [recipientIds, history] = await Promise.all([

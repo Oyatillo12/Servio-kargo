@@ -5,7 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/layout/page-header';
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { listBatches } from '@/lib/queries';
 import { NewBatchForm } from '@/features/batches/components/new-batch-form';
 import { TRANSPORT_KEY } from '@/features/batches/transport';
@@ -16,7 +16,7 @@ export async function generateMetadata() {
 }
 
 export default async function BatchesPage() {
-  const { tenant } = await requireAdmin();
+  const { tenant } = await requireCapability('batches.manage');
   const t = await getTranslations('batches');
 
   const batches = await listBatches(tenant.id);

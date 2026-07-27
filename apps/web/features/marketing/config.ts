@@ -10,10 +10,10 @@
  */
 
 /** Telegram deep link for the "write to us" CTA. */
-export const TELEGRAM_URL = 'https://t.me/servio_kargo';
+export const TELEGRAM_URL = 'https://t.me/Oyatilloi2';
 
 /**
  * Publicly shown contact phone in international format, or null to hide the
  * phone everywhere on the landing until there is a real number.
  */
-export const CONTACT_PHONE: string | null = null;
+export const CONTACT_PHONE: string | null = "+998 99 556 24 16";

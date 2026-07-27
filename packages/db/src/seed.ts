@@ -96,8 +96,9 @@ async function main() {
       pickupAddress: "Toshkent sh., Chilonzor t., Bunyodkor ko'chasi 1",
       workingHours: 'Dushanba–Shanba, 09:00–18:00',
       contactPhone: '+998901112233',
+      // No `staff_tg_ids`: employees are real `admin_users` rows now, seeded
+      // below with names and roles (AUDIT.md T8).
       settings: {
-        staff_tg_ids: [111111111, 222222222],
         reminders: { weekly_enabled: true, weekday: 1, hour: 10 },
       },
       createdAt: daysAgo(20),
@@ -145,13 +146,41 @@ async function main() {
 
   // --- Admin (owner) -------------------------------------------------------
   const passwordHash = await hash('demo123');
-  await db.insert(adminUsers).values({
-    tenantId: tenant.id,
-    phone: '+998901234567',
-    passwordHash,
-    role: 'owner',
-    createdAt: daysAgo(20),
-  });
+  // One of each role, so the panel can be opened as any of them and the seeded
+  // permission boundaries are visible without hand-editing the database.
+  const [seededOwner] = await db
+    .insert(adminUsers)
+    .values([
+      {
+        tenantId: tenant.id,
+        phone: '+998901234567',
+        fullName: 'Aziz Karimov',
+        passwordHash,
+        role: 'owner',
+        createdAt: daysAgo(20),
+      },
+      {
+        tenantId: tenant.id,
+        phone: '+998901234568',
+        fullName: 'Dilnoza Saidova',
+        passwordHash,
+        role: 'manager',
+        createdAt: daysAgo(18),
+      },
+      {
+        // Bot-only, exactly like an id migrated out of `staff_tg_ids`: linked to
+        // Telegram, no phone and no password until an owner invites them.
+        tenantId: tenant.id,
+        phone: null,
+        fullName: 'Ombor (Guangzhou)',
+        passwordHash: null,
+        tgUserId: 111111111,
+        role: 'warehouse',
+        createdAt: daysAgo(18),
+      },
+    ])
+    .returning();
+  if (!seededOwner) throw new Error('failed to insert admin users');
 
   // --- Customers -----------------------------------------------------------
   const customerSeeds = [

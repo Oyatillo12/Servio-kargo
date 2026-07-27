@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { TRACK_STATUSES, type TrackStatus } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { authorize, requireAdmin } from '@/lib/auth';
 import {
   assignTracksToBatch,
   setTrackStatuses,
@@ -46,7 +46,9 @@ export async function changeTrackStatusesAction(input: {
   trackIds: string[];
   status: TrackStatus;
 }): Promise<ChangeStatusResult> {
-  const { tenant, admin } = await requireAdmin();
+  const auth = await authorize('tracks.status');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant, admin } = auth.ctx;
   const t = await getTranslations('tracks');
 
   const parsed = changeSchema.safeParse(input);
@@ -82,7 +84,9 @@ export async function assignTracksToBatchAction(input: {
   trackIds: string[];
   batchId: string | null;
 }): Promise<AssignBatchResult> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('tracks.assign');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('tracks');
 
   const parsed = assignSchema.safeParse(input);
@@ -122,7 +126,9 @@ export async function assignTracksCustomerAction(input: {
   trackIds: string[];
   customerId: string | null;
 }): Promise<AssignCustomerResult> {
-  const { tenant, admin } = await requireAdmin();
+  const auth = await authorize('tracks.assign');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant, admin } = auth.ctx;
   const t = await getTranslations('tracks');
 
   const parsed = assignCustomerSchema.safeParse(input);
@@ -149,7 +155,9 @@ export interface DeleteTrackResult {
 export async function softDeleteTrackAction(
   trackId: string,
 ): Promise<DeleteTrackResult> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('tracks.delete');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
 
   const parsed = z.string().uuid().safeParse(trackId);
   if (!parsed.success) {

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { parseSomToTiyin, parseUsdToCents } from '@kargotrack/shared';
 import type { TenantSettings } from '@kargotrack/db/schema';
 
-import { requireAdmin } from '@/lib/auth';
+import { authorize } from '@/lib/auth';
 import {
   createTariff,
   deleteTariff,
@@ -28,7 +28,6 @@ const schema = z.object({
   pickupAddress: z.string().max(500).optional(),
   workingHours: z.string().max(100).optional(),
   contactPhone: z.string().max(50).optional(),
-  staffIds: z.string().max(2000).optional(),
   chinaAddressTemplate: z.string().max(2000).optional(),
   infoText: z.string().max(4000).optional(),
   weeklyEnabled: z.string().optional(), // 'on' when the switch is on
@@ -46,13 +45,14 @@ export async function updateSettingsAction(
   _prev: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('settings.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
 
   const parsed = schema.safeParse({
     pickupAddress: formData.get('pickupAddress') ?? undefined,
     workingHours: formData.get('workingHours') ?? undefined,
     contactPhone: formData.get('contactPhone') ?? undefined,
-    staffIds: formData.get('staffIds') ?? undefined,
     chinaAddressTemplate: formData.get('chinaAddressTemplate') ?? undefined,
     infoText: formData.get('infoText') ?? undefined,
     weeklyEnabled: formData.get('weeklyEnabled') ?? undefined,
@@ -63,22 +63,15 @@ export async function updateSettingsAction(
     return { error: (await getTranslations('settings'))('invalidFields') };
   }
 
-  const staffTgIds = Array.from(
-    new Set(
-      (parsed.data.staffIds ?? '')
-        .split(/[\s,]+/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((s) => Number(s))
-        .filter((n) => Number.isSafeInteger(n) && n > 0),
-    ),
-  );
-
   const chinaTemplate = parsed.data.chinaAddressTemplate?.trim();
   const infoText = parsed.data.infoText?.trim();
 
+  // Spread the stored object rather than rebuilding it: this jsonb column also
+  // carries keys this form knows nothing about — the retired `staff_tg_ids`
+  // (kept readable for a rollback, now owned by `admin_users`) and the `demo`
+  // flag the prospect importer sets. Rebuilding erased them on every save.
   const settings: TenantSettings = {
-    staff_tg_ids: staffTgIds,
+    ...tenant.settings,
     reminders: {
       weekly_enabled: parsed.data.weeklyEnabled === 'on',
       weekday: parsed.data.weekday,
@@ -112,7 +105,9 @@ export async function updateCurrencyAction(input: {
   currency: 'UZS' | 'USD';
   rate?: string;
 }): Promise<CurrencyState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('settings.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
 
   const t = await getTranslations('settings');
 
@@ -148,7 +143,9 @@ export async function createTariffAction(input: {
   price: string;
   isDefault: boolean;
 }): Promise<TariffActionState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('settings.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('settings');
 
   const name = input.name.trim();
@@ -173,7 +170,9 @@ export async function updateTariffAction(input: {
   name: string;
   price: string;
 }): Promise<TariffActionState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('settings.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('settings');
 
   const id = z.string().uuid().safeParse(input.tariffId);
@@ -199,7 +198,9 @@ export async function updateTariffAction(input: {
 export async function setDefaultTariffAction(
   tariffId: string,
 ): Promise<TariffActionState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('settings.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('settings');
 
   const id = z.string().uuid().safeParse(tariffId);
@@ -217,7 +218,9 @@ export async function setTariffActiveAction(
   tariffId: string,
   active: boolean,
 ): Promise<TariffActionState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('settings.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('settings');
 
   const id = z.string().uuid().safeParse(tariffId);
@@ -237,7 +240,9 @@ export async function setTariffActiveAction(
 export async function deleteTariffAction(
   tariffId: string,
 ): Promise<TariffActionState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('settings.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('settings');
 
   const id = z.string().uuid().safeParse(tariffId);
@@ -261,7 +266,9 @@ export interface WebhookState {
 
 /** Re-point the tenant's bot webhook at this platform (SPEC §5.7 / §6). */
 export async function reconnectWebhookAction(): Promise<WebhookState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('settings.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
 
   let base: string;
   try {

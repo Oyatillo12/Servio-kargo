@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { BATCH_STATUSES, type BatchStatus } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { authorize, requireAdmin } from '@/lib/auth';
 import { changeBatchStatus, createBatch, updateBatchEta } from '@/lib/queries';
 
 const isoDate = z
@@ -32,7 +32,9 @@ export async function createBatchAction(input: {
   transport: 'avia' | 'avto' | 'train';
   etaDate: string | null;
 }): Promise<CreateBatchResult> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('batches.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('batches');
 
   const parsed = createSchema.safeParse({
@@ -63,7 +65,9 @@ export async function updateBatchEtaAction(input: {
   batchId: string;
   etaDate: string | null;
 }): Promise<UpdateEtaResult> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('batches.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
 
   const id = z.string().uuid().safeParse(input.batchId);
   const eta = isoDate.safeParse(input.etaDate || null);
@@ -95,7 +99,9 @@ export async function changeBatchStatusAction(input: {
   batchId: string;
   status: BatchStatus;
 }): Promise<ChangeBatchStatusResult> {
-  const { tenant, admin } = await requireAdmin();
+  const auth = await authorize('batches.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant, admin } = auth.ctx;
   const t = await getTranslations('batches');
 
   const id = z.string().uuid().safeParse(input.batchId);

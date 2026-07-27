@@ -15,6 +15,7 @@ import { showChinaAddress } from './china';
 import { matchMenuAction } from './common';
 import { handleLookup } from './lookup';
 import { showBalance, showInfo, showMyTracks } from './menu';
+import { handleStaffLink } from './staffLink';
 import { handleStaffWeighing, isStaff } from './staffWeigh';
 
 /** Clear every pending multi-step flow's session state. */
@@ -67,6 +68,12 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
     await handleAddTracks(ctx, text);
     return;
   }
+
+  // An invitation code links this Telegram account to an employee record
+  // (§5.12). Checked before weighing and lookup because it is what a brand-new
+  // warehouse hand sends first, and a 6-character code can never be a track
+  // code (8–20), so nothing legitimate is shadowed.
+  if (!isStaff(ctx) && (await handleStaffLink(ctx, text))) return;
 
   // Staff weighing (§3.8): a staff member's free-text `CODE 3.2` weighs the
   // track. Only staff, and only when it parses — otherwise fall through to lookup.

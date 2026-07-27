@@ -42,7 +42,21 @@ export const trackStatus = pgEnum('track_status', [
   'RETURNED',
 ]);
 
-export const adminRole = pgEnum('admin_role', ['owner', 'staff']);
+/**
+ * Panel + bot roles, in descending authority (SPEC §1). They name a JOB, not a
+ * power level: a Tashkent cargo runs an owner, office managers and warehouse
+ * hands, and each needs a different screen — see `ROLE_CAPABILITIES` in
+ * `@kargotrack/shared`, which is the single source of truth for who may do what.
+ *
+ * `staff` is the legacy value kept so pre-existing rows stay readable; the
+ * migration rewrites every one of them to `manager` and nothing issues it again.
+ */
+export const adminRole = pgEnum('admin_role', [
+  'owner',
+  'manager',
+  'warehouse',
+  'staff',
+]);
 
 export const paymentMethod = pgEnum('payment_method', [
   'cash',
@@ -63,8 +77,14 @@ export const transport = pgEnum('transport', ['avia', 'avto', 'train']);
 
 /** Tenant-level configuration stored in `tenants.settings`. */
 export type TenantSettings = {
-  /** Telegram user ids allowed to use staff photo mode (SPEC 3.8). */
-  staff_tg_ids: number[];
+  /**
+   * @deprecated Superseded by `admin_users.tg_user_id` (AUDIT.md T8). Staff mode
+   * now resolves a real employee row — with a role — instead of a bare id, so
+   * the bot can tell a warehouse hand from an owner and the audit trail can name
+   * them. Migration 0009 copied every id here into `admin_users`; the field is
+   * retained only so a rollback can still read old rows, and nothing writes it.
+   */
+  staff_tg_ids?: number[];
   /** Weekly auto-reminder config (SPEC 5.7 / 7.7). */
   reminders: {
     weekly_enabled: boolean;
@@ -154,6 +174,19 @@ export const batches = pgTable('batches', {
     .defaultNow(),
 });
 
+/**
+ * One row per employee of a cargo company — the SAME row on both surfaces.
+ *
+ * It used to be two disconnected identities: this table for the panel and
+ * `tenants.settings.staff_tg_ids` for the bot's weighing mode. A warehouse hand
+ * therefore existed twice under two different keys, and the audit log could only
+ * say `staff:123456789` or a bare uuid. `tg_user_id` collapses them, so
+ * "who weighed this" and "who logged in" name one person (AUDIT.md T8).
+ *
+ * `phone` and `password_hash` are nullable because bot-only staff are real:
+ * every id migrated out of `staff_tg_ids` became a row here with neither, and an
+ * owner can invite them to the panel later (see `adminInvites`).
+ */
 export const adminUsers = pgTable(
   'admin_users',
   {
@@ -161,13 +194,33 @@ export const adminUsers = pgTable(
     tenantId: uuid('tenant_id')
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),
-    phone: text('phone').notNull(),
-    passwordHash: text('password_hash').notNull(),
-    role: adminRole('role').notNull().default('staff'),
+    // Null until the person is given panel access. Both of these are null
+    // together — `canSignIn` in @kargotrack/shared is the one place that decides.
+    phone: text('phone'),
+    passwordHash: text('password_hash'),
+    /** Telegram id, for bot staff mode (SPEC §3.8). Null until they link it. */
+    tgUserId: bigint('tg_user_id', { mode: 'number' }),
+    /** Display name for the audit trail — a uuid tells nobody anything. */
+    fullName: text('full_name'),
+    role: adminRole('role').notNull().default('manager'),
     // Admin panel UI language (next-intl locale). Independent of `customers.lang`:
     // Tashkent office staff often work in Russian while their customers read
     // Uzbek. Defaults to 'uz' — the panel's default locale.
     lang: lang('lang').notNull().default('uz'),
+    /**
+     * Soft off-switch. Employees leave; their rows must stay so the tracks and
+     * payments they touched keep naming them, so departure flips this instead of
+     * deleting. Sign-in and bot staff mode both require it.
+     */
+    active: boolean('active').notNull().default(true),
+    /**
+     * Bumped to revoke every issued session token for this admin (password
+     * change, "sign out everywhere", deactivation). Sessions are stateless
+     * signed cookies valid for 30 days, so without this a departing employee's
+     * phone kept working for a month and there was no way to stop it.
+     */
+    sessionEpoch: integer('session_epoch').notNull().default(0),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -176,6 +229,69 @@ export const adminUsers = pgTable(
     // Login looks admins up by phone alone (phone is NOT unique across tenants,
     // so every match is argon2-verified) — without this the login path seq-scans.
     phoneIdx: index('admin_users_phone_idx').on(t.phone),
+    // Two employees of ONE cargo cannot share a number — that would make the
+    // audit trail ambiguous and the invite flow pick a row at random. Across
+    // tenants it stays legal: one person may work for two companies.
+    tenantPhoneUq: uniqueIndex('admin_users_tenant_phone_uq')
+      .on(t.tenantId, t.phone)
+      .where(sql`${t.phone} IS NOT NULL`),
+    // The bot resolves staff by (tenant, telegram id) on every update.
+    tenantTgUserUq: uniqueIndex('admin_users_tenant_tg_user_uq')
+      .on(t.tenantId, t.tgUserId)
+      .where(sql`${t.tgUserId} IS NOT NULL`),
+    // The team screen lists a tenant's employees.
+    tenantIdx: index('admin_users_tenant_idx').on(t.tenantId),
+  }),
+);
+
+/**
+ * Pending panel invitations (SPEC §5.12).
+ *
+ * An owner never types a colleague's password: knowing it would let them act as
+ * that person, which is exactly what `track_events.created_by` and
+ * `payments.created_by` are supposed to rule out. So the owner creates an invite
+ * and the invitee sets their own password with the code.
+ *
+ * The code is stored in the clear on purpose — an owner has to be able to
+ * re-read it an hour later when the new hire finally answers the phone. It is
+ * safe to: it is six characters from a 32-symbol alphabet (~10^9), scoped to one
+ * phone in one tenant, expires in 24 hours, and dies on first use.
+ */
+export const adminInvites = pgTable(
+  'admin_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    /**
+     * The admin row this invite belongs to. Created up front so the person shows
+     * up on the team screen as "pending" and can be given a role and a Telegram
+     * link before they ever open the panel.
+     */
+    adminUserId: uuid('admin_user_id')
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: 'cascade' }),
+    code: text('code').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => adminUsers.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // Indexed on the code ALONE, deliberately: redemption happens on /login,
+    // which has no tenant yet — the person types a phone and a code, and the
+    // tenant is whatever the matching row turns out to belong to. The bot's
+    // Telegram-linking flow does know its tenant and filters after the lookup.
+    codeIdx: index('admin_invites_code_idx').on(t.code),
+    // At most one live invite per employee — a second `Invite` replaces it.
+    adminUq: uniqueIndex('admin_invites_admin_uq')
+      .on(t.adminUserId)
+      .where(sql`${t.acceptedAt} IS NULL`),
   }),
 );
 
@@ -196,6 +312,10 @@ export const customers = pgTable(
     fullName: text('full_name'),
     clientCode: text('client_code').notNull(),
     lang: lang('lang').notNull().default('uz'),
+    /** Employee who hand-entered this customer; null when the bot registered them. */
+    createdBy: uuid('created_by').references(() => adminUsers.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -342,6 +462,15 @@ export const payments = pgTable(
     amountTiyin: bigint('amount_tiyin', { mode: 'number' }).notNull(),
     method: paymentMethod('method').notNull().default('cash'),
     note: text('note'),
+    /**
+     * Which employee took the money. Cash crosses a counter in this business, so
+     * an unattributable payment row is the one gap an owner cannot audit around
+     * — this is what makes the owner's "today's cash by employee" read possible
+     * (SPEC §5.10). Null only for rows written before the column existed.
+     */
+    createdBy: uuid('created_by').references(() => adminUsers.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -373,6 +502,10 @@ export const broadcasts = pgTable('broadcasts', {
     .references(() => tenants.id, { onDelete: 'cascade' }),
   text: text('text').notNull(),
   sentCount: integer('sent_count').notNull().default(0),
+  /** Employee who pressed send — a broadcast reaches every customer at once. */
+  createdBy: uuid('created_by').references(() => adminUsers.id, {
+    onDelete: 'set null',
+  }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -477,6 +610,8 @@ export type Batch = typeof batches.$inferSelect;
 export type NewBatch = typeof batches.$inferInsert;
 export type AdminUser = typeof adminUsers.$inferSelect;
 export type NewAdminUser = typeof adminUsers.$inferInsert;
+export type AdminInvite = typeof adminInvites.$inferSelect;
+export type NewAdminInvite = typeof adminInvites.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 export type Track = typeof tracks.$inferSelect;
@@ -493,3 +628,5 @@ export type NewLead = typeof leads.$inferInsert;
 export type TrackStatus = (typeof trackStatus.enumValues)[number];
 export type Currency = (typeof currency.enumValues)[number];
 export type Transport = (typeof transport.enumValues)[number];
+/** Every value the column accepts, `staff` included — see {@link adminRole}. */
+export type AdminRoleValue = (typeof adminRole.enumValues)[number];

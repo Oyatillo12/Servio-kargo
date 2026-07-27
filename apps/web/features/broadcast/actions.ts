@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { BROADCAST_MAX_CHARS } from '@kargotrack/shared';
 
-import { requireAdmin } from '@/lib/auth';
+import { authorize, requireCapability } from '@/lib/auth';
 import { listCustomerIdsWithTelegram, sendBroadcast } from '@/lib/queries';
 
 export interface BroadcastState {
@@ -20,9 +20,15 @@ const schema = z.object({
   text: z.string().trim().min(1).max(BROADCAST_MAX_CHARS),
 });
 
-/** Current reachable-recipient count for the preview (SPEC §5.8). */
+/**
+ * Current reachable-recipient count for the preview (SPEC §5.8).
+ *
+ * Guarded with `requireCapability` rather than `authorize`: it returns a bare
+ * number with no room for an error string, and the only caller is the broadcast
+ * screen, which the same capability already gates.
+ */
 export async function getRecipientCountAction(): Promise<number> {
-  const { tenant } = await requireAdmin();
+  const { tenant } = await requireCapability('broadcast.send');
   const ids = await listCustomerIdsWithTelegram(tenant.id);
   return ids.length;
 }
@@ -34,7 +40,9 @@ export async function getRecipientCountAction(): Promise<number> {
 export async function sendBroadcastAction(
   text: string,
 ): Promise<BroadcastState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('broadcast.send');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('broadcast');
 
   const parsed = schema.safeParse({ text });

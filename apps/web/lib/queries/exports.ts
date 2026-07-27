@@ -5,10 +5,16 @@
 
 import 'server-only';
 
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
-import { batches, customers, payments, tracks } from '@kargotrack/db/schema';
+import {
+  adminUsers,
+  batches,
+  customers,
+  payments,
+  tracks,
+} from '@kargotrack/db/schema';
 import {
   EXPORT_MAX_ROWS,
   type CustomerExportRow,
@@ -123,10 +129,14 @@ export async function listPaymentsForExport(
       customerPhone: customers.phone,
       method: payments.method,
       amountTiyin: payments.amountTiyin,
+      // Falls back to the phone, exactly as the on-screen ledger does — the
+      // file must not disagree with what the admin just looked at (§5.11).
+      authorName: sql<string | null>`coalesce(${adminUsers.fullName}, ${adminUsers.phone})`,
       note: payments.note,
     })
     .from(payments)
     .innerJoin(customers, eq(payments.customerId, customers.id))
+    .leftJoin(adminUsers, eq(adminUsers.id, payments.createdBy))
     .where(where)
     .orderBy(desc(payments.createdAt))
     .limit(EXPORT_MAX_ROWS);

@@ -1,6 +1,7 @@
 /**
- * Staff photo + weighing entry point for photos (SPEC §3.8). A Telegram user in
- * `tenant.settings.staff_tg_ids` sends a photo whose caption is either:
+ * Staff photo + weighing entry point for photos (SPEC §3.8). An employee whose
+ * `admin_users` row carries this Telegram id (see `isStaff`) sends a photo whose
+ * caption is either:
  *  - a weighing command `CODE 3.2` → weigh the track (set weight/price, advance
  *    CREATED→CHINA_WAREHOUSE) AND link the photo (delegated to `handleStaffWeighing`);
  *  - a bare track code → download the photo to `{uploadsDir}/{tenantId}/{trackId}.jpg`,

@@ -2,7 +2,7 @@
 
 import { getTranslations } from 'next-intl/server';
 
-import { requireAdmin } from '@/lib/auth';
+import { authorize, requireAdmin } from '@/lib/auth';
 import { getCustomerDetail, listDebtors, queueReminder } from '@/lib/queries';
 
 export interface ReminderState {
@@ -20,7 +20,9 @@ export interface ReminderState {
 export async function sendReminderAction(
   customerId: string,
 ): Promise<ReminderState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('reminders.send');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const detail = await getCustomerDetail(tenant.id, customerId);
   if (!detail) {
     return { error: (await getTranslations('tracks'))('customerNotFound') };
@@ -31,7 +33,9 @@ export async function sendReminderAction(
 
 /** Queue a reminder for every current debtor (SPEC §5.6 "remind all"). */
 export async function sendAllRemindersAction(): Promise<ReminderState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('reminders.send');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const debtors = await listDebtors(tenant.id);
   for (const d of debtors) {
     await queueReminder(tenant.id, d.id);

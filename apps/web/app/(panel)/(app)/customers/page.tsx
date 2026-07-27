@@ -1,12 +1,14 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 
+import { can } from '@kargotrack/shared';
+
 import { DebtCell } from '@/components/shared/debt-cell';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ExportButton } from '@/components/shared/export-button';
 import { SearchField } from '@/components/shared/search-field';
 import { PageHeader } from '@/components/layout/page-header';
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { listCustomersWithDebt } from '@/lib/queries';
 import { NewCustomerButton } from '@/features/customers/components/new-customer-button';
 
@@ -20,7 +22,7 @@ export default async function CustomersPage({
 }: {
   searchParams: { q?: string };
 }) {
-  const { tenant } = await requireAdmin();
+  const { tenant, role } = await requireCapability('customers.view');
   const t = await getTranslations('customers');
   const tCommon = await getTranslations('common');
 
@@ -34,10 +36,12 @@ export default async function CustomersPage({
         count={customers.length}
         right={
           <>
-            <ExportButton
-              href={`/api/export/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`}
-            />
-            <NewCustomerButton />
+            {can(role, 'export.data') ? (
+              <ExportButton
+                href={`/api/export/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`}
+              />
+            ) : null}
+            {can(role, 'customers.manage') ? <NewCustomerButton /> : null}
           </>
         }
       />

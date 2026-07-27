@@ -105,7 +105,6 @@ export interface CreateTenantInput {
 
 /** Sensible defaults for a brand-new tenant (weekly reminders off until set up). */
 const DEFAULT_SETTINGS: TenantSettings = {
-  staff_tg_ids: [],
   reminders: { weekly_enabled: false, weekday: 1, hour: 10 },
 };
 

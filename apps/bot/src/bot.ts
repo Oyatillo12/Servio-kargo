@@ -11,7 +11,7 @@ import { t } from '@kargotrack/shared';
 import type { KargoContext, SessionData } from './context';
 import { registerHandlers } from './handlers';
 import { logger } from './logger';
-import { getCustomerByTg, getTenantById } from './queries';
+import { getCustomerByTg, getStaffByTg, getTenantById } from './queries';
 import { captureError } from './sentry';
 
 export function createBot(tenantId: string, token: string): Bot<KargoContext> {
@@ -31,8 +31,17 @@ export function createBot(tenantId: string, token: string): Bot<KargoContext> {
     ctx.tenant = tenant;
 
     const tgId = ctx.from?.id;
-    const customer = tgId ? await getCustomerByTg(tenant.id, tgId) : undefined;
+    // Customer and employee are resolved together: they are two different roles
+    // for the same Telegram account, and an owner is often their own customer.
+    // One round trip, because this runs on every single update.
+    const [customer, staff] = tgId
+      ? await Promise.all([
+          getCustomerByTg(tenant.id, tgId),
+          getStaffByTg(tenant.id, tgId),
+        ])
+      : [undefined, undefined];
     ctx.customer = customer;
+    ctx.staff = staff;
     if (customer && !ctx.session.lang) ctx.session.lang = customer.lang;
     ctx.lang = customer?.lang ?? ctx.session.lang ?? 'uz';
     ctx.s = t(ctx.lang);

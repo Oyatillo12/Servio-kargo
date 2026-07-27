@@ -16,8 +16,8 @@ import {
 
 import { StatusBadge } from '@/components/shared/status-badge';
 import { SectionCard } from '@/components/ui/section-card';
-import { requireAdmin } from '@/lib/auth';
-import { getTrackDetail, listActiveTariffs } from '@/lib/queries';
+import { requireCapability } from '@/lib/auth';
+import { getTrackDetail, listActiveTariffs, resolveActors } from '@/lib/queries';
 import { statusView } from '@/lib/status-ui';
 import { cn } from '@/lib/utils';
 import { CustomerCard } from '@/features/tracks/components/customer-card';
@@ -108,7 +108,7 @@ export default async function TrackDetailPage({
 }: {
   params: { id: string };
 }) {
-  const { tenant } = await requireAdmin();
+  const { tenant, role } = await requireCapability('tracks.view');
   const t = await getTranslations('trackDetail');
   const tCommon = await getTranslations('common');
   const tTracks = await getTranslations('tracks');
@@ -122,6 +122,34 @@ export default async function TrackDetailPage({
 
   const { track, customer, batch, events } = detail;
   const isUsd = tenant.currency === 'USD';
+
+  // Who did what, resolved once for the whole timeline (two queries, not one
+  // per row). Before this the column printed the raw uuid.
+  const actors = await resolveActors(
+    tenant.id,
+    events.map((e) => e.createdBy),
+  );
+
+  /** The one-line "by whom" under an event. Empty when there is nothing to say. */
+  function actorLine(raw: string | null): string | null {
+    if (!raw) return null;
+    const actor = actors.get(raw);
+    if (!actor) return null;
+    switch (actor.kind) {
+      case 'admin':
+        // "· bot" marks a warehouse action taken over Telegram rather than in
+        // the panel — same person, and an owner reading the trail cares which.
+        return actor.viaBot
+          ? `${actor.name ?? t('actorStaff')} · ${t('actorViaBot')}`
+          : (actor.name ?? t('actorStaff'));
+      case 'customer':
+        return t('actorCustomer');
+      case 'system':
+        return t('actorSystem');
+      default:
+        return t('actorUnknown');
+    }
+  }
 
   /** Labels for the ownership-change events the timeline mixes in (§5.3). */
   const assignLabels: Record<string, string> = {
@@ -267,8 +295,10 @@ export default async function TrackDetailPage({
                     <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
                       {formatDateTime(e.createdAt)}
                     </p>
-                    {e.createdBy ? (
-                      <p className="text-[12px] text-slate-600">{e.createdBy}</p>
+                    {actorLine(e.createdBy) ? (
+                      <p className="text-[12px] text-slate-600">
+                        {actorLine(e.createdBy)}
+                      </p>
                     ) : null}
                   </div>
                 </li>
@@ -299,6 +329,7 @@ export default async function TrackDetailPage({
         code={track.codeOriginal}
         currentStatus={track.currentStatus}
         customerId={track.customerId}
+        role={role}
       />
     </div>
   );

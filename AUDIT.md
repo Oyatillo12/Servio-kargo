@@ -67,7 +67,7 @@ T3 bilan `apps/bot` ga vitest qo'shildi (13 test, `rateLimiter`), lekin
 | ~~F6~~ | ~~Layoutda `listDebtors` — har sahifada to'liq jadval skani~~ | ✅ Yopildi | T6 |
 | ~~F7~~ | ~~Kritik indekslar yo'q (`track_events.track_id` va boshq.)~~ | ✅ Yopildi | T4 |
 | F8 | Bulk operatsiyalar tranzaksiyasiz, per-row tsikl | 🟠 Yuqori | T7 |
-| F9 | `role` majburlanmaydi; admin qo'shish/parol UI yo'q | 🟠 Yuqori | T8 |
+| ~~F9~~ | ~~`role` majburlanmaydi; admin qo'shish/parol UI yo'q~~ | ✅ Yopildi | T8 |
 | F10 | Loginda rate limit yo'q (brute force + argon2 DoS) | 🟡 O'rta | T9 |
 | F11 | "Barchasini tanlash" faqat ko'rinadigan 20 qatorni oladi | 🟡 O'rta | T10 |
 | F12 | Biriktirilmagan treklar uchun alohida ko'rinish yo'q | 🟡 O'rta | T11 |
@@ -642,25 +642,75 @@ To'g'ri namuna kodda bor: `applyImport` (`queries.ts:1155`) — chunked + tranza
 - [ ] `IMPORT_CHUNK` (1000) ni umumiy konstantaga chiqarish
 - [ ] Test: 2 500 trekda status o'zgarishi, parametr limiti oshmasligi
 
-### ☐ T8 · Rollarni majburlash + admin boshqaruvi
+### ☑ T8 · Rollarni majburlash + xodimlar boshqaruvi — **BAJARILDI** (2026-07-27)
 
-`role` ustuni bor, lekin **faqat bitta joyda** ishlatiladi —
-`layout.tsx:16` da "Egasi"/"Xodim" yozuvi. Boshqa hech qayerda tekshirilmaydi.
-Ya'ni `staff` login: valyutani o'zgartiradi, tariflarni tahrirlaydi,
-3 000 mijozga broadcast yuboradi, xodim Telegram IDlarini almashtiradi.
+**Muammo ikki qavatli edi.** Birinchisi ro'yxatda bor edi: `role` ustuni faqat
+`layout.tsx` dagi "Egasi"/"Xodim" yozuvida ishlatilardi, ya'ni oddiy xodim
+valyutani almashtira, tariflarni tahrirlay, 3 000 mijozga broadcast yubora va
+trek o'chira olardi — **30 ta server action, hech birida tekshiruv yo'q**.
 
-Bundan tashqari **admin qo'shish / parol o'zgartirish UI umuman yo'q** — bitta
-kargoda 4 xodim bitta parolni bo'lishadi; parol ketsa siz DBga qo'l bilan kirasiz.
+Ikkinchisi ro'yxatda yo'q edi va og'irroq: tizimda **ikkita bir-biriga
+bog'lanmagan «xodim»** bor edi — panel uchun `admin_users`, bot uchun
+`tenants.settings.staff_tg_ids`. Ombor xodimi ikki xil identifikator bilan ikki
+marta mavjud edi, uning roli yo'q edi, va uni bekor qilishning yo'li yo'q edi.
+Shu sababli `payments` da `created_by` umuman yo'q edi: kim naqd pul olgani —
+kargo biznesida audit qilib bo'lmaydigan yagona teshik.
 
-- [ ] `requireOwner()` guard — `lib/auth.ts`
-- [ ] Faqat owner: `/settings` (valyuta, tariflar, staff IDlar), `/broadcast`,
-      trekni o'chirish, admin boshqaruvi
-- [ ] `/settings/admins` — admin qo'shish/o'chirish, rol tanlash
-- [ ] Parolni o'zgartirish (joriy parolni so'rab)
-- [ ] Sessiya bekor qilish: `admin_users` ga `session_epoch` (int) — parol
-      o'zgarsa oshiriladi, `verifySessionToken` tekshiradi (hozir 30 kunlik
-      token bekor qilinmaydi — `lib/session.ts`)
-- [ ] Server action darajasida tekshirish (faqat UI yashirish yetarli emas)
+**Vazifalar:**
+- [x] `packages/shared/src/services/permissions.ts` — 3 rol
+      (`owner`/`manager`/`warehouse`) × 17 qobiliyat matritsasi, `can()`,
+      `toAdminRole()` (noma'lum rol → eng kam huquqli), `canSignIn`,
+      `canUseStaffMode` + **28 test**
+- [x] `packages/shared/src/services/invite.ts` — taklif kodi: chalkashmaydigan
+      32 belgili alifbo (`O`/`0`, `I`/`1` yo'q), normalizatsiya, muddat + **20 test**
+- [x] Migratsiya `0009_team_roles` — enum, ustunlar, `admin_invites`,
+      `created_by` va backfill. **Enum `ADD VALUE` bilan emas, qayta yaratilgan**:
+      drizzle barcha kutilayotgan migratsiyalarni **bitta** tranzaksiyada
+      bajaradi, shuning uchun Postgres `55P04` beradi (o'sha tranzaksiyada
+      qo'shilgan enum qiymatini ishlatib bo'lmaydi) va fayllarga bo'lish
+      yordam bermaydi. `RENAME → CREATE → cast → DROP` esa ishlaydi, chunki
+      cheklov faqat `ALTER TYPE … ADD VALUE` ga tegishli
+- [x] `staff_tg_ids` → `admin_users.tg_user_id` ga ko'chirildi. Bitta odam,
+      bitta yozuv, ikkala yuzada; bot endi rolni ham biladi
+- [x] `lib/auth.ts` — `authorize()` (action uchun, tarjima qilingan xato) va
+      `requireCapability()` (sahifa uchun). **30 ta actionning hammasi** va
+      6 ta sahifa + 3 eksport route yopildi
+- [x] `session_epoch` — parol o'zgarishi, «hamma qurilmadan chiqarish» va
+      o'chirib qo'yish 30 kunlik tokenni darhol bekor qiladi. Eski cookie'lar
+      epoch 0 bilan o'qiladi, ya'ni deploy hech kimni chiqarib yubormaydi
+- [x] `/settings/team` — rol, Telegram holati, oxirgi kirish, kutilayotgan kod;
+      rolni o'zgartirish, kod berish/bekor qilish, Telegramni uzish,
+      sessiyalarni to'xtatish, o'chirib qo'yish/qayta yoqish
+- [x] Taklif oqimi: **egasi hech qachon xodim parolini bilmaydi**. Kod →
+      xodim `/login` da o'z parolini qo'yadi; ombor xodimi shu kodni botga
+      yuborsa Telegrami ulanadi
+- [x] Har bir xodim (rolidan qat'i nazar) o'z parolini almashtira oladi
+- [x] Audit: `payments`/`customers`/`broadcasts` ga `created_by`; timeline
+      UUID o'rniga **ism** ko'rsatadi (`staff:<tgid>` ham hal qilinadi, bot
+      orqali bo'lgani `· bot` deb belgilanadi); to'lov tarixida va Excel
+      eksportida kassir ismi; dashboardda **«Kassa — kim qabul qildi»** (egaga)
+- [x] Himoya: oxirgi egani pasaytirib/o'chirib bo'lmaydi, o'zini o'chirib
+      bo'lmaydi, bir tenantda bitta telefon bitta xodimga
+- [x] i18n: `roles` va `team` namespace'lari (71 kalit × 2 til), bot uchun
+      4 ta yangi string uz+ru
+
+**Rol o'zgarishi sessiyani bekor QILMAYDI** — bu ataylab. Rol har so'rovda
+yozuvdan o'qiladi, shuning uchun darhol kuchga kiradi; epochni oshirish esa
+ishlayotgan hamkasbni smena o'rtasida tizimdan chiqarib yuborardi.
+
+**Nima ko'rinmaydi, o'sha ham qaror.** Navigatsiya rolga qarab filtrlanadi
+(bo'sh ekranga olib boradigan havola tushuntirmaydi), lekin sahifa ichidagi
+tugmalar yo'qolmaydi — ular yo mavjud, yo umuman boshqa rolniki. Trekni
+o'chirish tugmasi menejerda yo'q: bu «ruxsat so'rasa bo'ladigan» narsa emas.
+
+**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ **335 test**
+(288 shared + 30 bot + 17 web; T8 dan oldin 287) · ✅ migratsiya **jonli
+bazada** (0008 → 0009, `staff_tg_ids` dan 1 ta ombor xodimi ko'chdi) **va toza
+bazada** (0000–0009 bitta tranzaksiyada, `admin_role_old` qolmaydi) ·
+✅ ilovaning Drizzle so'rovlari jonli sxemada tekshirildi (login, bot
+`getStaffByTg`, `listTeam` join, to'lov+muallif join) ·
+✅ Spec.md §1, §3.8, §5.9 yangilandi, §5.12 va §5.13 qo'shildi ·
+✅ CLAUDE.md ma'lumot modeli + 9-qoida · ✅ yangi stringlar uz+ru da
 
 ### ☐ T9 · Login rate limit
 
@@ -976,7 +1026,7 @@ Aynan shu bozor, aynan shu mijoz. Ba'zi joyda **sizdan oldinda**:
 | 1688 parser + AI (mahsulot kartasini o'qish) | ❌ |
 | Xarid/закупка boardi (to'lov, postavshik, Xitoy treki) | ❌ |
 | **Telegram Mini App** — to'liq mijoz kabineti | Reply keyboard bot (T20) |
-| Rol boshqaruvi: ega/admin/menejer/ombor — majburlangan | Bezak `role` (T8) |
+| Rol boshqaruvi: ega/admin/menejer/ombor — majburlangan | ✅ 3 rol, majburlangan (T8) |
 | QO kod (ombor identifikatsiyasi) | Ataylab olib tashlangan |
 
 **Sizning ustunligingiz (buni sotuvda old planga qo'ying):**
@@ -1019,12 +1069,13 @@ Shuning uchun T5 va T13 — marketing vazifasi, texnik vazifa emas.
 
 P0 YOPILDI. Qoldi: panelni brauzerda qo'lda bosib chiqish → demo yozib olish.
 
-Pilot boshlanadi. Pilot davomida: T6 ✅ → T7 → T8 → T11 → T10 → T9 → T12
+Pilot boshlanadi. Pilot davomida: T6 ✅ → T8 ✅ → T7 → T11 → T10 → T9 → T12
 Birinchi to'lovdan keyin: T13 → T14 → T15 → T16
 Keyin: T17–T18, T20 (T19 ✅), va T21–T23 tozalash.
 ```
 
 **Keyingi:** `T7` (bulk operatsiyalarni tranzaksiya + chunkga o'tkazish) —
-500 trekda yarim qo'llanilgan holat xavfi eng katta ochiq nuqson.
-Undan keyin T8 (rollar) va T11 (biriktirilmagan ekrani — T19 dagi
-`?work=unassigned` allaqachon uning kirish nuqtasini berdi).
+500 trekda yarim qo'llanilgan holat xavfi endi eng katta ochiq nuqson.
+Undan keyin T11 (biriktirilmagan ekrani — T19 dagi `?work=unassigned`
+allaqachon uning kirish nuqtasini berdi) va T9 (login rate limit, endi
+xodimlar ko'payganda login yuzasi ham kengaydi).

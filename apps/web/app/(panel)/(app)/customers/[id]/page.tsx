@@ -3,14 +3,20 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 
-import { formatDate, formatSom, t as strings, type Lang } from '@kargotrack/shared';
+import {
+  can,
+  formatDate,
+  formatSom,
+  t as strings,
+  type Lang,
+} from '@kargotrack/shared';
 
 import { DebtCell } from '@/components/shared/debt-cell';
 import { ExportButton } from '@/components/shared/export-button';
 import { ReminderButton } from '@/components/shared/reminder-button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { SectionCard } from '@/components/ui/section-card';
-import { requireAdmin } from '@/lib/auth';
+import { requireCapability } from '@/lib/auth';
 import { getCustomerDetail } from '@/lib/queries';
 import { sendReminderAction } from '@/features/debtors/actions';
 import { PaymentForm } from '@/features/customers/components/payment-form';
@@ -37,11 +43,16 @@ export default async function CustomerDetailPage({
 }: {
   params: { id: string };
 }) {
-  const { tenant } = await requireAdmin();
+  const { tenant, role } = await requireCapability('customers.view');
   const t = await getTranslations('customerDetail');
   const tCommon = await getTranslations('common');
   const tCustomers = await getTranslations('customers');
   const locale = (await getLocale()) as Lang;
+
+  const canSeeMoney = can(role, 'money.reports');
+  const canRecordPayment = can(role, 'payments.record');
+  const canRemind = can(role, 'reminders.send');
+  const canExport = can(role, 'export.data');
 
   // Payment-method names come from the canonical bot catalogue, not from
   // `messages/*.json`: the customer sees the same words in their receipt.
@@ -108,48 +119,58 @@ export default async function CustomerDetailPage({
         </div>
       </SectionCard>
 
-      {/* Payment history */}
-      <SectionCard
-        title={t('paymentsTitle')}
-        action={
-          payments.length > 0 ? (
-            <ExportButton href={`/api/export/payments?customer=${customer.id}`} />
-          ) : undefined
-        }
-      >
-        {payments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('noPayments')}</p>
-        ) : (
-          <ul>
-            {payments.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center justify-between border-t border-[#eef0f4] py-2.5 first:border-0"
-              >
-                <div className="min-w-0">
-                  <p className="text-[13.5px] font-semibold text-foreground">
-                    {methodLabel[p.method]}
-                  </p>
-                  <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
-                    {formatDate(p.createdAt)}
-                    {p.note ? ` · ${p.note}` : ''}
-                  </p>
-                </div>
-                <span className="font-mono text-[14px] font-semibold text-[#177338]">
-                  {formatSom(p.amountTiyin)} {tCommon('som')}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
+      {/* Payment history. The balance above stays visible to every role — the
+          person handing a parcel over the counter has to know whether it is
+          paid for — but the ledger behind it, and taking money, do not. */}
+      {canSeeMoney ? (
+        <SectionCard
+          title={t('paymentsTitle')}
+          action={
+            payments.length > 0 && canExport ? (
+              <ExportButton href={`/api/export/payments?customer=${customer.id}`} />
+            ) : undefined
+          }
+        >
+          {payments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('noPayments')}</p>
+          ) : (
+            <ul>
+              {payments.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between border-t border-[#eef0f4] py-2.5 first:border-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[13.5px] font-semibold text-foreground">
+                      {methodLabel[p.method]}
+                    </p>
+                    <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
+                      {formatDate(p.createdAt)}
+                      {/* Who took it. The whole reason payments.created_by
+                          exists: cash crosses a counter and the row has to say
+                          whose counter. Absent only on rows written before T8. */}
+                      {p.authorName ? ` · ${p.authorName}` : ''}
+                      {p.note ? ` · ${p.note}` : ''}
+                    </p>
+                  </div>
+                  <span className="font-mono text-[14px] font-semibold text-[#177338]">
+                    {formatSom(p.amountTiyin)} {tCommon('som')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
+      ) : null}
 
       {/* Add a payment */}
-      <SectionCard title={t('addPaymentTitle')}>
-        <PaymentForm customerId={customer.id} />
-      </SectionCard>
+      {canRecordPayment ? (
+        <SectionCard title={t('addPaymentTitle')}>
+          <PaymentForm customerId={customer.id} />
+        </SectionCard>
+      ) : null}
 
-      {debtTiyin > 0 ? (
+      {debtTiyin > 0 && canRemind ? (
         <ReminderButton
           action={sendReminderAction.bind(null, customer.id)}
           label={t('sendReminder')}

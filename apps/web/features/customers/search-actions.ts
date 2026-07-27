@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { z } from 'zod';
 
-import { requireAdmin } from '@/lib/auth';
+import { authorize, requireCapability } from '@/lib/auth';
 import type { CustomerOption } from '@/lib/customer-types';
 import { createCustomer, searchCustomers } from '@/lib/queries';
 
@@ -19,7 +19,9 @@ import { createCustomer, searchCustomers } from '@/lib/queries';
 export async function searchCustomersAction(
   q: string,
 ): Promise<CustomerOption[]> {
-  const { tenant } = await requireAdmin();
+  // Returns a bare array, so a refusal has nowhere to render — the capability
+  // is the one every role that reaches a picker already holds.
+  const { tenant } = await requireCapability('customers.view');
   const term = z.string().max(100).safeParse(q);
   return searchCustomers(tenant.id, term.success ? term.data : '');
 }
@@ -48,7 +50,9 @@ export async function createCustomerAction(input: {
   phone: string;
   fullName: string;
 }): Promise<CreateCustomerState> {
-  const { tenant } = await requireAdmin();
+  const auth = await authorize('customers.manage');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
   const t = await getTranslations('customers');
 
   const parsed = createSchema.safeParse(input);

@@ -2,10 +2,14 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { LogOut, Megaphone, Search, Settings, Upload } from 'lucide-react';
+import { KeyRound, LogOut, Megaphone, Search, Settings, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { can } from '@kargotrack/shared';
+
 import { BrandMark } from '@/components/layout/brand';
+import { ChangePasswordDialog } from '@/features/team/components/change-password-dialog';
+import { HeaderActionsOutlet } from '@/components/layout/header-actions';
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
 import {
   Dialog,
@@ -26,38 +30,45 @@ import { logoutAction } from '@/features/auth/actions';
 
 export interface AppHeaderProps {
   tenantName: string;
-  /** Translated "owner" / "staff" — shown next to the phone in the account menu. */
+  /** Translated role name — shown next to the identity in the account menu. */
   roleLabel: string;
-  phone: string;
+  /** Full name, else phone. Bot-linked warehouse staff may have neither yet. */
+  identity: string;
+  /** Drives which shortcuts the account menu offers. */
+  role: string;
 }
 
 /**
- * Global top bar, rendered on every panel screen (both breakpoints).
+ * Global top bar (design screens 1a / 1b): 52px, white, one hairline rule,
+ * spanning the full width above both the sidebar and the content.
  *
- * Desktop previously had no header at all — the sidebar carried the brand and
- * the account block, and there was nowhere to put global actions. It now holds
- * the tenant identity on the left and the primary actions on the right; the
- * account block moved out of the sidebar footer into the avatar menu so it is
- * stated once.
- *
- * Mobile keeps the same bar with the square brand mark in front of the tenant
- * name. The section title used to live here, which duplicated the `PageHeader`
- * <h1> a few pixels below it — the brand takes that slot instead.
+ * Product identity on the left, tenant name after a divider — an admin who runs
+ * two cargo companies from one browser needs to see which one they are in
+ * before they touch anything. Search in the middle because it is the single
+ * most-used control in the panel. Account on the right.
  */
-export function AppHeader({ tenantName, roleLabel, phone }: AppHeaderProps) {
+export function AppHeader({
+  tenantName,
+  roleLabel,
+  identity,
+  role,
+}: AppHeaderProps) {
   const initial = tenantName.trim().charAt(0).toUpperCase() || 'S';
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 flex-none items-center gap-2 border-b border-border bg-white/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/80 md:px-6">
+    <header className="sticky top-0 z-30 flex h-[52px] flex-none items-center gap-3 border-b border-n-200 bg-white px-4 md:px-5">
       <HomeLink tenantName={tenantName} />
 
-      <div className="ml-auto flex flex-none items-center gap-1.5">
-        <HeaderSearch />
+      <HeaderSearch />
+
+      <div className="flex flex-none items-center gap-1">
+        <HeaderActionsOutlet />
         <AccountMenu
           initial={initial}
           tenantName={tenantName}
           roleLabel={roleLabel}
-          phone={phone}
+          identity={identity}
+          role={role}
         />
       </div>
     </header>
@@ -69,11 +80,18 @@ function HomeLink({ tenantName }: { tenantName: string }) {
   return (
     <Link
       href="/dashboard"
-      className="flex min-w-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       aria-label={t('home')}
     >
-      <BrandMark className="h-7 w-7 flex-none md:hidden" />
-      <span className="truncate text-[15px] font-bold tracking-tight text-foreground">
+      <BrandMark className="h-[22px] w-[22px] flex-none rounded-[5px]" />
+      <span className="hidden text-[14px] font-bold tracking-tight text-foreground md:inline">
+        SERVIO Kargo
+      </span>
+      <span
+        aria-hidden
+        className="hidden h-4 w-px flex-none bg-n-200 md:inline-block"
+      />
+      <span className="truncate text-[14px] font-bold text-foreground md:text-[13px] md:font-normal md:text-muted-foreground">
         {tenantName}
       </span>
     </Link>
@@ -83,8 +101,9 @@ function HomeLink({ tenantName }: { tenantName: string }) {
 /**
  * Track-code / customer search, the action admins reach for most often.
  * Submits straight to the tracks list, which owns the query (`?q=`), so no
- * client-side fetching is involved. Inline on desktop, dialog on mobile where
- * an always-visible input would eat the whole bar.
+ * client-side fetching is involved. A centred 440px field on desktop; on
+ * phones an icon that opens a dialog, because the bar also carries the page's
+ * primary actions there and an always-visible input would crowd them out.
  *
  * `/` focuses it from anywhere. Warehouse staff work a barcode scanner in one
  * hand: the scanner types the code and presses Enter, and without a focus
@@ -121,9 +140,12 @@ function HeaderSearch() {
 
   return (
     <>
-      <form action="/tracks" className="relative hidden md:block">
+      <form
+        action="/tracks"
+        className="relative hidden w-full max-w-[440px] md:mx-auto md:block"
+      >
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
           aria-hidden
         />
         <Input
@@ -132,11 +154,11 @@ function HeaderSearch() {
           type="search"
           placeholder={t('searchPlaceholder')}
           aria-label={t('searchLabel')}
-          className="h-9 w-64 bg-[#f7f8fa] pl-9 pr-8 text-sm"
+          className="h-[34px] rounded-md pl-9 pr-9 text-[13px]"
         />
         <kbd
           aria-hidden
-          className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-white px-1.5 font-mono text-[10px] font-medium text-muted-foreground lg:block"
+          className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded-sm border border-n-200 bg-white px-1.5 font-mono text-[11px] font-medium text-faint lg:block"
         >
           /
         </kbd>
@@ -146,9 +168,9 @@ function HeaderSearch() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('searchLabel')}
-        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+        className="ml-auto flex h-9 w-9 flex-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
       >
-        <Search className="h-5 w-5" aria-hidden />
+        <Search className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -163,7 +185,6 @@ function HeaderSearch() {
               autoFocus
               placeholder={t('searchPlaceholder')}
               aria-label={t('searchLabel')}
-              className="bg-[#f7f8fa]"
             />
           </form>
         </DialogContent>
@@ -177,63 +198,95 @@ function AccountMenu({
   initial,
   tenantName,
   roleLabel,
-  phone,
+  identity,
+  role,
 }: {
   initial: string;
   tenantName: string;
   roleLabel: string;
-  phone: string;
+  identity: string;
+  role: string;
 }) {
   const t = useTranslations('nav');
+  const [passwordOpen, setPasswordOpen] = useState(false);
+
+  // Same rule as the nav rail: a shortcut to a screen this role cannot open is
+  // a dead end, so it is dropped rather than disabled.
+  const shortcuts = [
+    { href: '/import', key: 'import', icon: Upload, capability: 'import.run' },
+    {
+      href: '/broadcast',
+      key: 'broadcast',
+      icon: Megaphone,
+      capability: 'broadcast.send',
+    },
+    {
+      href: '/settings',
+      key: 'settings',
+      icon: Settings,
+      capability: 'settings.manage',
+    },
+  ] as const;
+  const visible = shortcuts.filter((s) => can(role, s.capability));
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label={t('account')}
-        className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-accent text-xs font-bold text-primary outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      >
-        {initial}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          <p className="truncate text-[13px] font-semibold text-foreground">
-            {tenantName}
-          </p>
-          <p className="truncate text-[11px] font-normal text-muted-foreground">
-            {roleLabel} · {phone}
-          </p>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/import">
-            <Upload aria-hidden />
-            {t('import')}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/broadcast">
-            <Megaphone aria-hidden />
-            {t('broadcast')}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings">
-            <Settings aria-hidden />
-            {t('settings')}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <LocaleSwitcher />
-        <DropdownMenuSeparator />
-        <form action={logoutAction}>
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full text-destructive">
-              <LogOut aria-hidden />
-              {t('logout')}
-            </button>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={t('account')}
+          className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-input bg-secondary text-[12px] font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {initial}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>
+            <p className="truncate text-[13px] font-semibold text-foreground">
+              {tenantName}
+            </p>
+            <p className="truncate text-[11px] font-normal text-muted-foreground">
+              {roleLabel}
+              {identity ? ` · ${identity}` : null}
+            </p>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {visible.map((s) => {
+            const Icon = s.icon;
+            return (
+              <DropdownMenuItem key={s.href} asChild>
+                <Link href={s.href}>
+                  <Icon aria-hidden />
+                  {t(s.key)}
+                </Link>
+              </DropdownMenuItem>
+            );
+          })}
+          {visible.length > 0 ? <DropdownMenuSeparator /> : null}
+          {/* Every role can change their own password — it is the one account
+              control that must never depend on asking someone else. */}
+          <DropdownMenuItem
+            onSelect={(e) => {
+              // Let the menu close first; the dialog owns focus afterwards.
+              e.preventDefault();
+              setPasswordOpen(true);
+            }}
+          >
+            <KeyRound aria-hidden />
+            {t('changePassword')}
           </DropdownMenuItem>
-        </form>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <LocaleSwitcher />
+          <DropdownMenuSeparator />
+          <form action={logoutAction}>
+            <DropdownMenuItem asChild>
+              <button type="submit" className="w-full text-destructive">
+                <LogOut aria-hidden />
+                {t('logout')}
+              </button>
+            </DropdownMenuItem>
+          </form>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+    </>
   );
 }
