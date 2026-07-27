@@ -34,13 +34,24 @@ export async function landingMetadata(locale: Lang): Promise<Metadata> {
       url: path,
       title: t('metaTitle'),
       description: t('metaDescription'),
-      images: [{ url: '/og', width: 1200, height: 630, alt: t('ogAlt') }],
+      // Static file, not a generated route. It used to be an ImageResponse at
+      // app/og/route.tsx rendered by satori at build time, which meant one
+      // unsupported CSS value there failed the whole production build — and it
+      // did. The card is locale-neutral and changes about never, so it is
+      // checked in as public/og.png instead.
+      //
+      // To restyle it: recover that route from git history (last present in
+      // e90bc5d), render it once, replace the PNG, and delete the route again.
+      // Note the archived copy is the BROKEN version — satori accepts only
+      // `solid` and `dashed` borders, so its `borderTop: '4px dotted ...'`
+      // must become `dashed`, and every div needs an explicit `display`.
+      images: [{ url: '/og.png', width: 1200, height: 630, alt: t('ogAlt') }],
     },
     twitter: {
       card: 'summary_large_image',
       title: t('metaTitle'),
       description: t('metaDescription'),
-      images: [{ url: '/og', alt: t('ogAlt') }],
+      images: [{ url: '/og.png', alt: t('ogAlt') }],
     },
     manifest: '/site.webmanifest',
     icons: {

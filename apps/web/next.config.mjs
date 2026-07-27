@@ -19,11 +19,6 @@ const nextConfig = {
   experimental: {
     // Trace files from the monorepo root so standalone bundles workspace deps.
     outputFileTracingRoot: path.join(__dirname, '../..'),
-    // The OG image route reads this font with fs at render time — make sure
-    // the standalone output carries it.
-    outputFileTracingIncludes: {
-      '/og': ['./assets/fonts/*.ttf'],
-    },
     // Enables instrumentation.ts register() hook on server startup (Next 14).
     instrumentationHook: true,
     // Keep these as runtime requires, not webpack-bundled: argon2 is a native
