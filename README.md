@@ -43,6 +43,7 @@ the customer — throttled to respect Telegram rate limits, retried with backoff
 | Job queue      | pg-boss (Postgres-backed, no Redis) for **all** outbound Telegram sends  |
 | Validation     | Zod on every external input                                              |
 | Tests / logs   | Vitest / pino                                                            |
+| CI/CD          | GitHub Actions — verify, build images to GHCR, deploy over SSH           |
 | Deploy         | Docker Compose on a single VPS, Caddy for automatic HTTPS                |
 
 ## Repository layout
@@ -58,10 +59,13 @@ packages/
   shared/    Business-logic services (+ Vitest tests), i18n (uz/ru), status enums,
              track-code normalization, money formatting
 scripts/     backup.sh — nightly pg_dump, keeps 14 days
+.github/workflows/
+  ci.yml                   typecheck + lint + test (PRs, and reused by deploy)
+  deploy.yml               main → verify → build images to GHCR → SSH deploy
 Caddyfile                  HTTPS: admin panel at DOMAIN, webhooks at bot.DOMAIN
 docker-compose.yml         Local dev — just Postgres
 docker-compose.prod.yml    Production — postgres + web + bot + caddy
-deploy.sh                  Pull → build → migrate → restart; safe to re-run
+deploy.sh                  Sync → build (or --pull) → migrate → restart → health-gate
 ```
 
 ## Quick start (local dev)
@@ -127,12 +131,20 @@ Polling mode deletes any webhook on startup and needs no public URL; set
 
 A single Ubuntu VPS running Docker Compose. Caddy terminates HTTPS for two hostnames —
 `DOMAIN` (admin panel) and `bot.DOMAIN` (Telegram webhooks) — with certificates obtained
-and renewed automatically. Deploys are `./deploy.sh`: pull, build, run migrations, restart;
-named volumes keep the database and uploaded photos across deploys. A nightly `pg_dump`
-cron keeps the last 14 days of backups.
+and renewed automatically. Named volumes keep the database and uploaded photos across
+deploys. A nightly `pg_dump` cron keeps the last 14 days of backups.
 
-First-time setup, step by step: **[DEPLOY.md](./DEPLOY.md)**. Configuration lives in a
-single `.env` (copy [`.env.example`](./.env.example) and fill it in).
+Pushing to `main` deploys itself: GitHub Actions runs typecheck/lint/test, builds the web
+and bot images and pushes them to GHCR tagged with the commit SHA, then SSHes to the VPS,
+which pulls those images, runs migrations and restarts — failing the run if either service
+does not come back `healthy`. The VPS never builds anything. Rollback is
+`IMAGE_TAG=<sha> ./deploy.sh --pull`.
+
+Both paths run the same `deploy.sh`; `./deploy.sh` with no flag still builds on the server
+if you need to deploy without GitHub.
+
+First-time setup and the CI secrets, step by step: **[DEPLOY.md](./DEPLOY.md)**.
+Configuration lives in a single `.env` (copy [`.env.example`](./.env.example) and fill it in).
 
 ## Documentation
 
@@ -141,4 +153,4 @@ single `.env` (copy [`.env.example`](./.env.example) and fill it in).
 | [PROJECT.md](./PROJECT.md)       | Architecture, domain model, flows, operations — how the system works   |
 | [Spec.md](./Spec.md)             | Functional specification: exact flows, screens, message texts, rules   |
 | [CLAUDE.md](./Claude.md)         | Engineering ground rules (stack, conventions, definition of done)      |
-| [DEPLOY.md](./DEPLOY.md)         | First-time VPS deployment guide                                        
+| [DEPLOY.md](./DEPLOY.md)         | First-time VPS deployment + GitHub Actions CI/CD setup                 

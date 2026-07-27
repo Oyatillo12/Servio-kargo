@@ -1,6 +1,13 @@
 # Production stack for a single Ubuntu VPS. Bring up with:
 #   docker compose -f docker-compose.prod.yml up -d --build
 # All secrets/config come from the .env file next to this one (see .env.example).
+#
+# The web/bot `image:` names are registry-qualified so one file serves both
+# deploy paths: `./deploy.sh` builds them here and tags them locally, while
+# `./deploy.sh --pull` (what GitHub Actions runs) pulls the image CI already
+# built for a given commit. IMAGE_TAG selects which commit; WEB_IMAGE/BOT_IMAGE
+# let a fork point at its own registry from .env. Defaults keep a bare
+# `docker compose up --build` working with no extra environment.
 
 # Docker's default json-file driver grows without bound and will eventually fill
 # the VPS disk, taking Postgres down with it. Every service caps its logs
@@ -34,7 +41,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    image: kargotrack-web
+    image: ${WEB_IMAGE:-ghcr.io/oyatillo12/servio-kargo-web}:${IMAGE_TAG:-latest}
     container_name: serviokargo-web
     restart: unless-stopped
     logging: *default-logging
@@ -66,7 +73,7 @@ services:
     build:
       context: .
       dockerfile: apps/bot/Dockerfile
-    image: kargotrack-bot
+    image: ${BOT_IMAGE:-ghcr.io/oyatillo12/servio-kargo-bot}:${IMAGE_TAG:-latest}
     container_name: serviokargo-bot
     restart: unless-stopped
     logging: *default-logging

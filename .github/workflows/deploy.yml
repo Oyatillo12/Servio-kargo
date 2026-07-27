@@ -1,0 +1,147 @@
+name: Deploy
+
+# Push to main (or dispatch this workflow on any branch/tag) →
+#   verify  → the CLAUDE.md gates, reused from ci.yml
+#   build   → web + bot images built here and pushed to GHCR, tagged with the commit SHA
+#   deploy  → SSH to the VPS, which pulls those exact images, migrates, restarts
+#
+# The VPS never builds anything: a Next.js build does not fit comfortably in
+# 2 vCPU / 4 GB while the site is serving traffic. See DEPLOY.md §10.
+on:
+  push:
+    branches: [main]
+  # Dispatch from the Actions tab; pick the branch or tag there. The commit at
+  # the head of what you pick is what gets built and deployed.
+  workflow_dispatch:
+
+# Never let two deploys touch the VPS at once. Queue them instead of cancelling:
+# a half-applied migration is worse than a slow deploy.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+# Default for every job (including the reusable `verify`); the jobs that need
+# more widen it themselves.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: build ${{ matrix.app }} image
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        app: [web, bot]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GHCR rejects uppercase paths and this repo's owner is `Oyatillo12`, so
+      # lowercase the whole `owner/repo` before using it as an image name.
+      - id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.app }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@v6
+        with:
+          # Both Dockerfiles expect the monorepo root as context (they COPY the
+          # whole workspace and run a filtered pnpm build).
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:latest
+          # Separate scopes so the web and bot caches do not evict each other.
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+          # Skip the provenance attestation: it turns the tag into a multi-arch
+          # index that older docker/compose on the VPS pulls awkwardly.
+          provenance: false
+
+  deploy:
+    name: deploy to VPS
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Optional but recommended: create a `production` environment in repo
+    # settings to require an approval or restrict which branches may deploy.
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Load the deploy key and pin the host key
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Pinned host key, so a hijacked DNS record cannot collect the deploy
+          # key. Generate with: ssh-keyscan -p 22 YOUR_SERVER_IP
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Pull images, migrate and restart on the VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+          # Short-lived, scoped to this run — nothing long-lived is stored on the
+          # VPS, and the login is dropped again at the end of the script.
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The whole remote script arrives on stdin, values first. Passing the
+          # registry token this way keeps it out of the VPS process list, which
+          # `ssh host FOO=... bash` would not.
+          {
+            printf 'export IMAGE_TAG=%q DEPLOY_REF=%q APP_DIR=%q GHCR_USER=%q GHCR_TOKEN=%q\n' \
+              "$GITHUB_SHA" "$GITHUB_SHA" "${VPS_APP_DIR:-/root/kargotrack}" \
+              "$GITHUB_ACTOR" "$GHCR_TOKEN"
+            cat <<'REMOTE'
+          set -euo pipefail
+          cd "$APP_DIR"
+
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+
+          # --pull swaps the local image build for a registry pull; everything
+          # else (fast-forward to DEPLOY_REF, wait for Postgres, run migrations,
+          # restart, health-gate) is the same script an operator runs by hand.
+          # </dev/null: this script is stdin, and nothing deploy.sh spawns may
+          # read what bash has not consumed yet.
+          ./deploy.sh --pull </dev/null
+          REMOTE
+          } | ssh -i ~/.ssh/deploy_key \
+                  -o BatchMode=yes \
+                  -o StrictHostKeyChecking=yes \
+                  -p "${VPS_PORT:-22}" \
+                  "$VPS_USER@$VPS_HOST" 'bash -s'
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deploy ${{ job.status }}"
+            echo ""
+            echo "- commit: \`${GITHUB_SHA}\`"
+            echo "- images: \`ghcr.io/${GITHUB_REPOSITORY,,}-web:${GITHUB_SHA}\`, \`ghcr.io/${GITHUB_REPOSITORY,,}-bot:${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

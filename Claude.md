@@ -116,6 +116,11 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
 - `pnpm test` — Vitest
 - `pnpm lint && pnpm typecheck` — must pass before any task is "done"
 
+CI runs exactly those three on every PR (`.github/workflows/ci.yml`); a push to `main`
+runs them again, then builds the web/bot images to GHCR and deploys them to the VPS over
+SSH (`.github/workflows/deploy.yml`). Both CI and a hand-run deploy end in the same
+`deploy.sh` — put deploy logic there, not in the workflow YAML. Setup: DEPLOY.md §10.
+
 ## Coding Conventions
 - Business logic lives in `packages/shared/services/*` — route handlers and bot
   handlers stay thin.

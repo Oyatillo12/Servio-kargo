@@ -1,0 +1,44 @@
+name: CI
+
+# The Definition of Done gates from CLAUDE.md, run in one job.
+#
+# Note there is no `push: branches: [main]` trigger on purpose: a push to main
+# runs deploy.yml, and deploy.yml *calls* this workflow (`workflow_call`) before
+# it builds anything. So main is never deployed unverified, and the same three
+# commands never run twice for one commit.
+#
+# `pnpm format:check` is deliberately NOT a gate — the repo predates Prettier
+# being enforced and 126 files would fail it. Run `pnpm format` before adding it.
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck · lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # action-setup must run before setup-node, otherwise `cache: pnpm` cannot
+      # find the store. The pnpm version comes from package.json#packageManager.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+      - run: pnpm lint

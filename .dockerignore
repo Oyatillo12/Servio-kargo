@@ -29,3 +29,4 @@ Thumbs.db
 DEPLOY.md
 *.md
 !README.md
+.github

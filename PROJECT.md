@@ -273,11 +273,29 @@ are set to `{it}/webhook/{token}`), `PORT`, `UPLOADS_DIR`. Local dev uses per-wo
 
 ### Deploy
 
-`./deploy.sh` on the VPS, safe to re-run: checks `.env` → `git pull --ff-only` → build
-images → start Postgres and wait for its healthcheck → run Drizzle migrations (via the bot
-image) → restart `web`/`bot`/`caddy` → prune dangling images. Named volumes (`pgdata`,
-`uploads`, `caddy_*`) are never removed, so deploys cannot lose data. First-time
-walkthrough: [DEPLOY.md](./DEPLOY.md).
+`deploy.sh` on the VPS is the single deploy path, safe to re-run: checks `.env` →
+`git fetch` + `merge --ff-only` (to `DEPLOY_REF` if set, else the tracked upstream) →
+**build images locally, or `--pull` them from the registry** → start Postgres and wait for
+its healthcheck → run Drizzle migrations (via the bot image) → restart `web`/`bot`/`caddy`
+→ wait for both to report `healthy`, dumping logs and failing if they do not → prune
+dangling images and unused ones older than 7 days. Named volumes (`pgdata`, `uploads`,
+`caddy_*`) are never removed, so deploys cannot lose data.
+
+CI/CD drives that script rather than replacing it. `.github/workflows/deploy.yml` runs on
+every push to `main` (or on demand from the Actions tab): **verify** reuses `ci.yml`
+(`pnpm typecheck && pnpm lint && pnpm test`), **build** builds the web and bot images on
+GitHub's runners with a GHA layer cache and pushes them to
+`ghcr.io/<owner>/<repo>-{web,bot}` tagged with the commit SHA, and **deploy** SSHes to the
+VPS and runs `IMAGE_TAG=<sha> DEPLOY_REF=<sha> ./deploy.sh --pull`. Images are built on the
+runner because a Next.js build does not fit comfortably in 2 vCPU / 4 GB alongside live
+traffic; the VPS only pulls. `docker-compose.prod.yml` therefore names the web/bot images
+`${WEB_IMAGE:-…}:${IMAGE_TAG:-latest}` so the same file works for both paths. Deploys are
+serialised by a `deploy-production` concurrency group that queues instead of cancelling.
+GHCR access uses the run-scoped `GITHUB_TOKEN`, logged out again at the end of the remote
+script, so no long-lived registry credential lives on the VPS. Rollback is
+`IMAGE_TAG=<older-sha> ./deploy.sh --pull` (schema migrations are not reversed — restore
+from a backup for those). First-time walkthrough and the required secrets:
+[DEPLOY.md](./DEPLOY.md).
 
 ### TLS & routing
 
@@ -307,9 +325,13 @@ Panel passwords are argon2-hashed (`@node-rs/argon2`); sessions are httpOnly, se
   migrations run cleanly on a fresh database, the happy path is manually verified, and
   every new string exists in both uz and ru.
 - Commits are small and imperative: `feat(bot): claim flow for unassigned tracks`.
+- CI (`.github/workflows/ci.yml`) runs those same three commands on every pull request and
+  again before any deploy, so `main` is never deployed unverified. `pnpm format:check` is
+  not a gate yet — the repo predates Prettier being enforced.
 - Known quirk: `next build` in `apps/web` has been seen exiting 1 with a spurious
   `PageNotFoundError` in local dev even after compiling successfully — rely on
-  typecheck/lint/test locally and verify builds in the Docker image.
+  typecheck/lint/test locally; the authoritative build is the one the deploy workflow runs
+  inside the Docker image, and it gates the deploy.
 
 ## 9. Scope
 
