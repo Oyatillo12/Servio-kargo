@@ -378,6 +378,22 @@ export const broadcasts = pgTable('broadcasts', {
     .defaultNow(),
 });
 
+/**
+ * Demo requests from the public landing page. Platform-level (a lead is a
+ * cargo company that is not a tenant yet), so deliberately no tenant_id.
+ */
+export const leads = pgTable('leads', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  phone: text('phone').notNull(),
+  company: text('company'),
+  // Which landing locale the form was submitted from (/ = uz, /ru = ru).
+  locale: lang('locale').notNull().default('uz'),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // --- Relations (for typed relational queries) ------------------------------
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
@@ -471,6 +487,8 @@ export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
 export type Broadcast = typeof broadcasts.$inferSelect;
 export type NewBroadcast = typeof broadcasts.$inferInsert;
+export type Lead = typeof leads.$inferSelect;
+export type NewLead = typeof leads.$inferInsert;
 
 export type TrackStatus = (typeof trackStatus.enumValues)[number];
 export type Currency = (typeof currency.enumValues)[number];

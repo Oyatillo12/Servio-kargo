@@ -101,3 +101,36 @@
     animation: fade-in-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
+
+/* --- Public landing page (marketing root layouts) ------------------------ */
+
+/* Dot-grid backdrop for the dark indigo panels — a nod to route maps. */
+.landing-grid-dark {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgb(255 255 255 / 0.06) 1px,
+    transparent 0
+  );
+  background-size: 22px 22px;
+}
+
+/* FAQ <details>: hide the native marker, rotate our plus icon when open. */
+.landing-faq summary {
+  list-style: none;
+}
+.landing-faq summary::-webkit-details-marker {
+  display: none;
+}
+.landing-faq .faq-icon {
+  transition: transform 0.2s ease;
+}
+.landing-faq details[open] .faq-icon {
+  transform: rotate(45deg);
+}
+
+/* Slower variant for the chat bubbles inside the hero phone mockup. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-bubble {
+    animation: fade-in-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}

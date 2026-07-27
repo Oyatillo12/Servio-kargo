@@ -1,5 +1,6 @@
 import { formatDate } from '@kargotrack/shared';
 
+import { listLeadsForSa } from '@/lib/leads';
 import { listTenantsForSa } from '@/lib/sa-queries';
 import { requireSuperadmin } from '@/lib/superadmin';
 
@@ -13,7 +14,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function SaPage() {
   requireSuperadmin();
-  const tenants = await listTenantsForSa();
+  const [tenants, saLeads] = await Promise.all([
+    listTenantsForSa(),
+    listLeadsForSa(),
+  ]);
 
   return (
     <div className="min-h-screen">
@@ -100,6 +104,58 @@ export default async function SaPage() {
                       </td>
                       <td className="px-3 py-2">
                         <WebhookButton tenantId={t.id} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {/* Landing-page demo requests */}
+          <h2 className="mb-3 mt-8 text-sm font-semibold text-slate-900">
+            Demo so‘rovlari ({saLeads.length})
+          </h2>
+          {saLeads.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+              Hali so‘rov yo‘q.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <th className="px-3 py-2 font-medium">Ism</th>
+                    <th className="px-3 py-2 font-medium">Telefon</th>
+                    <th className="px-3 py-2 font-medium">Kompaniya</th>
+                    <th className="px-3 py-2 font-medium">Til</th>
+                    <th className="px-3 py-2 font-medium">Sana</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {saLeads.map((lead) => (
+                    <tr
+                      key={lead.id}
+                      className="border-b border-slate-100 last:border-0"
+                    >
+                      <td className="px-3 py-2 font-medium text-slate-900">
+                        {lead.name}
+                      </td>
+                      <td className="px-3 py-2">
+                        <a
+                          href={`tel:${lead.phone.replace(/[^+\d]/g, '')}`}
+                          className="tabular-nums text-slate-700 underline"
+                        >
+                          {lead.phone}
+                        </a>
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {lead.company ?? '—'}
+                      </td>
+                      <td className="px-3 py-2 uppercase text-slate-500">
+                        {lead.locale}
+                      </td>
+                      <td className="px-3 py-2 text-slate-500">
+                        {formatDate(lead.createdAt)}
                       </td>
                     </tr>
                   ))}

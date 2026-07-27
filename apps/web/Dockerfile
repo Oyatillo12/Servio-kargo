@@ -25,5 +25,8 @@ ENV NODE_ENV=production \
 # standalone/ carries a trimmed node_modules + server.js; static/ is served alongside it.
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+# public/ is NOT part of standalone output — without this copy every asset in
+# it (manifest, favicons, android-chrome icons) 404s in production.
+COPY --from=builder /app/apps/web/public ./apps/web/public
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]

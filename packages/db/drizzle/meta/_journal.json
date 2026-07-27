@@ -57,6 +57,13 @@
       "when": 1785112436461,
       "tag": "0007_broken_spyke",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785141546685,
+      "tag": "0008_freezing_magdalene",
+      "breakpoints": true
     }
   ]
 }

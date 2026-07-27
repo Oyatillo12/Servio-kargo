@@ -7,13 +7,19 @@
 
 import { getRequestConfig } from 'next-intl/server';
 
-import { getLocaleFromCookie } from '@/lib/locale';
+import { getLocaleFromCookie, isLocale } from '@/lib/locale';
 
 /** Every timestamp in the product is Tashkent local time (SPEC §7.9). */
 export const APP_TIME_ZONE = 'Asia/Tashkent';
 
-export default getRequestConfig(async () => {
-  const locale = getLocaleFromCookie();
+export default getRequestConfig(async (params) => {
+  // An explicit locale (`getTranslations({locale})`) comes from the public
+  // marketing pages, which are statically rendered — the cookie read below
+  // would force them dynamic, so it must stay behind this branch. The panel
+  // never passes a locale and keeps its cookie-based resolution.
+  const locale = isLocale(params.locale)
+    ? params.locale
+    : getLocaleFromCookie();
 
   return {
     locale,
