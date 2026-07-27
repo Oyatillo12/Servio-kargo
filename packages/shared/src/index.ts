@@ -153,9 +153,15 @@ export {
 } from './services/notify';
 export {
   planStatusChange,
+  planBulkStatusChange,
   type StatusTransitionInput,
   type StatusTransitionPlan,
+  type BulkStatusRow,
+  type BulkStatusNotify,
+  type BulkStatusPlan,
 } from './services/statusChange';
+// Bulk-write chunking, shared by the panel writes and the queue (AUDIT.md T7)
+export { BULK_CHUNK, chunked } from './services/bulk';
 export {
   planAssignCustomer,
   isAssignEventMeta,

@@ -138,6 +138,8 @@
     "customerDialogHint": "{count, plural, other {# ta trek}} tanlandi. Mijozga xabar yuborilmaydi.",
     "customerAssigned": "{count, plural, other {# ta trek}} {clientCode} mijoziga biriktirildi",
     "customerAlreadyOwned": "{count, plural, other {# ta allaqachon shu mijozda edi}}",
+    "quickAssign": "Biriktirish",
+    "quickAssignRow": "{code} ni mijozga biriktirish",
     "invalidTracksOrCustomer": "Treklarni yoki mijozni tekshiring.",
     "customerNotFound": "Mijoz topilmadi."
   },

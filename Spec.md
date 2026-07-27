@@ -295,6 +295,12 @@ two copies would drift the moment one side is edited.
   biriktirish` → modal: batch select → confirm; and `Mijozga biriktirish`
   → customer picker (7.3) → confirm. The customer picker states plainly
   that no message is sent.
+  An unclaimed row shows `+ Biriktirish` in the Mijoz column instead of grey
+  `Biriktirilmagan` text: it opens the same picker for that one track. Attaching
+  owners is the daily job behind `?work=unassigned`, and routing every single
+  parcel through the bulk bar costs three taps instead of one. Roles without
+  `tracks.assign` see the plain text — warehouse staff move parcels, they do
+  not decide whose they are (9).
 - **5.3 /tracks/[id]** — status select, tariff select (defaults to tenant's
   default tariff), weight input (kg, up to 2 decimals → stored grams, auto
   price per 7.4), price field with `Qo'lda kiritish` toggle (manual override,
@@ -314,7 +320,10 @@ two copies would drift the moment one side is edited.
      all + OPTIONAL `Reys` select (attach all imported tracks to a batch).
   3. Apply → result: created / updated / `{M} ta xabar navbatga qo'yildi`.
 - **5.5 /customers** — search; columns: Kod, Ism, Telefon, Treklar, Qarz
-  (red if > 0). Header carries `⬇️ Excel` (5.11).
+  (red if > 0). Header carries `⬇️ Excel` (5.11). Paged 20 per page like
+  /tracks, with search and page carried together in the URL; the header count
+  is the total, not the page. Track count and debt are aggregated in SQL, not
+  by reading the tenant's tracks and payments into memory.
   `Yangi mijoz` button → telefon (majburiy) + ism (ixtiyoriy);
   `client_code` avtomatik, `tg_user_id` NULL until the person opens the bot
   (7.12). A phone that already belongs to a customer is refused, and that
@@ -323,9 +332,13 @@ two copies would drift the moment one side is edited.
   that customer's statement, 5.11),
   `To'lov qo'shish` (summa so'mda, usul: naqd/Click/Payme/boshqa, izoh),
   `Eslatma yuborish` button.
-- **5.6 /debtors** — customers with debt > 0, sorted desc. Header carries
-  `⬇️ Excel` (5.11).
+- **5.6 /debtors** — customers with debt > 0, sorted desc (ties broken by
+  client_code so paging is stable). Header carries `⬇️ Excel` (5.11).
   Per-row `Eslatma` + top `Barchasiga eslatma yuborish` (confirm with count).
+  The list is paged 20 per page, but the summary card (total debt, debtor
+  count) and `Barchasiga eslatma` stay whole-tenant: the owner reads that total
+  as the number for the business, and a figure that shrank because they turned
+  to page 2 would be worse than no figure at all.
 - **5.7 /batches (Reyslar)** — list: Nomi, Transport (Avia/Avto/Poyezd),
   ETA, Status, Treklar soni. `Yangi reys` form: nomi (e.g. `AVIA-21.07`),
   transport, ETA sanasi. Detail: editable ETA, status select → confirm modal
@@ -562,6 +575,18 @@ default tariff + owner.
   throughput is bounded by the send limits above rather than by per-message
   latency. A job that fails is retried on its own; the rest of its batch must
   still complete, or a retry would re-send messages that already arrived.
+- Every bulk write — import, panel bulk status change, batch propagation,
+  bulk customer assignment — runs in ONE transaction and is issued in
+  fixed-size chunks, so a 2 500-track flight costs a handful of statements and
+  either fully applies or not at all. Half a flight moved is worse than none:
+  the admin cannot tell which half, and one warehouse shelf ends up in two
+  states.
+- Notifications for a bulk write are enqueued only AFTER that transaction
+  commits, and in bulk. The queue writes on its own connection, so a job sent
+  mid-transaction would outlive a rollback and message customers about a state
+  that was never stored; and one enqueue per track would leave the admin's
+  request waiting on thousands of round trips. The (track, status) dedupe of
+  7.6 applies to a bulk enqueue exactly as to a single one.
 - Photos: JPEG, max 10 MB; reject others with a clear staff-mode error.
 - Auth: argon2id; session cookie httpOnly, secure, 30 days.
 - Any bot handler error → pino log + `error_generic` reply only when the

@@ -138,6 +138,8 @@
     "customerDialogHint": "Выбрано {count, plural, one {# трек} few {# трека} many {# треков} other {# трека}}. Клиенту уведомление не отправляется.",
     "customerAssigned": "{count, plural, one {# трек привязан} few {# трека привязано} many {# треков привязано} other {# трека привязано}} к клиенту {clientCode}",
     "customerAlreadyOwned": "{count, plural, one {# уже принадлежал этому клиенту} few {# уже принадлежали этому клиенту} many {# уже принадлежали этому клиенту} other {# уже принадлежали этому клиенту}}",
+    "quickAssign": "Привязать",
+    "quickAssignRow": "Привязать {code} к клиенту",
     "invalidTracksOrCustomer": "Проверьте список треков или клиента.",
     "customerNotFound": "Клиент не найден."
   },

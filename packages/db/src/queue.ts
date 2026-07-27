@@ -21,11 +21,13 @@ import PgBoss from 'pg-boss';
 
 import {
   BROADCAST_QUEUE,
+  BULK_CHUNK,
   NOTIFY_QUEUE,
   REMINDER_QUEUE,
   REMINDER_SWEEP_CRON,
   REMINDER_SWEEP_QUEUE,
   REMINDER_TZ,
+  chunked,
   notifyDedupeKey,
   type BroadcastJob,
   type NotifyJob,
@@ -116,6 +118,38 @@ export function enqueueNotification(job: NotifyJob): Promise<string | null> {
       retryBackoff: RETRY_BACKOFF,
     }),
   );
+}
+
+/**
+ * Enqueue a whole bulk status change (AUDIT.md T7). One `boss.send` per track
+ * is one round trip per track: flipping a 2 500-track flight spent them all
+ * with the admin's request hanging on it. `boss.insert` writes a chunk per
+ * statement instead.
+ *
+ * Dedupe is preserved, unlike the broadcast fan-out: `insert` carries
+ * `singletonKey` into the same column `send` uses, and its `ON CONFLICT DO
+ * NOTHING` lands on NOTIFY_QUEUE's 'short'-policy unique index — so a job that
+ * duplicates one still queued is dropped exactly as §7.6 requires. Two rows in
+ * one chunk can't collide anyway: a bulk change lists each track once.
+ *
+ * Callers must invoke this only AFTER their transaction commits — pg-boss
+ * writes through its own connection, so jobs sent mid-transaction would survive
+ * a rollback and notify about rows that were never written.
+ */
+export async function enqueueNotifications(jobs: NotifyJob[]): Promise<void> {
+  if (jobs.length === 0) return;
+  const boss = await getBoss();
+  for (const chunk of chunked(jobs, BULK_CHUNK)) {
+    await boss.insert(
+      chunk.map((data) => ({
+        name: NOTIFY_QUEUE,
+        data,
+        singletonKey: notifyDedupeKey(data.trackId, data.status),
+        retryLimit: RETRY_LIMIT,
+        retryBackoff: RETRY_BACKOFF,
+      })),
+    );
+  }
 }
 
 /** Attempt metadata handed to the worker so it can log final failures. */
@@ -279,9 +313,6 @@ export function scheduleReminderSweep(): Promise<void> {
 
 // --- Broadcasts (SPEC §5.8, §7.11) -----------------------------------------
 
-/** Rows per bulk `insert` — one round trip each, well under any statement cap. */
-const ENQUEUE_CHUNK = 1000;
-
 /**
  * Enqueue a whole broadcast fan-out (SPEC §7.11, AUDIT.md T3). One `boss.send`
  * per recipient is one round trip per recipient: a 3 000-customer broadcast
@@ -296,9 +327,9 @@ const ENQUEUE_CHUNK = 1000;
 export async function enqueueBroadcasts(jobs: BroadcastJob[]): Promise<void> {
   if (jobs.length === 0) return;
   const boss = await getBoss();
-  for (let i = 0; i < jobs.length; i += ENQUEUE_CHUNK) {
+  for (const chunk of chunked(jobs, BULK_CHUNK)) {
     await boss.insert(
-      jobs.slice(i, i + ENQUEUE_CHUNK).map((data) => ({
+      chunk.map((data) => ({
         name: BROADCAST_QUEUE,
         data,
         retryLimit: RETRY_LIMIT,

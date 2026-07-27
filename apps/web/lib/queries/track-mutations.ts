@@ -8,16 +8,16 @@ import 'server-only';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
-import { enqueueNotification } from '@kargotrack/db/queue';
+import { enqueueNotifications } from '@kargotrack/db/queue';
 import { customers, trackEvents, tracks } from '@kargotrack/db/schema';
 import {
+  BULK_CHUNK,
+  chunked,
   planAssignCustomer,
-  planStatusChange,
+  planBulkStatusChange,
   type AssignEventMeta,
   type TrackStatus,
 } from '@kargotrack/shared';
-
-import { chunked, IMPORT_CHUNK } from './internal';
 
 export interface StatusChangeResult {
   /** Tracks whose status genuinely changed (an event was appended). */
@@ -28,10 +28,16 @@ export interface StatusChangeResult {
 
 /**
  * Apply `status` to the given (tenant-scoped, non-deleted) tracks. Reuses the
- * shared `planStatusChange` planner so the panel and import share one rule:
+ * shared `planBulkStatusChange` planner so the panel and import share one rule:
  * same-status writes are no-ops, real changes append a `track_events` row and
  * enqueue a §4.2 notification when a customer is attached. Backward moves are
  * allowed (mistake corrections, §7.2).
+ *
+ * Follows the `applyImport` shape (AUDIT.md T7): one transaction, ids grouped
+ * into a bulk UPDATE + bulk event INSERT per chunk, notifications enqueued only
+ * after the commit. A 500-track change costs a handful of round trips instead
+ * of 1000+, and can no longer half-apply — leaving some tracks moved, some not,
+ * and messages already sent about a state that was never written.
  */
 export async function setTrackStatuses(args: {
   tenantId: string;
@@ -43,55 +49,67 @@ export async function setTrackStatuses(args: {
   const result: StatusChangeResult = { changed: 0, queued: 0 };
   if (args.trackIds.length === 0) return result;
 
-  const rows = await db
-    .select({
-      id: tracks.id,
-      currentStatus: tracks.currentStatus,
-      customerId: tracks.customerId,
-    })
-    .from(tracks)
-    .where(
-      and(
-        eq(tracks.tenantId, args.tenantId),
-        inArray(tracks.id, args.trackIds),
-        isNull(tracks.deletedAt),
-      ),
-    );
+  // Enqueued only AFTER the transaction commits: pg-boss writes through its own
+  // connection, so a job sent mid-transaction would survive a rollback and
+  // notify about rows that were never written.
+  let toNotify: { trackId: string; customerId: string }[] = [];
 
-  for (const row of rows) {
-    const plan = planStatusChange({
-      previousStatus: row.currentStatus,
-      newStatus: args.status,
-      customerId: row.customerId,
-      wasDeleted: false,
-    });
-    if (!plan.willWrite) continue; // §2 no-op
+  await db.transaction(async (tx) => {
+    const rows = await tx
+      .select({
+        id: tracks.id,
+        currentStatus: tracks.currentStatus,
+        customerId: tracks.customerId,
+      })
+      .from(tracks)
+      .where(
+        and(
+          eq(tracks.tenantId, args.tenantId),
+          inArray(tracks.id, args.trackIds),
+          isNull(tracks.deletedAt),
+        ),
+      );
 
-    await db
-      .update(tracks)
-      .set({ currentStatus: args.status })
-      .where(and(eq(tracks.tenantId, args.tenantId), eq(tracks.id, row.id)));
+    // Soft-deleted rows are filtered out above, so `willWrite` here means a real
+    // status change — the planner's revive case belongs to the import path.
+    const plan = planBulkStatusChange(args.status, rows);
+    if (plan.writeIds.length === 0) return;
 
-    if (plan.willEvent) {
-      await db.insert(trackEvents).values({
-        trackId: row.id,
-        status: args.status,
-        meta: { source: 'panel' },
-        createdBy: args.createdBy,
-      });
-      result.changed += 1;
+    // Every track in this call gets the same status, so the UPDATE groups into
+    // one statement per chunk; the event rows differ only by track id.
+    for (const chunk of chunked(plan.writeIds, BULK_CHUNK)) {
+      await tx
+        .update(tracks)
+        .set({ currentStatus: args.status })
+        .where(
+          and(eq(tracks.tenantId, args.tenantId), inArray(tracks.id, chunk)),
+        );
     }
 
-    if (plan.willNotify) {
-      await enqueueNotification({
-        tenantId: args.tenantId,
-        trackId: row.id,
-        customerId: row.customerId!,
-        status: args.status,
-      });
-      result.queued += 1;
+    for (const chunk of chunked(plan.eventIds, BULK_CHUNK)) {
+      await tx.insert(trackEvents).values(
+        chunk.map((trackId) => ({
+          trackId,
+          status: args.status,
+          meta: { source: 'panel' },
+          createdBy: args.createdBy,
+        })),
+      );
     }
-  }
+
+    result.changed = plan.eventIds.length;
+    toNotify = plan.notify;
+  });
+
+  await enqueueNotifications(
+    toNotify.map((n) => ({
+      tenantId: args.tenantId,
+      trackId: n.trackId,
+      customerId: n.customerId,
+      status: args.status,
+    })),
+  );
+  result.queued = toNotify.length;
 
   return result;
 }
@@ -176,7 +194,7 @@ export async function setTracksCustomer(args: {
 
     // Every write in this call sets the same customer_id, so the UPDATE groups
     // into one statement per chunk; only the audit meta differs per row.
-    for (const chunk of chunked(writes, IMPORT_CHUNK)) {
+    for (const chunk of chunked(writes, BULK_CHUNK)) {
       await tx
         .update(tracks)
         .set({ customerId: args.customerId })
@@ -210,7 +228,7 @@ export async function setTracksCustomer(args: {
       ).map((r) => [r.id, r.currentStatus]),
     );
 
-    for (const chunk of chunked(writes, IMPORT_CHUNK)) {
+    for (const chunk of chunked(writes, BULK_CHUNK)) {
       await tx.insert(trackEvents).values(
         chunk.map((w) => ({
           trackId: w.id,

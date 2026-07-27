@@ -7,15 +7,15 @@ import 'server-only';
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
-import { enqueueNotification } from '@kargotrack/db/queue';
+import { enqueueNotifications } from '@kargotrack/db/queue';
 import { trackEvents, tracks } from '@kargotrack/db/schema';
 import {
+  BULK_CHUNK,
+  chunked,
   planStatusChange,
   type ImportCode,
   type TrackStatus,
 } from '@kargotrack/shared';
-
-import { chunked, IMPORT_CHUNK } from './internal';
 
 /**
  * Which of `normalizedCodes` already exist for this tenant. Includes
@@ -97,7 +97,7 @@ export async function applyImport(
     // import racing on the same (tenant, code): the loser's row silently skips
     // (not created, not updated this run) instead of aborting the whole import.
     const newCodes = codes.filter((c) => !existingByCode.has(c.normalized));
-    for (const chunk of chunked(newCodes, IMPORT_CHUNK)) {
+    for (const chunk of chunked(newCodes, BULK_CHUNK)) {
       const inserted = await tx
         .insert(tracks)
         .values(
@@ -163,13 +163,13 @@ export async function applyImport(
       deletedAt: null,
     };
     if (batchId != null) writeSet.batchId = batchId;
-    for (const chunk of chunked(writeIds, IMPORT_CHUNK)) {
+    for (const chunk of chunked(writeIds, BULK_CHUNK)) {
       await tx.update(tracks).set(writeSet).where(inArray(tracks.id, chunk));
     }
-    for (const chunk of chunked(batchOnlyIds, IMPORT_CHUNK)) {
+    for (const chunk of chunked(batchOnlyIds, BULK_CHUNK)) {
       await tx.update(tracks).set({ batchId }).where(inArray(tracks.id, chunk));
     }
-    for (const chunk of chunked(eventIds, IMPORT_CHUNK)) {
+    for (const chunk of chunked(eventIds, BULK_CHUNK)) {
       await tx.insert(trackEvents).values(
         chunk.map((trackId) => ({
           trackId,
@@ -181,15 +181,15 @@ export async function applyImport(
     }
   });
 
-  for (const n of toNotify) {
-    await enqueueNotification({
+  await enqueueNotifications(
+    toNotify.map((n) => ({
       tenantId,
       trackId: n.trackId,
       customerId: n.customerId,
       status,
-    });
-    result.queued += 1;
-  }
+    })),
+  );
+  result.queued = toNotify.length;
 
   return result;
 }

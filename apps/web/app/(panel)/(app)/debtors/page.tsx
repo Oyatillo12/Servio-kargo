@@ -6,10 +6,15 @@ import { formatSom } from '@kargotrack/shared';
 import { DebtCell } from '@/components/shared/debt-cell';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ExportButton } from '@/components/shared/export-button';
+import { Pagination } from '@/components/shared/pagination';
 import { ReminderButton } from '@/components/shared/reminder-button';
 import { PageHeader } from '@/components/layout/page-header';
 import { requireCapability } from '@/lib/auth';
-import { listDebtors } from '@/lib/queries';
+import {
+  CUSTOMERS_PAGE_SIZE,
+  getDebtTotals,
+  listCustomersWithDebt,
+} from '@/lib/queries';
 import { sendReminderAction } from '@/features/debtors/actions';
 import { BulkReminder } from '@/features/debtors/components/bulk-reminder';
 
@@ -18,13 +23,37 @@ export async function generateMetadata() {
   return { title: `${t('pageTitle')} — SERVIO Kargo` };
 }
 
-export default async function DebtorsPage() {
+export default async function DebtorsPage({
+  searchParams,
+}: {
+  searchParams: { page?: string };
+}) {
   const { tenant } = await requireCapability('money.reports');
   const t = await getTranslations('debtors');
   const tCommon = await getTranslations('common');
 
-  const debtors = await listDebtors(tenant.id);
-  const totalTiyin = debtors.reduce((sum, c) => sum + c.debtTiyin, 0);
+  const requestedPage = Math.max(1, Number(searchParams.page) || 1);
+
+  // The summary card and "remind all" stay whole-tenant while the list is
+  // paged: an owner reads the total debt as the number for the business, and a
+  // figure that shrank because they turned to page 2 would be worse than no
+  // figure at all. `getDebtTotals` is one aggregate (AUDIT.md T6).
+  const [{ debtorCount, debtTiyin: totalTiyin }, { rows: debtors }] =
+    await Promise.all([
+      getDebtTotals(tenant.id),
+      listCustomersWithDebt({
+        tenantId: tenant.id,
+        onlyDebtors: true,
+        sort: 'debt',
+        limit: CUSTOMERS_PAGE_SIZE,
+        offset: (requestedPage - 1) * CUSTOMERS_PAGE_SIZE,
+      }),
+    ]);
+
+  const pages = Math.max(1, Math.ceil(debtorCount / CUSTOMERS_PAGE_SIZE));
+  const page = Math.min(requestedPage, pages);
+  const pageHref = (target: number) =>
+    target > 1 ? `/debtors?page=${target}` : '/debtors';
 
   return (
     <div>
@@ -36,14 +65,14 @@ export default async function DebtorsPage() {
         right={<ExportButton href="/api/export/customers?debtors=1" />}
       />
 
-      {debtors.length > 0 ? (
+      {debtorCount > 0 ? (
         <div className="mb-4 rounded-xl border border-[#f3d6d4] bg-[#fdf6f6] p-3.5">
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-[12px] text-muted-foreground">
               {t('totalDebt')}
             </span>
             <span className="text-[12px] text-muted-foreground">
-              {t('debtorCount', { count: debtors.length })}
+              {t('debtorCount', { count: debtorCount })}
             </span>
           </div>
           <p className="mt-1 whitespace-nowrap font-mono text-[22px] font-bold leading-tight tabular-nums text-[#b3261e]">
@@ -54,14 +83,14 @@ export default async function DebtorsPage() {
           </p>
           <div className="mt-3">
             <BulkReminder
-              count={debtors.length}
+              count={debtorCount}
               totalDebtText={`${formatSom(totalTiyin)} ${tCommon('som')}`}
             />
           </div>
         </div>
       ) : null}
 
-      {debtors.length === 0 ? (
+      {debtorCount === 0 ? (
         <EmptyState
           icon={
             <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full border border-[#c2e8cf] bg-[#e2f6e8] text-lg text-[#177338]">
@@ -103,6 +132,8 @@ export default async function DebtorsPage() {
           ))}
         </div>
       )}
+
+      <Pagination page={page} pages={pages} buildHref={pageHref} />
     </div>
   );
 }

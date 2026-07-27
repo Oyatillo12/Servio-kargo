@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Plus } from 'lucide-react';
 
 import { can, type TrackStatus } from '@kargotrack/shared';
 
@@ -60,6 +61,16 @@ export function TracksTable({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
+  /**
+   * Track being attached from its own row (AUDIT.md T11). Attaching owners is
+   * the daily job behind `/tracks?work=unassigned`, and going through the bulk
+   * bar for it costs three taps per parcel: tick the box, open the bar, pick.
+   * The grey "Biriktirilmagan" cell IS the button — it is already the thing the
+   * admin is looking at when they decide to act, and it needs no new column.
+   */
+  const [quickTarget, setQuickTarget] = useState<string | null>(null);
+
+  const canAssign = can(role, 'tracks.assign');
 
   /**
    * Optimistic status overlay (AUDIT.md T15). A bulk status change round-trips
@@ -131,7 +142,7 @@ export function TracksTable({
       {selected.size > 0 ? (
         <BulkBar
           count={selected.size}
-          canAssign={can(role, 'tracks.assign')}
+          canAssign={canAssign}
           onClear={() => setSelected(new Set())}
           onCustomer={() => setCustomerOpen(true)}
           onBatch={() => setBatchOpen(true)}
@@ -167,13 +178,13 @@ export function TracksTable({
                   </Link>
                   <StatusBadge status={r.status} />
                 </div>
-                <p className="mt-1 truncate text-[13px] text-slate-600">
-                  {r.customerLabel ?? (
-                    <span className="text-slate-400">
-                      {tCommon('unassigned')}
-                    </span>
-                  )}
-                </p>
+                <div className="mt-1 truncate text-[13px] text-slate-600">
+                  <CustomerCell
+                    row={r}
+                    canAssign={canAssign}
+                    onAssign={() => setQuickTarget(r.id)}
+                  />
+                </div>
                 <p className="mt-0.5 font-mono text-[12px] text-muted-foreground">
                   {r.weightText} · {r.priceText} · {r.dateText}
                 </p>
@@ -232,11 +243,11 @@ export function TracksTable({
                     </Link>
                   </TableCell>
                   <TableCell className="text-slate-700">
-                    {r.customerLabel ?? (
-                      <span className="text-slate-400">
-                        {tCommon('unassigned')}
-                      </span>
-                    )}
+                    <CustomerCell
+                      row={r}
+                      canAssign={canAssign}
+                      onAssign={() => setQuickTarget(r.id)}
+                    />
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={r.status} />
@@ -283,7 +294,62 @@ export function TracksTable({
         onOpenChange={setCustomerOpen}
         onDone={() => setSelected(new Set())}
       />
+
+      {/* Same dialog, one track: the row-level attach (AUDIT.md T11). It is a
+          separate instance rather than a shared one with a swapped id list, so
+          opening it never disturbs an in-progress bulk selection. */}
+      <CustomerAssignDialog
+        trackIds={quickTarget ? [quickTarget] : []}
+        open={quickTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setQuickTarget(null);
+        }}
+        onDone={() => {
+          setQuickTarget(null);
+          // The row must stop saying "Biriktirilmagan" — on the unassigned
+          // worklist it should leave the list entirely.
+          router.refresh();
+        }}
+      />
     </div>
+  );
+}
+
+/**
+ * The customer column: the owner's label, or — for an unclaimed track — the
+ * button that attaches one (AUDIT.md T11).
+ *
+ * Warehouse staff see the plain grey text instead: they move parcels, they do
+ * not decide whose they are (CLAUDE.md rule 9). The server action checks the
+ * same capability regardless.
+ */
+function CustomerCell({
+  row,
+  canAssign,
+  onAssign,
+}: {
+  row: TrackRowView;
+  canAssign: boolean;
+  onAssign: () => void;
+}) {
+  const t = useTranslations('tracks');
+  const tCommon = useTranslations('common');
+
+  if (row.customerLabel) return <>{row.customerLabel}</>;
+  if (!canAssign) {
+    return <span className="text-slate-400">{tCommon('unassigned')}</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onAssign}
+      aria-label={t('quickAssignRow', { code: row.code })}
+      className="inline-flex items-center gap-1 rounded-full border border-dashed border-input px-2 py-0.5 text-[12px] font-medium text-slate-500 transition-colors hover:border-primary hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Plus className="h-3 w-3 flex-none" strokeWidth={2} aria-hidden />
+      {t('quickAssign')}
+    </button>
   );
 }
 

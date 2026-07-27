@@ -66,12 +66,12 @@ T3 bilan `apps/bot` ga vitest qo'shildi (13 test, `rateLimiter`), lekin
 | ~~F5~~ | ~~Xatolik kuzatuvi va web healthcheck yo'q~~ | ✅ Yopildi | T5 |
 | ~~F6~~ | ~~Layoutda `listDebtors` — har sahifada to'liq jadval skani~~ | ✅ Yopildi | T6 |
 | ~~F7~~ | ~~Kritik indekslar yo'q (`track_events.track_id` va boshq.)~~ | ✅ Yopildi | T4 |
-| F8 | Bulk operatsiyalar tranzaksiyasiz, per-row tsikl | 🟠 Yuqori | T7 |
+| ~~F8~~ | ~~Bulk operatsiyalar tranzaksiyasiz, per-row tsikl~~ | ✅ Yopildi | T7 |
 | ~~F9~~ | ~~`role` majburlanmaydi; admin qo'shish/parol UI yo'q~~ | ✅ Yopildi | T8 |
 | F10 | Loginda rate limit yo'q (brute force + argon2 DoS) | 🟡 O'rta | T9 |
 | F11 | "Barchasini tanlash" faqat ko'rinadigan 20 qatorni oladi | 🟡 O'rta | T10 |
-| F12 | Biriktirilmagan treklar uchun alohida ko'rinish yo'q | 🟡 O'rta | T11 |
-| F13 | `/customers`, `/debtors` pagination yo'q | 🟡 O'rta | T12 |
+| ~~F12~~ | ~~Biriktirilmagan treklar uchun alohida ko'rinish yo'q~~ | ✅ Yopildi | T11 |
+| ~~F13~~ | ~~`/customers`, `/debtors` pagination yo'q~~ | ✅ Yopildi | T12 |
 | F14 | Xabar yetkazish jurnali yo'q (bloklagan mijoz ko'rinmaydi) | 🟡 O'rta | T13 |
 | F15 | Undo / savat yo'q — 300 ta xato xabar qaytarilmaydi | 🟡 O'rta | T14 |
 | ~~F16~~ | ~~Bulk operatsiyada progress yo'q, qidiruv Enter + reload~~ | ✅ Yopildi | T15 |
@@ -626,21 +626,69 @@ yangilandi · yangi user-facing string yo'q.
 
 ---
 
-### ☐ T7 · Bulk operatsiyalarni tranzaksiya + chunkga o'tkazish
+### ☑ T7 · Bulk operatsiyalarni tranzaksiya + chunkga o'tkazish — **BAJARILDI** (2026-07-27)
 
-`queries.ts:379–412` (`setTrackStatuses`) va `queries.ts:1056–1080`
-(`changeBatchStatus`) — har trek uchun alohida `UPDATE` + `INSERT`, tsiklda,
-**tranzaksiyasiz**. 500 trek = 1000+ round trip; yarmida uzilsa yarim
-qo'llanilgan holat qoladi va yarim xabar ketadi.
+**Vazifalar:**
+- [x] `setTrackStatuses` (`lib/queries/track-mutations.ts`) — bitta tranzaksiya,
+      chunk boshiga bitta bulk `UPDATE` + bitta bulk event `INSERT`
+- [x] `changeBatchStatus` (`lib/queries/batches.ts`) — xuddi shunday, **reysning
+      o'z statusi ham o'sha tranzaksiyada**
+- [x] Notify enqueue faqat commitdan keyin (import'da qilinganidek)
+- [x] `IMPORT_CHUNK` → `BULK_CHUNK`: `packages/shared/src/services/bulk.ts`
+      (`chunked` bilan birga). Endi panel yozuvlari ham, `packages/db` dagi
+      pg-boss fan-out ham **bitta testlangan konstantadan** o'lchov oladi —
+      ilgari `IMPORT_CHUNK` (web) va `ENQUEUE_CHUNK` (db) alohida edi
+- [x] `planBulkStatusChange` (`packages/shared/.../statusChange.ts`) — tanlovni
+      `writeIds` / `eventIds` / `notify` ro'yxatlariga ajratuvchi sof planner
+- [x] Testlar: 2 500 trekda status o'zgarishi va parametr limiti
+      (**351 test**, 335 → +16)
 
-To'g'ri namuna kodda bor: `applyImport` (`queries.ts:1155`) — chunked + tranzaksiya
-+ notify'ni commitdan **keyin** enqueue qilish. Shu naqshni ko'chirish.
+**Ro'yxatda bo'lmagan uchinchi joy — `enqueueNotifications`.** Vazifada
+notify'ni commitdan keyinga surish yozilgan edi, lekin import'dagi «to'g'ri
+namuna»ning o'zi ham har trek uchun bitta `boss.send` qilardi: 2 500 trekli
+reys = 2 500 queue round trip, admin so'rovi esa shuning hammasini kutadi.
+Endi T3 dagi `enqueueBroadcasts` naqshi bo'yicha bitta `boss.insert` — chunk
+boshiga bitta statement.
 
-- [ ] `setTrackStatuses` — bitta tranzaksiya, status bo'yicha guruhlab bulk UPDATE
-- [ ] `changeBatchStatus` — xuddi shunday
-- [ ] Notify enqueue faqat commitdan keyin (import'da qilinganidek)
-- [ ] `IMPORT_CHUNK` (1000) ni umumiy konstantaga chiqarish
-- [ ] Test: 2 500 trekda status o'zgarishi, parametr limiti oshmasligi
+**Dedupe saqlanib qoldi** (broadcast'dan farqli o'laroq): pg-boss 10.4.2 ning
+`insertJobs` SQL i `singletonKey` ni `send` ishlatadigan **o'sha** ustunga
+yozadi va `ON CONFLICT DO NOTHING` bilan tugaydi, ya'ni NOTIFY_QUEUE ning
+`short` policy unique indeksi §7.6 ni avvalgidek majburlaydi. Bitta chunk
+ichida to'qnashuv bo'lishi ham mumkin emas — bulk o'zgarishda har trek bir
+marta ro'yxatda.
+
+**Nima o'zgardi (round trip, 2 500 trekli reys):**
+
+| Operatsiya | Oldin | Keyin |
+| ------------------------------ | ---------------- | ------------------------- |
+| `setTrackStatuses` yozuvlari | 2×N statement | 2 UPDATE + 2 INSERT |
+| `changeBatchStatus` yozuvlari | 2×N + 1 | 2 + 2 + 1 (reys statusi) |
+| Notify enqueue | N `boss.send` | 1 `boss.insert` |
+| Atomiklik | yo'q | bitta tranzaksiya |
+
+**Nega reysning statusi ham tranzaksiya ichida.** Ilgari u tsikldan **keyin**,
+alohida yozilardi: uzilish yuz bersa reys «IN_TRANSIT» deb ko'rinardi, a'zolarining
+yarmi esa hamon CHINA_WAREHOUSE da qolardi — va aynan shu holatda admin qaysi
+yarmi ekanini bilmaydi. Endi ikkalasi birga commit bo'ladi.
+
+**`setTrackStatuses` ning revive holati yo'q.** Query `deleted_at IS NULL` bilan
+cheklangan, shuning uchun bu yerda `willWrite` = haqiqiy status o'zgarishi.
+Planner'ning revive tarmog'i import yo'liga tegishli (§7.2) — shu sabab
+`writeIds` va `eventIds` bu chaqiruvda doim teng bo'ladi, lekin planner ikkalasini
+alohida qaytaradi va DB qatlami taxmin qilmaydi.
+
+**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ **351 test**
+(304 shared + 30 bot + 17 web; T8 dan keyin 335) · migratsiya yo'q (sxema
+o'zgarmadi) · ✅ Spec.md § 8 yangilandi (bulk atomikligi + commitdan keyin
+enqueue) · yangi user-facing string yo'q (sof yozuv qatlami).
+
+**⚠️ Halol cheklov.** Tekshiruv **sof birlik testlari** darajasida:
+planner 2 500 qatorda, chunk hajmi parametr limitida. Jonli bazada
+o'lchov/rollback tekshiruvi (T3/T4/T6 dagi kabi harness) **qilinmadi** —
+ataylab, kelishilgan holda. Ya'ni «tranzaksiya haqiqatan orqaga qaytadi» va
+«enqueue qilingan job soni to'g'ri» degan da'volar kod o'qish darajasida,
+o'lchov darajasida emas. Pilotdan oldin bitta reysni panelda qo'lda
+o'zgartirib, `track_events` va navbatdagi job sonini solishtiring.
 
 ### ☑ T8 · Rollarni majburlash + xodimlar boshqaruvi — **BAJARILDI** (2026-07-27)
 
@@ -734,25 +782,106 @@ argon2 chaqiriladi (qimmat) → arzon DoS vektori.
       katta ro'yxatni client'dan yubormaslik
 - [ ] Tasdiq modalida aniq son: "{N} ta trek, {M} ta mijozga xabar"
 
-### ☐ T11 · "Biriktirilmagan treklar" ekrani
+### ☑ T11 · "Biriktirilmagan treklar" ekrani — **BAJARILDI** (2026-07-27)
 
-Bu adminning **asosiy kunlik vazifasi**, lekin alohida ko'rinishi yo'q — faqat
-ro'yxatda "Biriktirilmagan" yozuvi. T1 dan keyin bu ekran biriktirish oqimining
-kirish nuqtasi bo'ladi.
+**Ro'yxatning yarmi T19 bilan allaqachon yopilgan edi.** T19 operatsion
+worklist'larni qo'shganda `unassigned` ham ular orasida edi, ya'ni filtr,
+dashboard kartasi va bannerli ko'rinish bor edi. T1 esa bulk biriktirishni
+bergan edi. Qolgani — qator ichidagi tez biriktirish.
 
-- [ ] `/tracks?unassigned=1` filtri (yoki alohida `/unassigned` sahifasi)
-- [ ] Navigatsiyada son bilan nishon
-- [ ] Har qatorda tez biriktirish (mijoz qidiruvi bilan)
-- [ ] Bulk biriktirish
+**Vazifalar:**
+- [x] `/tracks?work=unassigned` filtri — T19 (alohida sahifa emas: bu
+      ko'rinishda qidiruv, reys filtri, Excel eksporti va bulk bar allaqachon
+      bor; ikkinchi sahifa hammasini takrorlardi)
+- [x] Bulk biriktirish — T1
+- [x] **Har qatorda tez biriktirish**: bo'sh «Mijoz» katagi endi
+      `+ Biriktirish` tugmasi (`tracks-table.tsx` → `CustomerCell`), o'sha
+      mijoz picker'ini **bitta trek** uchun ochadi
+- [ ] ~~Navigatsiyada son bilan nishon~~ — **ataylab qilinmadi**, pastga qarang
 
-### ☐ T12 · Pagination: mijozlar va qarzdorlar
+**Nega alohida tugma emas, aynan o'sha katak.** Admin qaror qabul qilayotgan
+payt aynan shu katakka qaraydi («bu kimniki?»). Yangi ustun qo'shish jadvalni
+telefonda torroq qiladi, bulk bar orqali yurish esa har quti uchun uch teginish:
+belgila → bar → tanla. Endi bitta.
 
-`customers/page.tsx` va `debtors/page.tsx` barcha qatorni render qiladi —
-3 000 mijoz = 3 000 DOM qatori + og'ir HTML.
+**Dialog takrorlanadi, umumiy emas.** `CustomerAssignDialog` ning ikkinchi
+nusxasi qo'yildi (`trackIds={[bitta]}`), chunki bittasini id ro'yxatini
+almashtirib ishlatish yarim yig'ilgan bulk tanlovni buzardi.
 
-- [ ] `TRACKS_PAGE_SIZE` naqshini mijozlarga ham qo'llash
-- [ ] Qarz bo'yicha SQL sortirovka (hozir xotirada — `queries.ts:797`)
-- [ ] Qidiruv + pagination birga ishlashi
+**Nima qilinmadi va nega — nav nishoni.** Vazifada «navigatsiyada son bilan
+nishon» bor edi. Bu `layout.tsx` ga **har sahifa yuklanishida** ishlaydigan
+yana bitta aggregate qo'shadi — T6 aynan shu narsani olib tashlagan edi, va
+`customer_id IS NULL` uchun mos indeks ham yo'q (partial index kerak bo'lardi).
+Son esa allaqachon dashboard'ning «Bugungi ish» blokida turibdi — admin
+kunini boshlaydigan ekran. Nishon takroriy ma'lumot uchun har klikka bitta
+query qo'shardi. Kelishilgan holda tashlab ketildi.
+
+**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ 351 test (o'zgarmadi —
+sof UI) · migratsiya yo'q · ✅ Spec.md § 5.2 yangilandi ·
+✅ yangi stringlar uz+ru (`tracks.quickAssign`, `tracks.quickAssignRow`).
+
+### ☑ T12 · Pagination: mijozlar va qarzdorlar — **BAJARILDI** (2026-07-27)
+
+**Vazifalar:**
+- [x] `TRACKS_PAGE_SIZE` naqshi mijozlarga: `CUSTOMERS_PAGE_SIZE = 20`,
+      `/customers` va `/debtors` da `Pagination` komponenti
+- [x] Qarz bo'yicha SQL sortirovka (xotira o'rniga)
+- [x] Qidiruv + pagination birga: `q` sahifa almashganda saqlanadi
+
+**Ro'yxatda yozilganidan kattaroq muammo topildi.** Vazifa DOM haqida edi
+(«3 000 mijoz = 3 000 qator»), lekin `listCustomersWithDebt` **tenantning butun
+`tracks` va `payments` jadvalini** Node'ga tortib, qarzni Map'da hisoblardi —
+T6 layout'dan olib tashlagan naqshning aynan o'zi, ustiga natijani to'liq
+render qilib. Ya'ni pagination faqat HTML ni kichraytirardi, bazadan keladigan
+yukni emas.
+
+Endi bitta statement: `owed` / `counted` / `paid` CTE lari + `customers` ga
+`left join`, `count(*) over ()` bilan sahifasiz jami ham o'sha o'tishda
+qaytadi — sahifa yuklanishi 1 round trip.
+
+**Qarz qoidasi takrorlanmadi.** T6 dagidek: `IN (…)` ro'yxati
+`DEBT_OWED_STATUSES` dan quriladi (test har status uchun `computeDebtTiyin`
+bilan mosligini tekshiradi), soft-deleted chiqmaydi (§7.8), NULL narx 0,
+to'lovlar ayiriladi. `getDebtTotals` dan farqi: bu yerda **manfiy net
+saqlanadi** — mijozlar ro'yxatida avans `Avans` bo'lib ko'rinishi kerak (§7.5);
+faqat `onlyDebtors` uni tashlaydi.
+
+**Saralashda `client_code` tiebreak.** `debt desc` yolg'iz noyob emas — bir xil
+qarzli ikki mijoz sahifalar orasida takrorlanib yoki tushib qolardi.
+
+**Qarzdorlar kartasi sahifaga bog'lanmadi.** Umumiy qarz va «Barchasiga
+eslatma» butun tenant bo'yicha qoladi (`getDebtTotals`, T6 aggregate'i): ega bu
+raqamni biznesning raqami deb o'qiydi, 2-sahifaga o'tgani uchun kichrayadigan
+summa umuman yo'q summadan yomonroq.
+
+**Eksport ham yutdi.** `listCustomersForExport` xuddi shu funksiyani
+`limit: EXPORT_MAX_ROWS` bilan chaqiradi — ekran va fayl bitta query'dan
+keladi (§5.11 kafolati), va eksport ham endi butun jadvalni Node'ga tortmaydi.
+
+**Jonli bazada tekshirildi** (lokal `kargotrack`, seed ma'lumoti; harness
+repoda saqlanmadi) — SQL ni typecheck ushlamaydi, shuning uchun 7 ta tekshiruv:
+
+| Tekshirilgan | Natija |
+| ------------------------------------------------------------ | ------ |
+| Qatorlar + `total_count` (sahifasiz jami) | ✅ |
+| 1- va 2-sahifa: jami bir xil, qator takrorlanmaydi | ✅ |
+| Qarzdorlar: `> 0` filtri va kamayish tartibi | ✅ |
+| Har mijoz uchun subquery bilan solishtirish (qarz + trek soni) | 0 farq ✅ |
+| Qidiruv (ism bo'yicha) va uning jamisi | ✅ |
+| Boshqa tenant qatorlari sizmaydi | ✅ |
+| Natija bo'sh → jami 0 ga tushadi (`rows[0]` yo'q) | ✅ |
+
+**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ 351 test (o'zgarmadi —
+qarz qoidasi testlari T6 dan o'sha joyida) · migratsiya yo'q ·
+✅ jonli bazada yuqoridagi 7 tekshiruv · ✅ Spec.md § 5.5 / § 5.6 yangilandi ·
+yangi user-facing string yo'q (`Pagination` stringlari mavjud edi).
+
+**⚠️ Halol cheklov.** Yangi Vitest testi yozilmadi (kelishilgan holda —
+so'rov sof SQL, birlik testi baza talab qiladi). Tekshiruv yuqoridagi jonli
+baza harness'i darajasida, seed hajmida (3 mijoz) — ya'ni to'g'rilik
+tasdiqlangan, **katta hajmdagi tezlik o'lchanmagan**. Shuningdek diapazondan
+tashqari `?page=999` bo'sh ro'yxat ko'rsatadi (pagination «oldingi» bilan
+qaytaradi) — qayta so'rov qilib qisqartirilmaydi.
 
 ---
 

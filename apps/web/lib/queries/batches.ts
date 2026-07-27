@@ -8,7 +8,7 @@ import 'server-only';
 import { and, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
-import { enqueueNotification } from '@kargotrack/db/queue';
+import { enqueueNotifications } from '@kargotrack/db/queue';
 import {
   batches,
   customers,
@@ -18,6 +18,8 @@ import {
   type Transport,
 } from '@kargotrack/db/schema';
 import {
+  BULK_CHUNK,
+  chunked,
   planBatchPropagation,
   type BatchStatus,
   type TrackStatus,
@@ -186,6 +188,12 @@ export async function assignTracksToBatch(args: {
  * propagate to every non-terminal, non-deleted member track via the shared
  * `planBatchPropagation`, appending events + enqueuing §4.2 notifications —
  * exactly the machinery the panel/import bulk flows use.
+ *
+ * All of it in one transaction, chunked (AUDIT.md T7). A flight carries far more
+ * tracks than a screenful of checkboxes, so this is the worst of the per-row
+ * loops: 2 500 members meant 5 000 round trips, and a connection dropped halfway
+ * left the flight's own status disagreeing with its members' while the customers
+ * of the first half had already been messaged.
  */
 export async function changeBatchStatus(args: {
   tenantId: string;
@@ -202,50 +210,73 @@ export async function changeBatchStatus(args: {
     .limit(1);
   if (!batch) return null;
 
-  const members = await db
-    .select({
-      id: tracks.id,
-      currentStatus: tracks.currentStatus,
-      customerId: tracks.customerId,
-      deletedAt: tracks.deletedAt,
-    })
-    .from(tracks)
-    .where(and(eq(tracks.tenantId, args.tenantId), eq(tracks.batchId, args.batchId)));
-
-  const plan = planBatchPropagation(args.status, members);
   const result: StatusChangeResult = { changed: 0, queued: 0 };
+  // Enqueued only AFTER the transaction commits — see `applyImport`.
+  let toNotify: { trackId: string; customerId: string }[] = [];
 
-  for (const item of plan.updates) {
-    await db
-      .update(tracks)
-      .set({ currentStatus: args.status })
-      .where(and(eq(tracks.tenantId, args.tenantId), eq(tracks.id, item.trackId)));
+  await db.transaction(async (tx) => {
+    const members = await tx
+      .select({
+        id: tracks.id,
+        currentStatus: tracks.currentStatus,
+        customerId: tracks.customerId,
+        deletedAt: tracks.deletedAt,
+      })
+      .from(tracks)
+      .where(
+        and(eq(tracks.tenantId, args.tenantId), eq(tracks.batchId, args.batchId)),
+      );
 
-    if (item.willEvent) {
-      await db.insert(trackEvents).values({
-        trackId: item.trackId,
-        status: args.status,
-        meta: { source: 'batch', batchId: args.batchId },
-        createdBy: args.createdBy,
-      });
-      result.changed += 1;
+    const plan = planBatchPropagation(args.status, members);
+
+    // Every member in `updates` moves to the same status, so the UPDATE groups
+    // into one statement per chunk; the event rows differ only by track id.
+    const writeIds = plan.updates.map((u) => u.trackId);
+    for (const chunk of chunked(writeIds, BULK_CHUNK)) {
+      await tx
+        .update(tracks)
+        .set({ currentStatus: args.status })
+        .where(
+          and(eq(tracks.tenantId, args.tenantId), inArray(tracks.id, chunk)),
+        );
     }
-    if (item.willNotify) {
-      await enqueueNotification({
-        tenantId: args.tenantId,
-        trackId: item.trackId,
-        customerId: item.customerId!,
-        status: args.status,
-      });
-      result.queued += 1;
-    }
-  }
 
-  // The batch always records its own new status, even if no member changed.
-  await db
-    .update(batches)
-    .set({ status: args.status })
-    .where(and(eq(batches.tenantId, args.tenantId), eq(batches.id, args.batchId)));
+    const eventIds = plan.updates.filter((u) => u.willEvent).map((u) => u.trackId);
+    for (const chunk of chunked(eventIds, BULK_CHUNK)) {
+      await tx.insert(trackEvents).values(
+        chunk.map((trackId) => ({
+          trackId,
+          status: args.status,
+          meta: { source: 'batch', batchId: args.batchId },
+          createdBy: args.createdBy,
+        })),
+      );
+    }
+
+    // The batch always records its own new status, even if no member changed —
+    // and now it commits together with the members it just moved.
+    await tx
+      .update(batches)
+      .set({ status: args.status })
+      .where(
+        and(eq(batches.tenantId, args.tenantId), eq(batches.id, args.batchId)),
+      );
+
+    result.changed = eventIds.length;
+    toNotify = plan.updates
+      .filter((u) => u.willNotify)
+      .map((u) => ({ trackId: u.trackId, customerId: u.customerId! }));
+  });
+
+  await enqueueNotifications(
+    toNotify.map((n) => ({
+      tenantId: args.tenantId,
+      trackId: n.trackId,
+      customerId: n.customerId,
+      status: args.status,
+    })),
+  );
+  result.queued = toNotify.length;
 
   return result;
 }

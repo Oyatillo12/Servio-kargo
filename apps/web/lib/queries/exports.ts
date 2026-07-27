@@ -81,14 +81,20 @@ export async function listCustomersForExport(
   tenantId: string,
   opts: { q?: string; onlyDebtors?: boolean } = {},
 ): Promise<ExportQueryResult<CustomerExportRow>> {
-  const all = await listCustomersWithDebt(tenantId, opts.q);
-  const matching = opts.onlyDebtors
-    ? all.filter((c) => c.debtTiyin > 0).sort((a, b) => b.debtTiyin - a.debtTiyin)
-    : all;
+  // Same query the screen runs, only the paging differs (AUDIT.md T12): the cap
+  // is applied in SQL and `total` still reports how many matched, so the caller
+  // can say what was left out instead of truncating silently.
+  const { rows: matching, total } = await listCustomersWithDebt({
+    tenantId,
+    q: opts.q,
+    onlyDebtors: opts.onlyDebtors,
+    sort: opts.onlyDebtors ? 'debt' : 'code',
+    limit: EXPORT_MAX_ROWS,
+  });
 
   return {
-    total: matching.length,
-    rows: matching.slice(0, EXPORT_MAX_ROWS).map((c) => ({
+    total,
+    rows: matching.map((c) => ({
       clientCode: c.clientCode,
       fullName: c.fullName,
       phone: c.phone,

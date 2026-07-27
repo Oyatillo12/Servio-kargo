@@ -54,3 +54,74 @@ export function planStatusChange(
     }),
   };
 }
+
+/** A track row as read by a bulk status change, before anything is written. */
+export interface BulkStatusRow {
+  id: string;
+  currentStatus: TrackStatus;
+  /** Attached customer id, or null when unclaimed. */
+  customerId: string | null;
+  /** Soft-delete timestamp; omitted when the caller already filtered them out. */
+  deletedAt?: Date | null;
+}
+
+/** A notification to enqueue once the transaction has committed (§4.2). */
+export interface BulkStatusNotify {
+  trackId: string;
+  customerId: string;
+}
+
+export interface BulkStatusPlan {
+  /** Ids whose row must be updated — one bulk UPDATE, identical SET. */
+  writeIds: string[];
+  /** Ids that get a `track_events` row (a genuine status change, §2). */
+  eventIds: string[];
+  /** Notifications, enqueued only after the write commits. */
+  notify: BulkStatusNotify[];
+  /** Rows left untouched: already at `newStatus` (§2 no-op). */
+  skipped: number;
+}
+
+/**
+ * Group a whole selection of tracks into the three id lists a bulk status
+ * change needs (AUDIT.md T7). Every row in a bulk change gets the *same* SET,
+ * so the DB layer can issue one UPDATE and one INSERT per chunk instead of a
+ * statement pair per track — and, because the plan is computed up front, the
+ * notifications are known before the transaction opens and can be enqueued
+ * after it commits rather than interleaved with the writes.
+ *
+ * Rules come from {@link planStatusChange}, so bulk, single and import flows
+ * stay identical. A soft-deleted row is revived (write) without an event or a
+ * notification, matching the import path.
+ */
+export function planBulkStatusChange(
+  newStatus: TrackStatus,
+  rows: readonly BulkStatusRow[],
+): BulkStatusPlan {
+  const plan: BulkStatusPlan = {
+    writeIds: [],
+    eventIds: [],
+    notify: [],
+    skipped: 0,
+  };
+
+  for (const row of rows) {
+    const step = planStatusChange({
+      previousStatus: row.currentStatus,
+      newStatus,
+      customerId: row.customerId,
+      wasDeleted: row.deletedAt != null,
+    });
+    if (!step.willWrite) {
+      plan.skipped += 1;
+      continue;
+    }
+    plan.writeIds.push(row.id);
+    if (step.willEvent) plan.eventIds.push(row.id);
+    if (step.willNotify) {
+      plan.notify.push({ trackId: row.id, customerId: row.customerId! });
+    }
+  }
+
+  return plan;
+}

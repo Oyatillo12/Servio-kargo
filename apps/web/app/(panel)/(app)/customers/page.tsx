@@ -6,10 +6,11 @@ import { can } from '@kargotrack/shared';
 import { DebtCell } from '@/components/shared/debt-cell';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ExportButton } from '@/components/shared/export-button';
+import { Pagination } from '@/components/shared/pagination';
 import { SearchField } from '@/components/shared/search-field';
 import { PageHeader } from '@/components/layout/page-header';
 import { requireCapability } from '@/lib/auth';
-import { listCustomersWithDebt } from '@/lib/queries';
+import { CUSTOMERS_PAGE_SIZE, listCustomersWithDebt } from '@/lib/queries';
 import { NewCustomerButton } from '@/features/customers/components/new-customer-button';
 
 export async function generateMetadata() {
@@ -20,20 +21,41 @@ export async function generateMetadata() {
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: { q?: string };
+  searchParams: { q?: string; page?: string };
 }) {
   const { tenant, role } = await requireCapability('customers.view');
   const t = await getTranslations('customers');
   const tCommon = await getTranslations('common');
 
   const q = searchParams.q?.trim() ?? '';
-  const customers = await listCustomersWithDebt(tenant.id, q);
+  const requestedPage = Math.max(1, Number(searchParams.page) || 1);
+
+  const { rows: customers, total } = await listCustomersWithDebt({
+    tenantId: tenant.id,
+    q,
+    sort: 'code',
+    limit: CUSTOMERS_PAGE_SIZE,
+    offset: (requestedPage - 1) * CUSTOMERS_PAGE_SIZE,
+  });
+
+  const pages = Math.max(1, Math.ceil(total / CUSTOMERS_PAGE_SIZE));
+  const page = Math.min(requestedPage, pages);
+
+  // Search and page travel together: dropping `q` on a page change would swap
+  // the list under the admin without any visible reason.
+  const pageHref = (target: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (target > 1) params.set('page', String(target));
+    const qs = params.toString();
+    return qs ? `/customers?${qs}` : '/customers';
+  };
 
   return (
     <div>
       <PageHeader
         title={t('pageTitle')}
-        count={customers.length}
+        count={total}
         right={
           <>
             {can(role, 'export.data') ? (
@@ -91,6 +113,8 @@ export default async function CustomersPage({
           ))}
         </div>
       )}
+
+      <Pagination page={page} pages={pages} buildHref={pageHref} />
     </div>
   );
 }
