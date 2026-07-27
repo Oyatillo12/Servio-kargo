@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { getLocale, getTranslations } from 'next-intl/server';
 
 import {
   PIPELINE_ORDER,
@@ -9,37 +10,44 @@ import {
   formatSom,
   formatUsd,
   isAssignEventMeta,
+  type Lang,
   type TrackStatus,
 } from '@kargotrack/shared';
 
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { SectionCard } from '@/components/ui/section-card';
 import { requireAdmin } from '@/lib/auth';
 import { getTrackDetail, listActiveTariffs } from '@/lib/queries';
 import { statusView } from '@/lib/status-ui';
 import { cn } from '@/lib/utils';
+import { CustomerCard } from '@/features/tracks/components/customer-card';
+import {
+  WeightForm,
+  type TariffOption,
+} from '@/features/tracks/components/weight-form';
+import { TrackActions } from '@/features/tracks/components/track-actions';
 
-import { CustomerCard } from './customer-card';
-import { WeightForm, type TariffOption } from './weight-form';
-import { TrackActions } from './track-actions';
+export async function generateMetadata() {
+  const t = await getTranslations('trackDetail');
+  return { title: `${t('pageTitle')} — SERVIO Kargo` };
+}
 
-/** Uzbek labels for the ownership-change events the timeline mixes in (§5.3). */
-const ASSIGN_LABEL: Record<string, string> = {
-  attach: 'Mijozga biriktirildi',
-  detach: 'Mijozdan ajratildi',
-  reassign: 'Mijoz o‘zgartirildi',
-};
-
-export const metadata = { title: 'Trek — SERVIO Kargo' };
-
-const RAIL: { key: TrackStatus; label: string; emoji: string }[] = [
-  { key: 'CHINA_WAREHOUSE', label: 'Xitoy', emoji: '📦' },
-  { key: 'IN_TRANSIT', label: "Yo'lda", emoji: '🚚' },
-  { key: 'TASHKENT_WAREHOUSE', label: 'Toshkent', emoji: '🇺🇿' },
-  { key: 'DELIVERED', label: 'Topshirildi', emoji: '✅' },
+/** The four stages the China→Uzbekistan progress rail shows (design screen 05). */
+const RAIL: { key: TrackStatus; labelKey: string; emoji: string }[] = [
+  { key: 'CHINA_WAREHOUSE', labelKey: 'railChina', emoji: '📦' },
+  { key: 'IN_TRANSIT', labelKey: 'railTransit', emoji: '🚚' },
+  { key: 'TASHKENT_WAREHOUSE', labelKey: 'railTashkent', emoji: '🇺🇿' },
+  { key: 'DELIVERED', labelKey: 'railDelivered', emoji: '✅' },
 ];
 
 /** Horizontal China→Uzbekistan progress rail (design screen 05). */
-function RouteRail({ status }: { status: TrackStatus }) {
+function RouteRail({
+  status,
+  labels,
+}: {
+  status: TrackStatus;
+  labels: Record<string, string>;
+}) {
   const order = PIPELINE_ORDER as readonly TrackStatus[];
   const currentIndex = order.indexOf(status); // -1 for LOST/RETURNED
   const reached = RAIL.map((s) => currentIndex >= order.indexOf(s.key));
@@ -85,7 +93,7 @@ function RouteRail({ status }: { status: TrackStatus }) {
                       : 'font-medium text-muted-foreground',
                 )}
               >
-                {stage.label}
+                {labels[stage.labelKey]}
               </span>
             </div>
           </div>
@@ -101,6 +109,11 @@ export default async function TrackDetailPage({
   params: { id: string };
 }) {
   const { tenant } = await requireAdmin();
+  const t = await getTranslations('trackDetail');
+  const tCommon = await getTranslations('common');
+  const tTracks = await getTranslations('tracks');
+  const locale = (await getLocale()) as Lang;
+
   const [detail, activeTariffs] = await Promise.all([
     getTrackDetail(tenant.id, params.id),
     listActiveTariffs(tenant.id),
@@ -110,18 +123,35 @@ export default async function TrackDetailPage({
   const { track, customer, batch, events } = detail;
   const isUsd = tenant.currency === 'USD';
 
+  /** Labels for the ownership-change events the timeline mixes in (§5.3). */
+  const assignLabels: Record<string, string> = {
+    attach: t('assignAttach'),
+    detach: t('assignDetach'),
+    reassign: t('assignReassign'),
+  };
+  const railLabels: Record<string, string> = {
+    railChina: t('railChina'),
+    railTransit: t('railTransit'),
+    railTashkent: t('railTashkent'),
+    railDelivered: t('railDelivered'),
+  };
+
   const defaultWeight =
     track.weightGrams != null ? formatKg(track.weightGrams) : '';
   const priceText =
-    track.priceTiyin != null ? `${formatSom(track.priceTiyin)} so'm` : '—';
+    track.priceTiyin != null
+      ? `${formatSom(track.priceTiyin)} ${tCommon('som')}`
+      : tCommon('dash');
   const priceUsdText =
-    isUsd && track.priceUsdCents != null ? formatUsd(track.priceUsdCents) : undefined;
+    isUsd && track.priceUsdCents != null
+      ? formatUsd(track.priceUsdCents)
+      : undefined;
 
   const tariffOptions: TariffOption[] = activeTariffs.map((tf) => ({
     id: tf.id,
     label: isUsd
-      ? `${tf.name} · ${formatUsd(tf.pricePerKgMinor)}/kg`
-      : `${tf.name} · ${formatSom(tf.pricePerKgMinor)} so'm/kg`,
+      ? `${tf.name} · ${formatUsd(tf.pricePerKgMinor)}/${tCommon('kg')}`
+      : `${tf.name} · ${formatSom(tf.pricePerKgMinor)} ${tCommon('som')}/${tCommon('kg')}`,
   }));
   const initialManualPriceSom =
     track.priceManual && track.priceTiyin != null
@@ -132,10 +162,10 @@ export default async function TrackDetailPage({
     <div className="mx-auto max-w-md space-y-3">
       <Link
         href="/tracks"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 rounded text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="h-4 w-4" />
-        Treklar
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        {tTracks('pageTitle')}
       </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -146,17 +176,17 @@ export default async function TrackDetailPage({
       </div>
 
       {/* Route rail */}
-      <div className="rounded-xl border border-border bg-white px-3.5 pb-3.5 pt-4">
-        <RouteRail status={track.currentStatus} />
+      <SectionCard className="px-3.5 pb-3.5 pt-4">
+        <RouteRail status={track.currentStatus} labels={railLabels} />
         <p className="mt-2.5 text-center text-xs text-muted-foreground">
-          {statusView(track.currentStatus).label}
+          {statusView(track.currentStatus, locale).label}
         </p>
-      </div>
+      </SectionCard>
 
-      {/* Batch (Reys) */}
+      {/* Batch */}
       {batch ? (
         <div className="flex items-center gap-2 rounded-xl border border-border bg-white px-3.5 py-3 text-[13.5px]">
-          <span className="text-muted-foreground">🚚 Reys:</span>
+          <span className="text-muted-foreground">🚚 {t('batch')}</span>
           <Link
             href={`/batches/${batch.id}`}
             className="font-semibold text-primary underline-offset-2 hover:underline"
@@ -172,7 +202,7 @@ export default async function TrackDetailPage({
       ) : null}
 
       {/* Weight + tariff + price */}
-      <div className="rounded-xl border border-border bg-white p-3.5">
+      <SectionCard>
         <WeightForm
           trackId={track.id}
           defaultWeight={defaultWeight}
@@ -183,44 +213,38 @@ export default async function TrackDetailPage({
           priceText={priceText}
           priceUsdText={priceUsdText}
         />
-      </div>
+      </SectionCard>
 
       {/* Photo */}
-      <div className="rounded-xl border border-border bg-white p-3.5">
-        <h2 className="mb-2.5 text-[13.5px] font-semibold text-foreground">
-          Ombor rasmi
-        </h2>
+      <SectionCard title={t('photo')}>
         {track.photoPath ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={`/api/tracks/${track.id}/photo`}
-            alt={`${track.codeOriginal} ombor rasmi`}
+            alt={t('photoAlt', { code: track.codeOriginal })}
             className="max-h-80 w-auto rounded-lg border border-border"
           />
         ) : (
           <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-input text-sm text-muted-foreground">
-            Rasm yo&apos;q
+            {t('noPhoto')}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* Timeline */}
-      <div className="rounded-xl border border-border bg-white p-3.5">
-        <h2 className="mb-3 text-[13.5px] font-semibold text-foreground">
-          Tarix
-        </h2>
+      <SectionCard title={t('history')}>
         {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Hodisalar yo&apos;q.</p>
+          <p className="text-sm text-muted-foreground">{t('noEvents')}</p>
         ) : (
           <ol>
             {events.map((e, i) => {
-              const v = statusView(e.status);
+              const v = statusView(e.status, locale);
               const last = i === events.length - 1;
               // An ownership change reuses the track's unchanged status in the
               // status column, so read `meta.action` to label it as what it
               // really was — otherwise the timeline shows the same status twice.
               const assignLabel = isAssignEventMeta(e.meta)
-                ? ASSIGN_LABEL[e.meta.action]
+                ? assignLabels[e.meta.action]
                 : undefined;
               return (
                 <li key={e.id} className="flex gap-3">
@@ -252,7 +276,7 @@ export default async function TrackDetailPage({
             })}
           </ol>
         )}
-      </div>
+      </SectionCard>
 
       {/* Customer card + attach/detach (SPEC §5.3, §7.3) */}
       <CustomerCard

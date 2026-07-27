@@ -141,5 +141,4 @@ single `.env` (copy [`.env.example`](./.env.example) and fill it in).
 | [PROJECT.md](./PROJECT.md)       | Architecture, domain model, flows, operations — how the system works   |
 | [Spec.md](./Spec.md)             | Functional specification: exact flows, screens, message texts, rules   |
 | [CLAUDE.md](./Claude.md)         | Engineering ground rules (stack, conventions, definition of done)      |
-| [DEPLOY.md](./DEPLOY.md)         | First-time VPS deployment guide                                        |
-| [ONBOARDING.md](./ONBOARDING.md) | Checklist for connecting a new cargo company (Uzbek)                   |
+| [DEPLOY.md](./DEPLOY.md)         | First-time VPS deployment guide                                        

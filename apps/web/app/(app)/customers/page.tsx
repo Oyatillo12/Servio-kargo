@@ -1,16 +1,19 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 
-import { DebtCell } from '@/components/debt-cell';
-import { EmptyState } from '@/components/empty-state';
-import { ExportButton } from '@/components/export-button';
-import { PageHeader } from '@/components/page-header';
-import { Input } from '@/components/ui/input';
+import { DebtCell } from '@/components/shared/debt-cell';
+import { EmptyState } from '@/components/shared/empty-state';
+import { ExportButton } from '@/components/shared/export-button';
+import { SearchField } from '@/components/shared/search-field';
+import { PageHeader } from '@/components/layout/page-header';
 import { requireAdmin } from '@/lib/auth';
 import { listCustomersWithDebt } from '@/lib/queries';
+import { NewCustomerButton } from '@/features/customers/components/new-customer-button';
 
-import { NewCustomerButton } from './new-customer-button';
-
-export const metadata = { title: 'Mijozlar — SERVIO Kargo' };
+export async function generateMetadata() {
+  const t = await getTranslations('customers');
+  return { title: `${t('pageTitle')} — SERVIO Kargo` };
+}
 
 export default async function CustomersPage({
   searchParams,
@@ -18,44 +21,40 @@ export default async function CustomersPage({
   searchParams: { q?: string };
 }) {
   const { tenant } = await requireAdmin();
+  const t = await getTranslations('customers');
+  const tCommon = await getTranslations('common');
+
   const q = searchParams.q?.trim() ?? '';
   const customers = await listCustomersWithDebt(tenant.id, q);
 
   return (
     <div>
       <PageHeader
-        title="Mijozlar"
+        title={t('pageTitle')}
+        count={customers.length}
         right={
-          <div className="flex items-center gap-2">
-            <span className="mr-1 text-xs text-muted-foreground">
-              jami{' '}
-              <span className="font-mono font-semibold">{customers.length}</span>
-            </span>
+          <>
             <ExportButton
               href={`/api/export/customers${q ? `?q=${encodeURIComponent(q)}` : ''}`}
             />
             <NewCustomerButton />
-          </div>
+          </>
         }
       />
 
-      <form method="get" className="mb-4">
-        <Input
-          name="q"
-          defaultValue={q}
-          placeholder="Ism, kod yoki telefon qidirish"
-          className="bg-[#f7f8fa]"
+      <div className="mb-4 flex">
+        <SearchField
+          path="/customers"
+          value={q}
+          placeholder={t('searchPlaceholder')}
+          label={t('searchPlaceholder')}
         />
-      </form>
+      </div>
 
       {customers.length === 0 ? (
         <EmptyState
-          title="Mijoz topilmadi"
-          hint={
-            q
-              ? "Qidiruvni o'zgartirib ko'ring."
-              : "«Yangi mijoz» tugmasi bilan qo'shing — mijoz botga kirganda telefoni bo'yicha ulanadi."
-          }
+          title={t('emptyTitle')}
+          hint={q ? t('emptyHintSearch') : t('emptyHint')}
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-white">
@@ -63,22 +62,22 @@ export default async function CustomersPage({
             <Link
               key={c.id}
               href={`/customers/${c.id}`}
-              className="flex items-center justify-between gap-3 border-b border-[#eef0f4] px-4 py-3 last:border-0 hover:bg-secondary/60"
+              className="flex items-center justify-between gap-3 border-b border-[#eef0f4] px-4 py-3 transition-colors last:border-0 hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">
-                  {c.fullName ?? 'Ismi yo‘q'}{' '}
+                  {c.fullName ?? tCommon('noName')}{' '}
                   <span className="font-mono text-[12px] font-medium text-muted-foreground">
                     {c.clientCode}
                   </span>
                 </p>
                 <p className="truncate font-mono text-[12px] text-muted-foreground">
-                  {c.phone ?? '—'}
+                  {c.phone ?? tCommon('dash')}
                 </p>
               </div>
               <div className="flex-none text-right">
                 <p className="text-[12px] text-muted-foreground">
-                  {c.trackCount} ta trek
+                  {t('trackCount', { count: c.trackCount })}
                 </p>
                 <p className="text-[12.5px]">
                   <DebtCell tiyin={c.debtTiyin} />

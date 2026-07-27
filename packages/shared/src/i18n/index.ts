@@ -103,7 +103,38 @@ export interface Strings {
     calc: string;
     info: string;
     manzil: string;
+    help: string;
   };
+
+  /**
+   * Inline-button labels for the contextual keyboards attached to result
+   * messages (SPEC §3.11). Every leaf message ends with at least one of these
+   * so a customer is never left in a chat with nowhere to go but the keyboard.
+   */
+  nav: {
+    backToList: string;
+    refresh: string;
+    myTracks: string;
+    addMore: string;
+    balance: string;
+    cancel: string;
+    recalc: string;
+    photo: string;
+    menu: string;
+  };
+
+  /** Confirmation after a flow is abandoned via the inline cancel button. */
+  cancelled: string;
+  /** Callback-answer toast when a refresh found nothing new. */
+  refreshedNoChange: string;
+  /** Callback-answer toast confirming a refresh applied. */
+  refreshed: string;
+
+  /** Language picker prompt for an ALREADY registered customer (§3.7). */
+  langChoose: string;
+
+  /** `/help` card — what the bot can do, in one message (§3.12). */
+  helpCard: string;
 
   // --- §4.3 add-track result summary ---
   summaryAdded(n: number, codes: string): string;
@@ -139,6 +170,10 @@ export interface Strings {
   // --- §3.9 calculator (§4.5) ---
   calcChooseTariff: string;
   calcAskKg: string;
+  /** `1/2 · …` step prefix shown above the tariff picker (§3.11). */
+  calcStepTariff: string;
+  /** `2/2 · …` step prefix shown above the weight prompt (§3.11). */
+  calcStepKg: string;
   calcResult(v: CalcResultVars): string;
   calcInvalid: string;
   /** Calculator opened but the tenant has no active tariff to price against. */

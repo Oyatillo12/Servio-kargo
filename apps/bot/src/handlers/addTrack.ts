@@ -14,6 +14,7 @@ import {
 } from '@kargotrack/shared';
 
 import type { KargoContext } from '../context';
+import { addSummaryKeyboard, cancelKeyboard } from '../keyboards';
 import {
   claimTrack,
   createTrackForCustomer,
@@ -21,6 +22,24 @@ import {
   isUniqueViolation,
 } from '../queries';
 import { ensureRegistered } from './common';
+
+/**
+ * Open the add-track prompt (SPEC §3.2, §3.11). The prompt owns the customer's
+ * next message, so it carries a cancel button — a customer who tapped ➕ by
+ * mistake used to have no way back except sending something that failed to
+ * parse as a code.
+ */
+export async function askForTracks(ctx: KargoContext): Promise<void> {
+  if (!(await ensureRegistered(ctx))) return;
+  ctx.session.step = 'awaiting_tracks';
+  await ctx.reply(ctx.s.askTracks, { reply_markup: cancelKeyboard(ctx.s) });
+}
+
+/** `addmore` inline callback — re-open the prompt from a summary (§3.11). */
+export async function addMoreCallback(ctx: KargoContext): Promise<void> {
+  await ctx.answerCallbackQuery();
+  await askForTracks(ctx);
+}
 
 export async function handleAddTracks(
   ctx: KargoContext,
@@ -81,7 +100,9 @@ export async function handleAddTracks(
     }
   }
 
-  await ctx.reply(buildAddSummary(groups, ctx.s));
+  await ctx.reply(buildAddSummary(groups, ctx.s), {
+    reply_markup: addSummaryKeyboard(ctx.s),
+  });
 }
 
 /** Re-classify a code that appeared between our read and our insert. */

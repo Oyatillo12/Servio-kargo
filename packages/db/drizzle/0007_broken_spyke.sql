@@ -1,0 +1,1 @@
+ALTER TABLE "admin_users" ADD COLUMN "lang" "lang" DEFAULT 'uz' NOT NULL;

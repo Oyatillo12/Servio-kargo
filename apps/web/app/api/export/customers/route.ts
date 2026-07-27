@@ -1,9 +1,12 @@
+import { getLocale } from 'next-intl/server';
 import { z } from 'zod';
 
 import {
+  EXPORT_FILE_BASE,
   EXPORT_MAX_ROWS,
   buildCustomersSheet,
   truncationNotice,
+  type Lang,
 } from '@kargotrack/shared';
 
 import { requireAdmin } from '@/lib/auth';
@@ -22,6 +25,7 @@ const Query = z.object({
 
 export async function GET(req: Request) {
   const { tenant } = await requireAdmin();
+  const lang = (await getLocale()) as Lang;
 
   const params = new URL(req.url).searchParams;
   const { q, debtors } = Query.parse({
@@ -36,7 +40,11 @@ export async function GET(req: Request) {
   });
 
   const sheet = buildCustomersSheet(rows, {
-    notice: truncationNotice(total, EXPORT_MAX_ROWS),
+    lang,
+    notice: truncationNotice(total, EXPORT_MAX_ROWS, lang),
   });
-  return xlsxResponse(sheet, onlyDebtors ? 'qarzdorlar' : 'mijozlar');
+  return xlsxResponse(
+    sheet,
+    EXPORT_FILE_BASE[lang][onlyDebtors ? 'debtors' : 'customers'],
+  );
 }

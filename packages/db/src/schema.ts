@@ -164,6 +164,10 @@ export const adminUsers = pgTable(
     phone: text('phone').notNull(),
     passwordHash: text('password_hash').notNull(),
     role: adminRole('role').notNull().default('staff'),
+    // Admin panel UI language (next-intl locale). Independent of `customers.lang`:
+    // Tashkent office staff often work in Russian while their customers read
+    // Uzbek. Defaults to 'uz' — the panel's default locale.
+    lang: lang('lang').notNull().default('uz'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

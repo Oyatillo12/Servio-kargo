@@ -1,24 +1,29 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 
 import { formatSom } from '@kargotrack/shared';
 
-import { DebtCell } from '@/components/debt-cell';
-import { EmptyState } from '@/components/empty-state';
-import { ExportButton } from '@/components/export-button';
-import { PageHeader } from '@/components/page-header';
-import { ReminderButton } from '@/components/reminder-button';
+import { DebtCell } from '@/components/shared/debt-cell';
+import { EmptyState } from '@/components/shared/empty-state';
+import { ExportButton } from '@/components/shared/export-button';
+import { ReminderButton } from '@/components/shared/reminder-button';
+import { PageHeader } from '@/components/layout/page-header';
 import { requireAdmin } from '@/lib/auth';
 import { listDebtors } from '@/lib/queries';
-import { sendReminderAction } from '@/lib/reminder-actions';
+import { sendReminderAction } from '@/features/debtors/actions';
+import { BulkReminder } from '@/features/debtors/components/bulk-reminder';
 
-import { BulkReminder } from './bulk-reminder';
-
-export const metadata = { title: 'Qarzdorlar — SERVIO Kargo' };
+export async function generateMetadata() {
+  const t = await getTranslations('debtors');
+  return { title: `${t('pageTitle')} — SERVIO Kargo` };
+}
 
 export default async function DebtorsPage() {
   const { tenant } = await requireAdmin();
-  const debtors = await listDebtors(tenant.id);
+  const t = await getTranslations('debtors');
+  const tCommon = await getTranslations('common');
 
+  const debtors = await listDebtors(tenant.id);
   const totalTiyin = debtors.reduce((sum, c) => sum + c.debtTiyin, 0);
 
   return (
@@ -27,28 +32,30 @@ export default async function DebtorsPage() {
           button, which overflowed the viewport on phones and squeezed the
           figure into an unreadable strip. It gets its own full-width card. */}
       <PageHeader
-        title="Qarzdorlar"
+        title={t('pageTitle')}
         right={<ExportButton href="/api/export/customers?debtors=1" />}
       />
 
       {debtors.length > 0 ? (
         <div className="mb-4 rounded-xl border border-[#f3d6d4] bg-[#fdf6f6] p-3.5">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="text-[12px] text-muted-foreground">Jami qarz</span>
             <span className="text-[12px] text-muted-foreground">
-              {debtors.length} ta qarzdor
+              {t('totalDebt')}
+            </span>
+            <span className="text-[12px] text-muted-foreground">
+              {t('debtorCount', { count: debtors.length })}
             </span>
           </div>
           <p className="mt-1 whitespace-nowrap font-mono text-[22px] font-bold leading-tight tabular-nums text-[#b3261e]">
             {formatSom(totalTiyin)}
             <span className="ml-1 text-[12px] font-medium text-muted-foreground">
-              so&apos;m
+              {tCommon('som')}
             </span>
           </p>
           <div className="mt-3">
             <BulkReminder
               count={debtors.length}
-              totalDebtText={`${formatSom(totalTiyin)} so'm`}
+              totalDebtText={`${formatSom(totalTiyin)} ${tCommon('som')}`}
             />
           </div>
         </div>
@@ -61,8 +68,8 @@ export default async function DebtorsPage() {
               ✓
             </div>
           }
-          title="Qarzdorlar yo'q"
-          hint="Barcha to'lovlar yopilgan."
+          title={t('emptyTitle')}
+          hint={t('emptyHint')}
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-white">
@@ -71,15 +78,18 @@ export default async function DebtorsPage() {
               key={c.id}
               className="flex items-center justify-between gap-3 border-b border-[#eef0f4] px-4 py-3 last:border-0"
             >
-              <Link href={`/customers/${c.id}`} className="min-w-0 flex-1">
+              <Link
+                href={`/customers/${c.id}`}
+                className="min-w-0 flex-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <p className="truncate text-sm font-semibold text-foreground">
-                  {c.fullName ?? 'Ismi yo‘q'}{' '}
+                  {c.fullName ?? tCommon('noName')}{' '}
                   <span className="font-mono text-[12px] font-medium text-muted-foreground">
                     {c.clientCode}
                   </span>
                 </p>
                 <p className="text-[12px] text-muted-foreground">
-                  {c.trackCount} ta trek
+                  {t('trackCount', { count: c.trackCount })}
                 </p>
               </Link>
               <div className="flex flex-none items-center gap-2.5">

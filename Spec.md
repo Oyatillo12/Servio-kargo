@@ -47,22 +47,29 @@ Main menu (reply keyboard, 2 columns, 4 rows):
 - ru: `➕ Добавить трек` `📦 Мои посылки` / `🧮 Калькулятор` `💰 Баланс` /
   `🇨🇳 Адрес склада` `ℹ️ Информация` / `🌐 Til / Язык`
 
+Immediately after registration the bot also sends the `help_card` (3.12) — a
+brand-new customer is looking at seven unexplained buttons and this is the
+cheapest moment to say what they do.
+
 ### 3.2 Add track
-Prompt the user, accept one message with one or MANY codes (any separators:
-newlines, commas, spaces). Normalize each candidate line, then per code:
-already claimed by this user → skip silently in summary count; exists
-unattached → claim; belongs to another customer → refuse politely; new →
-create with status CREATED and attach. Reply with the grouped summary (4.3).
+Prompt the user (prompt carries an inline `❌` cancel — see 3.11), accept one
+message with one or MANY codes (any separators: newlines, commas, spaces).
+Normalize each candidate line, then per code: already claimed by this user →
+skip silently in summary count; exists unattached → claim; belongs to another
+customer → refuse politely; new → create with status CREATED and attach. Reply
+with the grouped summary (4.3) plus the `➕ / 📦` follow-up row (3.11).
 
 ### 3.3 My tracks
 Group user's non-deleted tracks by status in pipeline order. Each line:
 `{emoji} {code_original}`; for READY_FOR_PICKUP also append
 ` — {weight} kg, {price} so'm` when set. Paginate 10 per page with inline
-`◀️ / ▶️` buttons. Empty state text in 4.1.
+`◀️ / ▶️` buttons plus a `🔄` refresh. One tappable button per track opens its
+card **in place** (3.11). Empty state text in 4.1.
 
 ### 3.4 Balance
 Show debt (or advance if negative) + last 5 payments as
-`{DD.MM.YYYY} — {amount} so'm ({method label})`.
+`{DD.MM.YYYY} — {amount} so'm ({method label})`, followed by a `📦` shortcut
+back to the tracks list (3.11).
 
 ### 3.5 Info
 Card assembled from tenant settings, in this order:
@@ -78,10 +85,20 @@ Any plain message whose normalized form is 8–20 alphanumerics → status card:
 code, current status (emoji + label), last event date, batch line
 `🚚 Reys: {batch_name} · Taxminan: {eta DD.MM.YYYY}` when the track belongs
 to a batch that is not yet in TASHKENT_WAREHOUSE or later, weight/price if
-set, photo if exists. Otherwise → short help text pointing to the menu.
+set, photo if exists. Otherwise → short help text plus the `📦 / 💰 / ℹ️`
+shortcut row (3.11): a customer who wrote something the bot did not understand
+is the least likely to go hunting through the reply keyboard.
+
+A card reached from the tracks list is rendered as text and offers `📷` when a
+photo exists, because a text message cannot be edited into a photo message and
+in-place navigation (3.11) is worth more than an inline picture. A card reached
+by free-text lookup is a new message and keeps the photo attached.
 
 ### 3.7 Language switch
-`🌐` button toggles and persists `customers.lang`. Re-render menu.
+`🌐` button toggles and persists `customers.lang`. Re-render menu. For an
+already-registered customer the prompt is `lang_choose`, NOT the `welcome`
+copy — being greeted as a new arrival reads as having been logged out. The
+buttons are removed from the message once a language is picked.
 
 ### 3.8 Staff mode (photo + weighing)
 If `from.id` ∈ `tenant.settings.staff_tg_ids`, two extra behaviors on top of
@@ -97,15 +114,59 @@ the normal customer menu:
    Replies per 4.5 staff strings.
 
 ### 3.9 Calculator
-`🧮` → inline buttons of ACTIVE tariffs (name only) → ask weight
-(`calc_ask_kg`, accept `3.2`, `3,2`, `3`) → reply `calc_result` (4.5).
+`🧮` → `calc_step_tariff` with inline buttons of ACTIVE tariffs (name only) +
+`❌` cancel → `calc_step_kg` asking for a weight (accept `3.2`, `3,2`, `3`),
+also with `❌` → reply `calc_result` (4.5) + a `🧮 recalc` button.
 Never writes anything to the DB. Invalid number → re-ask once with hint.
+
+Both steps are numbered `1/2` and `2/2` and both are cancellable: the flow
+hijacks the customer's next plain message, so without a visible exit a mistyped
+trek code is silently read as a weight.
 
 ### 3.10 China warehouse address
 `🇨🇳` → send `china_addr_header` + the tenant's `china_address_template`
 rendered in a monospace block with `{client_code}` substituted, then
 `china_addr_footer` reminding the client to write their code on every box.
 If the template is empty → `china_addr_missing` fallback text.
+
+### 3.11 Inline navigation
+Every message that ends a flow carries an inline row saying where to go next.
+The reply keyboard stays as the permanent main menu; these buttons are what
+make the *result* of an action actionable.
+
+Callback-data grammar — `action[:arg][:modifier]`:
+
+| data | effect |
+| ------------------- | ------------------------------------------------- |
+| `lang:uz` \| `lang:ru` | pick a language |
+| `mytracks:{page}` | render that page **in place** (also the "back" target) |
+| `mytracks:{page}:refresh` | re-read it; answer `refreshed` / `refreshed_no_change` |
+| `track:{id}` | open a track's card, replacing the list message |
+| `track:{id}:refresh` | re-read that card |
+| `photo:{id}` | send the warehouse photo as its own message |
+| `calc:{tariffId}` | pick a tariff |
+| `calc:restart` | run the calculator again |
+| `addmore` | re-open the add-track prompt |
+| `balance` \| `help` | open that card |
+| `cancel` | abandon the pending prompt; strip the button, keep the text |
+
+Rules:
+- **Opening a track edits the list, it does not append to it.** Opening five
+  parcels and coming back must cost one message, not eleven, and the list the
+  customer returns to must be the live one.
+- Every prompt that consumes the customer's next message (add-track, calculator
+  weight) MUST carry `cancel`.
+- A refresh always answers the callback query with a result, so a button that
+  found nothing new still visibly did something.
+- Callback handlers are ownership-scoped exactly like the flows they mirror: a
+  `track:{id}` for someone else's parcel answers `lookup_not_found`.
+
+### 3.12 Help
+`/help`, the `help` callback and the post-registration follow-up all send
+`help_card`: a numbered "how this works" (get the code → send it → the bot
+notifies you) plus one line per menu section. It exists because the reply
+keyboard shows seven labels and explains none of them — in particular that a
+bare trek code typed into the chat is itself a query (3.6).
 
 ## 4. Message & notification templates
 
@@ -120,10 +181,19 @@ texts below are canonical.
 - ask_phone — uz: `Ro'yxatdan o'tish uchun telefon raqamingizni yuboring 👇`
   (button: `📱 Raqamni yuborish`) — ru: `Отправьте номер телефона для регистрации 👇` (button: `📱 Отправить номер`)
 - registered — uz: `Tayyor! Sizning mijoz kodingiz: {client_code}\n\nEndi trek kodlaringizni yuboring — bir nechtasini birdaniga, har birini alohida qatorda yozsangiz ham bo'ladi.`
-- ask_tracks — uz: `Trek kodlarini yuboring (bir nechtasini birdan yozish mumkin):`
+- ask_tracks — uz: `Trek kodlarini yuboring 👇\nBir nechtasini birdaniga yuborsangiz ham bo'ladi — har birini yangi qatorga yozing.`
 - no_tracks — uz: `Hozircha yuklaringiz yo'q. ➕ Trek qo'shish tugmasi orqali trek kodingizni yuboring.`
-- help_fallback — uz: `Tushunmadim 🤔 Trek kodini yuboring yoki quyidagi menyudan foydalaning.`
+- help_fallback — uz: `Tushunmadim 🤔\nTrek kodini yuboring yoki quyidagi tugmalardan birini tanlang.`
 - error_generic — uz: `Xatolik yuz berdi, birozdan so'ng qayta urinib ko'ring.`
+- lang_choose — uz/ru (identical, both scripts): `Tilni tanlang / Выберите язык:`
+- cancelled — uz: `Bekor qilindi.`
+- refreshed / refreshed_no_change — callback-answer toasts, uz:
+  `Yangilandi` / `O'zgarish yo'q`
+- help_card (3.12) — a numbered three-step "how this works" followed by one
+  line per menu section. Held as an array joined with `\n` in the catalogues so
+  the steps stay individually editable.
+- nav.* — inline button labels (3.11): `backToList`, `refresh`, `myTracks`,
+  `addMore`, `balance`, `cancel`, `recalc`, `photo`, `menu`.
 - ru variants: same meaning, natural Russian; Claude writes them.
 
 ### 4.2 Status notifications (sent on change, only if customer attached)
@@ -157,6 +227,8 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
 ### 4.5 Calculator, address & broadcast strings
 - calc_choose_tariff — uz: `Tarifni tanlang:`
 - calc_ask_kg — uz: `Og'irlikni kiriting (kg), masalan: 3.2`
+- calc_step_tariff — uz: `🧮 1/2 · Tarifni tanlang`
+- calc_step_kg — uz: `🧮 2/2 · Og'irlikni kiriting (kg), masalan: 3.2`
 - calc_result — uz: `🧮 {tariff_name}\n{kg} kg ≈ {price} so'm{usd_part}\n\nAniq summa yuk tortilganda hisoblanadi.`
   where `{usd_part}` = ` ({usd}$)` in USD mode, else empty.
 - calc_invalid — uz: `Raqam kiriting, masalan: 2.5`
@@ -170,9 +242,22 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
 - Broadcast messages have no wrapper — admin's text is sent as-is.
 - ru variants for all of the above.
 
-## 5. Admin panel screens (all tenant-scoped, Uzbek UI)
+## 5. Admin panel screens (all tenant-scoped, uz + ru)
 
-- **5.1 /login** — telefon + parol. Xato: `Telefon yoki parol noto'g'ri`.
+The panel runs next-intl **without i18n routing**: paths stay `/tracks`,
+`/customers/:id`, and the locale comes from the `NEXT_LOCALE` cookie, seeded at
+login from `admin_users.lang` and switchable from the account menu or Settings
+(5.9). Uzbek is the default, Russian secondary — Tashkent office staff often
+work in Russian while their customers read Uzbek, which is why this is the
+ADMIN's language and separate from `customers.lang`.
+
+Panel strings live in `apps/web/messages/{uz,ru}.json`. Domain vocabulary the
+bot also sends to customers (status names, worklist labels, payment methods,
+Excel headers) stays in `packages/shared` and is read with the panel's locale —
+two copies would drift the moment one side is edited.
+
+- **5.1 /login** — telefon + parol. One generic error for any bad pair
+  (`auth.invalidCredentials`).
 - **5.2 /tracks** — table: Kod, Mijoz (client_code + ism, link), Status
   (colored badge), Reys, Og'irlik, Narx, Sana. Header carries `⬇️ Excel`
   (5.11). Filters: status dropdown,
@@ -232,6 +317,10 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
   - **Tariflar**: CRUD list (nomi, narx per kg, `asosiy` radio = default,
     faol/nofaol). At least one active default tariff must always exist.
   - **Valyuta**: `UZS` / `USD` radio; if USD → `Kurs (1$ = ? so'm)` input.
+  - **Panel tili**: `O'zbekcha` / `Русский` — the signed-in admin's own UI
+    language (§5 preamble). Labels are written in their own language, never
+    translated: an admin who has landed in a language they cannot read has to
+    be able to find their way out. Also reachable from the account menu.
   - Olib ketish manzili, ish vaqti, aloqa telefoni.
   - **🇨🇳 Xitoy ombori manzili**: textarea, hint `{client_code} — mijoz kodi
     o'rniga qo'yiladi`.
@@ -277,12 +366,14 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
   screen downloads exactly the rows **currently filtered on screen**, never the
   whole table:
 
-  | Screen | File | Contents |
-  | ---------------- | -------------------------- | ------------------------------------------- |
-  | `/tracks` | `treklar-YYYY-MM-DD.xlsx` | search + status + reys filters applied |
-  | `/customers` | `mijozlar-YYYY-MM-DD.xlsx` | search applied, with the qarz column |
-  | `/debtors` | `qarzdorlar-YYYY-MM-DD.xlsx` | debt > 0, largest first |
-  | `/customers/[id]` | `tolovlar-YYYY-MM-DD.xlsx` | that customer's payment statement |
+  | Screen | File (uz / ru) | Contents |
+  | ---------------- | ----------------------------------- | ------------------------------------------- |
+  | `/tracks` | `treklar` / `treki` | search + status + reys filters applied |
+  | `/customers` | `mijozlar` / `klienty` | search applied, with the qarz column |
+  | `/debtors` | `qarzdorlar` / `dolzhniki` | debt > 0, largest first |
+  | `/customers/[id]` | `tolovlar` / `platezhi` | that customer's payment statement |
+
+  (each followed by `-YYYY-MM-DD.xlsx`)
 
   Rules:
   - Soft-deleted tracks never appear (7.8), and debt/track counts exclude them.
@@ -292,7 +383,12 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
     keeps its sign so the column still totals correctly.
   - Timestamps are `DD.MM.YYYY HH:mm` text in Asia/Tashkent (7.9), not Excel
     date serials, which carry no timezone.
-  - Column headers exist in uz and ru; the panel requests uz.
+  - The sheet — headers, status names, payment methods — is written in the
+    admin's panel language (§5 preamble). A spreadsheet leaves the building:
+    an owner forwards it to an accountant, so it must read the way the person
+    who exported it reads.
+  - File-name stems stay ASCII (transliterated for ru): a non-ASCII plain
+    `filename=` in Content-Disposition is mangled by some Windows browsers.
   - The date in the file name is the Tashkent calendar day.
   - Max 50 000 rows per file. Beyond that the file itself carries a warning
     row naming the true total — an export is never silently partial.

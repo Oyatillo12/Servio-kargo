@@ -9,7 +9,7 @@ import { parseStaffWeighing } from '@kargotrack/shared';
 
 import type { KargoContext } from '../context';
 import { langKeyboard } from '../keyboards';
-import { handleAddTracks } from './addTrack';
+import { askForTracks, handleAddTracks } from './addTrack';
 import { handleCalcWeight, showCalculator } from './calculator';
 import { showChinaAddress } from './china';
 import { matchMenuAction } from './common';
@@ -18,7 +18,7 @@ import { showBalance, showInfo, showMyTracks } from './menu';
 import { handleStaffWeighing, isStaff } from './staffWeigh';
 
 /** Clear every pending multi-step flow's session state. */
-function resetFlows(ctx: KargoContext): void {
+export function resetFlows(ctx: KargoContext): void {
   ctx.session.step = undefined;
   ctx.session.calcTariffId = undefined;
   ctx.session.calcRetried = undefined;
@@ -35,9 +35,7 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
     switch (action) {
       case 'addTrack':
         resetFlows(ctx);
-        ctx.session.step = 'awaiting_tracks';
-        await ctx.reply(ctx.s.askTracks);
-        return;
+        return askForTracks(ctx);
       case 'myTracks':
         return showMyTracks(ctx);
       case 'calculator':
@@ -49,9 +47,12 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
       case 'info':
         return showInfo(ctx);
       case 'lang':
-        await ctx.reply(ctx.s.welcome(ctx.tenant.name), {
-          reply_markup: langKeyboard(),
-        });
+        // A registered customer switching language does not need re-greeting;
+        // the welcome copy ("welcome to X") read as if they had been logged out.
+        await ctx.reply(
+          ctx.customer ? ctx.s.langChoose : ctx.s.welcome(ctx.tenant.name),
+          { reply_markup: langKeyboard() },
+        );
         return;
     }
   }
@@ -78,4 +79,20 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
   }
 
   await handleLookup(ctx, text);
+}
+
+/**
+ * `cancel` inline callback — abandon whatever prompt is pending (§3.11).
+ *
+ * The prompt message keeps its text but loses its button, so the chat history
+ * still shows what was asked while making it obvious the question is closed.
+ */
+export async function cancelCallback(ctx: KargoContext): Promise<void> {
+  resetFlows(ctx);
+  await ctx.answerCallbackQuery({ text: ctx.s.cancelled });
+  try {
+    await ctx.editMessageReplyMarkup({ reply_markup: undefined });
+  } catch {
+    // Message too old to edit, or already cleared — nothing to undo.
+  }
 }

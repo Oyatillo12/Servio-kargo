@@ -1,13 +1,13 @@
 /**
  * Free-text status lookup (SPEC §3.6). Any plain message whose normalized form
  * is a valid 8–20 char code is treated as a status query — even without pressing
- * a button. Non-codes fall back to the help text.
+ * a button. Non-codes fall back to the help text (§3.11).
  */
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { InputFile } from 'grammy';
+import { InlineKeyboard, InputFile } from 'grammy';
 
 import {
   formatDate,
@@ -22,6 +22,7 @@ import type { Track } from '@kargotrack/db/schema';
 
 import { getConfig } from '../config';
 import type { KargoContext } from '../context';
+import { helpFallbackKeyboard, trackCardKeyboard } from '../keyboards';
 import { findTrackByCode, getBatchById, getLastEventAt } from '../queries';
 import { logger } from '../logger';
 
@@ -31,15 +32,28 @@ function formatIsoDate(iso: string): string {
   return d && m && y ? `${d}.${m}.${y}` : iso;
 }
 
+/** Absolute path of a track's stored photo, or `undefined` if there isn't one. */
+function photoPathOf(ctx: KargoContext, track: Track): string | undefined {
+  if (!track.photoPath) return undefined;
+  const abs = join(getConfig().uploadsDir, track.photoPath);
+  return existsSync(abs) ? abs : undefined;
+}
+
 /**
- * Render + send a track's status card (SPEC §3.6), attaching the warehouse
- * photo when one exists. Shared by the free-text lookup and the "Mening
- * yuklarim" per-track buttons so both stay identical.
+ * Compose a track's status card + the actions that belong under it (§3.6,
+ * §3.11). Pure rendering: the caller decides whether to send it as a new
+ * message or edit one in place.
+ *
+ * `fromPage` marks the card as having replaced a My-tracks listing, which adds
+ * the back button. The photo is offered as a button rather than attached here:
+ * a text message cannot be edited into a photo message, and making every card
+ * a fresh photo upload would undo the in-place navigation.
  */
-export async function sendTrackCard(
+export async function renderTrackCard(
   ctx: KargoContext,
   track: Track,
-): Promise<void> {
+  opts: { fromPage?: number } = {},
+): Promise<{ text: string; keyboard: InlineKeyboard }> {
   const s = ctx.s;
   const meta = STATUS_META[track.currentStatus];
   const lastAt = (await getLastEventAt(track.id)) ?? track.createdAt;
@@ -58,7 +72,7 @@ export async function sendTrackCard(
     }
   }
 
-  const card = s.lookupCard({
+  const text = s.lookupCard({
     code: track.codeOriginal,
     statusEmoji: meta.emoji,
     statusLabel: meta[ctx.lang],
@@ -69,20 +83,40 @@ export async function sendTrackCard(
     som: track.priceTiyin != null ? formatSom(track.priceTiyin) : undefined,
   });
 
-  // Attach the warehouse photo when the file exists (SPEC §3.6).
-  if (track.photoPath) {
-    const abs = join(getConfig().uploadsDir, track.photoPath);
-    if (existsSync(abs)) {
-      try {
-        await ctx.replyWithPhoto(new InputFile(abs), { caption: card });
-        return;
-      } catch (err) {
-        logger.warn({ err, trackId: track.id }, 'failed to send lookup photo');
-      }
+  const keyboard = trackCardKeyboard(s, track.id, opts.fromPage);
+  if (photoPathOf(ctx, track)) {
+    keyboard.row().text(s.nav.photo, `photo:${track.id}`);
+  }
+
+  return { text, keyboard };
+}
+
+/**
+ * Send a track's status card as a NEW message, attaching the warehouse photo
+ * when one exists (SPEC §3.6). Used by the free-text lookup — where there is no
+ * list message to replace — and by the explicit 📷 button.
+ */
+export async function sendTrackCard(
+  ctx: KargoContext,
+  track: Track,
+): Promise<void> {
+  const { text, keyboard } = await renderTrackCard(ctx, track);
+  const abs = photoPathOf(ctx, track);
+
+  if (abs) {
+    try {
+      await ctx.replyWithPhoto(new InputFile(abs), {
+        caption: text,
+        // No 📷 button on a message that already IS the photo.
+        reply_markup: trackCardKeyboard(ctx.s, track.id),
+      });
+      return;
+    } catch (err) {
+      logger.warn({ err, trackId: track.id }, 'failed to send lookup photo');
     }
   }
 
-  await ctx.reply(card);
+  await ctx.reply(text, { reply_markup: keyboard });
 }
 
 export async function handleLookup(
@@ -92,9 +126,10 @@ export async function handleLookup(
   const s = ctx.s;
   const normalized = normalizeCode(text);
 
-  // Not a plausible code → short help pointing to the menu.
+  // Not a plausible code → short help plus the shortcuts a confused customer
+  // most likely wanted (§3.11).
   if (!isValidTrackCode(normalized)) {
-    await ctx.reply(s.helpFallback);
+    await ctx.reply(s.helpFallback, { reply_markup: helpFallbackKeyboard(s) });
     return;
   }
 

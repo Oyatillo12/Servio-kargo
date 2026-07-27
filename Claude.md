@@ -40,8 +40,19 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
 4. **Track codes are messy.** Store `code_normalized` (uppercase, strip spaces, dashes,
    non-alphanumerics) alongside `code_original`. Match user input after the same
    normalization. Typical codes: 8–20 alphanumeric chars.
-5. **i18n:** every user-facing string lives in `packages/shared/i18n/{uz,ru}.ts`.
-   Uzbek (Latin) is the default, Russian secondary. Never hardcode user-facing text.
+5. **i18n:** Uzbek (Latin) is the default, Russian secondary, on BOTH surfaces.
+   Never hardcode user-facing text.
+   - Bot strings live in `packages/shared/src/i18n/{uz,ru}.ts` (`Strings`).
+   - Panel strings live in `apps/web/messages/{uz,ru}.json`, loaded by
+     next-intl **without i18n routing** — paths stay `/tracks`, the locale
+     comes from the `NEXT_LOCALE` cookie and is persisted in `admin_users.lang`.
+   - Domain vocabulary shown on both surfaces — status names, worklist labels,
+     payment methods, Excel headers — stays in `packages/shared` and is read
+     with the caller's locale. Never copy it into `messages/*.json`.
+   - Server Actions translate their own errors with `getTranslations()` and
+     return finished text; clients hand it straight to `toast.error`.
+   - `apps/web/messages/messages.test.ts` enforces key parity, ICU validity and
+     matching placeholders across both locales.
    Customers often mix Latin/Cyrillic — normalize input where it matters.
 6. **Money:** store amounts as integer **tiyin** (UZS minor unit, 1 so'm = 100 tiyin).
    Never floats for money. Display as so'm with thousands separators.
@@ -63,7 +74,8 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
 - `batches` — id, tenant_id, name, transport ('avia'|'avto'|'train'),
   eta_date (nullable), status (CHINA_WAREHOUSE|IN_TRANSIT|TASHKENT_WAREHOUSE),
   created_at
-- `admin_users` — id, tenant_id, phone, password_hash (argon2), role ('owner'|'staff')
+- `admin_users` — id, tenant_id, phone, password_hash (argon2), role ('owner'|'staff'),
+  lang ('uz'|'ru', panel UI language — independent of `customers.lang`)
 - `customers` — id, tenant_id, tg_user_id, phone, full_name, client_code
   (e.g. "DK-1042" = tenant prefix + sequence), lang ('uz'|'ru'), created_at
 - `tracks` — id, tenant_id, customer_id (nullable — codes can arrive before a customer
@@ -94,7 +106,12 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
   or code normalization.
 - Small commits, imperative messages: `feat(bot): claim flow for unassigned tracks`.
 - Admin UI: Tailwind, clean and dense, mobile-first (admins work from phones).
-  Uzbek labels in the UI.
+  Every label goes through next-intl — no literal text in JSX.
+- **`apps/web` layout:** `app/` holds routes only (page / layout / loading /
+  error). Domain components and Server Actions live in
+  `features/<area>/{components,actions}`; `components/ui` is the primitive kit,
+  `components/layout` the app shell, `components/shared` the cross-feature
+  pieces. `lib/queries/*` stays the one tenant-scoped data-access layer.
 
 ## Definition of Done (every task)
 1. `pnpm typecheck && pnpm lint && pnpm test` all pass

@@ -1,23 +1,36 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { getLocale, getTranslations } from 'next-intl/server';
 
-import { formatDate, formatSom, t } from '@kargotrack/shared';
+import { formatDate, formatSom, t as strings, type Lang } from '@kargotrack/shared';
 
-import { DebtCell } from '@/components/debt-cell';
-import { ExportButton } from '@/components/export-button';
-import { ReminderButton } from '@/components/reminder-button';
-import { StatusBadge } from '@/components/status-badge';
+import { DebtCell } from '@/components/shared/debt-cell';
+import { ExportButton } from '@/components/shared/export-button';
+import { ReminderButton } from '@/components/shared/reminder-button';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { SectionCard } from '@/components/ui/section-card';
 import { requireAdmin } from '@/lib/auth';
 import { getCustomerDetail } from '@/lib/queries';
-import { sendReminderAction } from '@/lib/reminder-actions';
+import { sendReminderAction } from '@/features/debtors/actions';
+import { PaymentForm } from '@/features/customers/components/payment-form';
 
-import { PaymentForm } from './payment-form';
+export async function generateMetadata() {
+  const t = await getTranslations('customerDetail');
+  return { title: `${t('pageTitle')} — SERVIO Kargo` };
+}
 
-export const metadata = { title: 'Mijoz — SERVIO Kargo' };
-
-// Uzbek admin labels for payment methods (reuse the canonical i18n catalogue).
-const methodLabel = t('uz').paymentMethod;
+/** Two-letter avatar initials, or a dash when the customer has no name yet. */
+function initialsOf(fullName: string | null): string {
+  return (
+    (fullName ?? '')
+      .split(' ')
+      .map((part) => part.charAt(0))
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || '—'
+  );
+}
 
 export default async function CustomerDetailPage({
   params,
@@ -25,6 +38,15 @@ export default async function CustomerDetailPage({
   params: { id: string };
 }) {
   const { tenant } = await requireAdmin();
+  const t = await getTranslations('customerDetail');
+  const tCommon = await getTranslations('common');
+  const tCustomers = await getTranslations('customers');
+  const locale = (await getLocale()) as Lang;
+
+  // Payment-method names come from the canonical bot catalogue, not from
+  // `messages/*.json`: the customer sees the same words in their receipt.
+  const methodLabel = strings(locale).paymentMethod;
+
   const detail = await getCustomerDetail(tenant.id, params.id);
   if (!detail) notFound();
 
@@ -33,32 +55,26 @@ export default async function CustomerDetailPage({
   const deliveredCount = tracks.filter(
     (tr) => tr.currentStatus === 'DELIVERED',
   ).length;
-  const initials = (customer.fullName ?? '')
-    .split(' ')
-    .map((p) => p.charAt(0))
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 
   return (
     <div className="mx-auto max-w-md space-y-3">
       <Link
         href="/customers"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 rounded text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="h-4 w-4" />
-        Mijozlar
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        {tCustomers('pageTitle')}
       </Link>
 
       {/* Header + stats */}
-      <div className="rounded-xl border border-border bg-white p-3.5">
+      <SectionCard>
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-accent text-sm font-bold text-primary">
-            {initials || '—'}
+            {initialsOf(customer.fullName)}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-base font-bold text-foreground">
-              {customer.fullName ?? 'Ismi yo‘q'}
+              {customer.fullName ?? tCommon('noName')}
             </p>
             <p className="truncate font-mono text-[12.5px] text-muted-foreground">
               {customer.clientCode}
@@ -68,39 +84,41 @@ export default async function CustomerDetailPage({
         </div>
         <div className="mt-2.5 flex border-t border-[#eef0f4] pt-2.5 text-center">
           <div className="flex-1">
-            <p className="font-mono text-base font-semibold">{tracks.length}</p>
-            <p className="text-[11.5px] text-muted-foreground">trek</p>
+            <p className="font-mono text-base font-semibold tabular-nums">
+              {tracks.length}
+            </p>
+            <p className="text-[11.5px] text-muted-foreground">
+              {t('statTracks')}
+            </p>
           </div>
           <div className="flex-1 border-l border-[#eef0f4]">
-            <p className="font-mono text-base font-semibold">
+            <p className="font-mono text-base font-semibold tabular-nums">
               {deliveredCount}
             </p>
-            <p className="text-[11.5px] text-muted-foreground">topshirildi</p>
+            <p className="text-[11.5px] text-muted-foreground">
+              {t('statDelivered')}
+            </p>
           </div>
           <div className="flex-1 border-l border-[#eef0f4]">
             <div className="text-[13px]">
               <DebtCell tiyin={debtTiyin} />
             </div>
-            <p className="text-[11.5px] text-muted-foreground">qarz</p>
+            <p className="text-[11.5px] text-muted-foreground">{t('statDebt')}</p>
           </div>
         </div>
-      </div>
+      </SectionCard>
 
       {/* Payment history */}
-      <div className="rounded-xl border border-border bg-white p-3.5">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <h2 className="text-[13.5px] font-semibold text-foreground">
-            To&apos;lovlar tarixi
-          </h2>
-          {payments.length > 0 ? (
-            <ExportButton
-              href={`/api/export/payments?customer=${customer.id}`}
-              label="Excel"
-            />
-          ) : null}
-        </div>
+      <SectionCard
+        title={t('paymentsTitle')}
+        action={
+          payments.length > 0 ? (
+            <ExportButton href={`/api/export/payments?customer=${customer.id}`} />
+          ) : undefined
+        }
+      >
         {payments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">To&apos;lovlar yo&apos;q.</p>
+          <p className="text-sm text-muted-foreground">{t('noPayments')}</p>
         ) : (
           <ul>
             {payments.map((p) => (
@@ -118,26 +136,23 @@ export default async function CustomerDetailPage({
                   </p>
                 </div>
                 <span className="font-mono text-[14px] font-semibold text-[#177338]">
-                  {formatSom(p.amountTiyin)} so&apos;m
+                  {formatSom(p.amountTiyin)} {tCommon('som')}
                 </span>
               </li>
             ))}
           </ul>
         )}
-      </div>
+      </SectionCard>
 
       {/* Add a payment */}
-      <div className="rounded-xl border border-border bg-white p-3.5">
-        <h2 className="mb-3 text-[13.5px] font-semibold text-foreground">
-          To&apos;lov qo&apos;shish
-        </h2>
+      <SectionCard title={t('addPaymentTitle')}>
         <PaymentForm customerId={customer.id} />
-      </div>
+      </SectionCard>
 
       {debtTiyin > 0 ? (
         <ReminderButton
           action={sendReminderAction.bind(null, customer.id)}
-          label="Eslatma yuborish"
+          label={t('sendReminder')}
           variant="outline"
           size="lg"
           className="w-full"
@@ -145,12 +160,9 @@ export default async function CustomerDetailPage({
       ) : null}
 
       {/* Tracks */}
-      <div className="rounded-xl border border-border bg-white p-3.5">
-        <h2 className="mb-2 text-[13.5px] font-semibold text-foreground">
-          Treklar
-        </h2>
+      <SectionCard title={t('tracksTitle')}>
         {tracks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Treklar yo&apos;q.</p>
+          <p className="text-sm text-muted-foreground">{t('noTracks')}</p>
         ) : (
           <ul>
             {tracks.map((tr) => (
@@ -168,7 +180,7 @@ export default async function CustomerDetailPage({
                   <span className="flex flex-none items-center gap-3">
                     {tr.priceTiyin != null ? (
                       <span className="whitespace-nowrap font-mono text-[12.5px] text-slate-600">
-                        {formatSom(tr.priceTiyin)} so&apos;m
+                        {formatSom(tr.priceTiyin)} {tCommon('som')}
                       </span>
                     ) : null}
                     <StatusBadge status={tr.currentStatus} />
@@ -178,7 +190,7 @@ export default async function CustomerDetailPage({
             ))}
           </ul>
         )}
-      </div>
+      </SectionCard>
     </div>
   );
 }

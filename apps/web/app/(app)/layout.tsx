@@ -1,18 +1,20 @@
 import type { ReactNode } from 'react';
+import { getTranslations } from 'next-intl/server';
 
 import { requireAdmin } from '@/lib/auth';
 import { countDebtors } from '@/lib/queries';
-import { RouteDots, Wordmark } from '@/components/brand';
-
-import { AppHeader } from './app-header';
-import { SidebarNav, BottomNav } from './nav-link';
+import { AppHeader } from '@/components/layout/app-header';
+import { BottomNav } from '@/components/layout/bottom-nav';
+import { RouteDots, Wordmark } from '@/components/layout/brand';
+import { SidebarNav } from '@/components/layout/sidebar-nav';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { admin, tenant } = await requireAdmin();
+  const t = await getTranslations('auth');
 
-  const roleLabel = admin.role === 'owner' ? 'Egasi' : 'Xodim';
+  const roleLabel = admin.role === 'owner' ? t('roleOwner') : t('roleStaff');
 
-  // Pending-debtor count for the "Ko'proq" badge (Qarzdorlar lives in the sheet).
+  // Pending-debtor count for the "more" badge (Debtors lives in the sheet).
   // This runs on EVERY page load, so it must stay a single aggregate — it used
   // to call `listDebtors`, which drags the tenant's whole track + payment table
   // into Node just to take `.length` (AUDIT.md T6).

@@ -1,4 +1,6 @@
+import { getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { X } from 'lucide-react';
 
 import {
   STATUS_META,
@@ -8,22 +10,29 @@ import {
   formatSom,
   isTrackWorklist,
   worklistLabel,
+  type Lang,
   type TrackStatus,
 } from '@kargotrack/shared';
 
 import { requireAdmin } from '@/lib/auth';
 import { listBatches, listTracks } from '@/lib/queries';
-import { Input } from '@/components/ui/input';
-import { ExportButton } from '@/components/export-button';
-import { PageHeader } from '@/components/page-header';
-import { cn } from '@/lib/utils';
+import { ExportButton } from '@/components/shared/export-button';
+import { FilterChips, type FilterChip } from '@/components/shared/filter-chips';
+import { Pagination } from '@/components/shared/pagination';
+import { SearchField } from '@/components/shared/search-field';
+import { PageHeader } from '@/components/layout/page-header';
 import { WORKLIST_ICONS } from '@/lib/worklist-ui';
+import {
+  TracksTable,
+  type TrackRowView,
+} from '@/features/tracks/components/tracks-table';
+import { BatchFilter } from '@/features/tracks/components/batch-filter';
+import type { BatchOption } from '@/features/tracks/components/batch-assign-dialog';
 
-import { TracksTable, type TrackRowView } from './tracks-table';
-import { BatchFilter } from './batch-filter';
-import type { BatchOption } from './batch-assign-dialog';
-
-export const metadata = { title: 'Treklar — SERVIO Kargo' };
+export async function generateMetadata() {
+  const t = await getTranslations('tracks');
+  return { title: `${t('pageTitle')} — SERVIO Kargo` };
+}
 
 function isStatus(v: string | undefined): v is TrackStatus {
   return !!v && (TRACK_STATUSES as readonly string[]).includes(v);
@@ -44,6 +53,9 @@ export default async function TracksPage({
   searchParams: SearchParams;
 }) {
   const { tenant } = await requireAdmin();
+  const t = await getTranslations('tracks');
+  const tCommon = await getTranslations('common');
+  const locale = (await getLocale()) as Lang;
 
   const q = searchParams.q?.trim() ?? '';
   const status = isStatus(searchParams.status) ? searchParams.status : undefined;
@@ -85,14 +97,20 @@ export default async function TracksPage({
           }`
         : null,
     batchName: r.batchName,
-    weightText: r.weightGrams != null ? `${formatKg(r.weightGrams)} kg` : '—',
-    priceText: r.priceTiyin != null ? `${formatSom(r.priceTiyin)} so'm` : '—',
+    weightText:
+      r.weightGrams != null
+        ? `${formatKg(r.weightGrams)} ${tCommon('kg')}`
+        : tCommon('dash'),
+    priceText:
+      r.priceTiyin != null
+        ? `${formatSom(r.priceTiyin)} ${tCommon('som')}`
+        : tCommon('dash'),
     dateText: formatDate(r.createdAt),
   }));
 
   // Filter chip link, preserving the search term + batch filter. `work` is
   // deliberately dropped: picking a status chip means leaving the worklist.
-  const chipHref = (target?: TrackStatus) => {
+  const chipHref = (target?: string) => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (batchId) params.set('batch', batchId);
@@ -111,7 +129,7 @@ export default async function TracksPage({
     exportParams.toString() ? `?${exportParams}` : ''
   }`;
 
-  // Pagination link, preserving filters.
+  // Pagination link, preserving every active filter.
   const pageHref = (targetPage: number) => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
@@ -123,118 +141,80 @@ export default async function TracksPage({
     return qs ? `/tracks?${qs}` : '/tracks';
   };
 
-  const chip = (label: string, target: TrackStatus | undefined, active: boolean) => (
-    <Link
-      key={label}
-      href={chipHref(target)}
-      className={cn(
-        'flex-none rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-        active
-          ? 'border-primary bg-primary text-white'
-          : 'border-input bg-white text-slate-600 hover:bg-secondary',
-      )}
-    >
-      {label}
-    </Link>
-  );
+  const statusChips: FilterChip[] = [
+    { value: undefined, label: t('allStatuses') },
+    ...TRACK_STATUSES.map((s) => ({
+      value: s as string,
+      label: STATUS_META[s][locale],
+      emoji: STATUS_META[s].emoji,
+    })),
+  ];
 
   return (
     <div>
       <PageHeader
-        title="Treklar"
-        right={
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
-              jami{' '}
-              <span className="font-mono font-semibold">{result.total}</span>
-            </span>
-            <ExportButton href={exportHref} />
-          </div>
-        }
+        title={t('pageTitle')}
+        count={result.total}
+        right={<ExportButton href={exportHref} />}
       />
 
       <div className="mb-3 flex gap-2">
-        <form method="get" className="flex-1">
-          <input type="hidden" name="status" value={status ?? ''} />
-          {batchId ? <input type="hidden" name="batch" value={batchId} /> : null}
-          {work ? <input type="hidden" name="work" value={work} /> : null}
-          <Input
-            name="q"
-            defaultValue={q}
-            placeholder="Trek kodi yoki mijoz qidirish"
-            className="h-11 bg-[#f7f8fa]"
-          />
-        </form>
+        <SearchField
+          path="/tracks"
+          value={q}
+          placeholder={t('searchPlaceholder')}
+          label={t('searchPlaceholder')}
+          keep={{ status, batch: batchId, work }}
+        />
         {batchRows.length > 0 ? (
           <BatchFilter
             batches={batchRows.map((b) => ({ id: b.id, name: b.name }))}
             current={batchId}
             q={q}
             status={status}
+            work={work}
           />
         ) : null}
       </div>
 
       {work ? (
-        /* Came from the dashboard's "Bugungi ish" (AUDIT.md T19). The status
-           chips are hidden rather than shown inactive: a worklist already
-           implies a status, so a chip tapped on top of it would look like a
-           second filter and return nothing. One obvious way out instead. */
+        /* Came from the dashboard's work queue (AUDIT.md T19). The status chips
+           are hidden rather than shown inactive: a worklist already implies a
+           status, so a chip tapped on top of it would look like a second filter
+           and return nothing. One obvious way out instead. */
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#f0e0c2] bg-[#fffbf3] px-3 py-2.5">
           <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#fdf0d8] text-base leading-none">
             {WORKLIST_ICONS[work]}
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-semibold text-foreground">
-              {worklistLabel(work, 'uz').label}
+              {worklistLabel(work, locale).label}
             </p>
             <p className="truncate text-[11px] text-muted-foreground">
-              {worklistLabel(work, 'uz').hint}
+              {worklistLabel(work, locale).hint}
             </p>
           </div>
           <Link
             href={chipHref()}
-            className="flex-none rounded-full border border-input bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-secondary"
+            className="flex flex-none items-center gap-1 rounded-full border border-input bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-secondary"
           >
-            ✕ Filtrsiz
+            <X className="h-3.5 w-3.5" aria-hidden />
+            {t('clearFilter')}
           </Link>
         </div>
       ) : (
-        <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {chip('Barchasi', undefined, !status)}
-          {TRACK_STATUSES.map((s) => chip(STATUS_META[s].uz, s, status === s))}
-        </div>
+        <FilterChips
+          className="mb-4"
+          chips={statusChips}
+          active={status}
+          buildHref={chipHref}
+          label={t('colStatus')}
+        />
       )}
 
       <TracksTable rows={rows} batches={batchOptions} />
 
-      {result.pages > 1 ? (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          {result.page > 1 ? (
-            <Link
-              href={pageHref(result.page - 1)}
-              className="rounded-lg border border-input bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-secondary"
-            >
-              ← Oldingi
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="font-mono text-muted-foreground">
-            {result.page} / {result.pages}
-          </span>
-          {result.page < result.pages ? (
-            <Link
-              href={pageHref(result.page + 1)}
-              className="rounded-lg border border-input bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-secondary"
-            >
-              Keyingi →
-            </Link>
-          ) : (
-            <span />
-          )}
-        </div>
-      ) : null}
+      <Pagination page={result.page} pages={result.pages} buildHref={pageHref} />
     </div>
   );
 }

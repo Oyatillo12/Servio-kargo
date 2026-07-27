@@ -13,11 +13,12 @@ export const uz: Strings = {
   askPhoneButton: '📱 Raqamni yuborish',
   registered: (clientCode) =>
     `Tayyor! Sizning mijoz kodingiz: ${clientCode}\n\nEndi trek kodlaringizni yuboring — bir nechtasini birdaniga, har birini alohida qatorda yozsangiz ham bo'ladi.`,
-  askTracks: 'Trek kodlarini yuboring (bir nechtasini birdan yozish mumkin):',
+  askTracks:
+    "Trek kodlarini yuboring 👇\nBir nechtasini birdaniga yuborsangiz ham bo'ladi — har birini yangi qatorga yozing.",
   noTracks:
     "Hozircha yuklaringiz yo'q. ➕ Trek qo'shish tugmasi orqali trek kodingizni yuboring.",
   helpFallback:
-    'Tushunmadim 🤔 Trek kodini yuboring yoki quyidagi menyudan foydalaning.',
+    "Tushunmadim 🤔\nTrek kodini yuboring yoki quyidagi tugmalardan birini tanlang.",
   errorGeneric: "Xatolik yuz berdi, birozdan so'ng qayta urinib ko'ring.",
 
   // --- §3.1 menu labels ---
@@ -37,7 +38,40 @@ export const uz: Strings = {
     calc: 'Narx kalkulyatori',
     info: "Ma'lumot",
     manzil: 'Xitoy ombori manzili',
+    help: 'Bot qanday ishlaydi',
   },
+
+  // --- §3.11 inline navigation ---
+  nav: {
+    backToList: "⬅️ Ro'yxatga qaytish",
+    refresh: '🔄 Yangilash',
+    myTracks: '📦 Yuklarim',
+    addMore: "➕ Yana qo'shish",
+    balance: '💰 Balans',
+    cancel: '❌ Bekor qilish',
+    recalc: '🧮 Qayta hisoblash',
+    photo: '📷 Rasm',
+    menu: '🏠 Menyu',
+  },
+  cancelled: 'Bekor qilindi.',
+  refreshedNoChange: "O'zgarish yo'q",
+  refreshed: 'Yangilandi',
+
+  langChoose: 'Tilni tanlang / Выберите язык:',
+
+  helpCard: [
+    "ℹ️ Bot qanday ishlaydi",
+    '',
+    "1️⃣ Xitoydagi sotuvchidan trek kodini oling.",
+    "2️⃣ ➕ Trek qo'shish tugmasini bosib, kodni yuboring — bir nechtasini birdaniga ham bo'ladi.",
+    "3️⃣ Yuk holati o'zgarganda bot sizga o'zi xabar beradi.",
+    '',
+    "🔍 Istalgan payt trek kodini shunchaki yozib yuborsangiz, holatini ko'rsataman.",
+    "📦 Yuklarim — barcha yuklaringiz ro'yxati.",
+    "💰 Balans — qarzingiz va oxirgi to'lovlar.",
+    "🧮 Kalkulyator — taxminiy narxni hisoblash.",
+    "🇨🇳 Ombor manzili — sotuvchiga yuboriladigan manzil.",
+  ].join('\n'),
 
   // --- §4.3 add-track summary ---
   summaryAdded: (n, codes) => `✅ Qo'shildi (${n}): ${codes}`,
@@ -117,6 +151,8 @@ export const uz: Strings = {
   // --- §3.9 calculator (§4.5) ---
   calcChooseTariff: 'Tarifni tanlang:',
   calcAskKg: "Og'irlikni kiriting (kg), masalan: 3.2",
+  calcStepTariff: '🧮 1/2 · Tarifni tanlang',
+  calcStepKg: "🧮 2/2 · Og'irlikni kiriting (kg), masalan: 3.2",
   calcResult: ({ tariffName, kg, som, usd }) =>
     `🧮 ${tariffName}\n${kg} kg ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nAniq summa yuk tortilganda hisoblanadi.`,
   calcInvalid: 'Raqam kiriting, masalan: 2.5',

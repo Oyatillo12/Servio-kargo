@@ -49,7 +49,8 @@ Bular haqiqatan tekshirildi, shunchaki da'vo emas:
 
 **Test qoplami nomutanosib:** testlar deyarli faqat `packages/shared`da.
 T3 bilan `apps/bot` ga vitest qo'shildi (13 test, `rateLimiter`), lekin
-`apps/web` (9 227 satr) hamon **0 test** — T24 ga qarang.
+`apps/web` uzoq vaqt **0 test** edi; T17 bilan `messages.test.ts` qo'shildi
+(5 test — i18n kataloglari). Qolgani hamon T24 da.
 
 ---
 
@@ -73,9 +74,9 @@ T3 bilan `apps/bot` ga vitest qo'shildi (13 test, `rateLimiter`), lekin
 | F13 | `/customers`, `/debtors` pagination yo'q | 🟡 O'rta | T12 |
 | F14 | Xabar yetkazish jurnali yo'q (bloklagan mijoz ko'rinmaydi) | 🟡 O'rta | T13 |
 | F15 | Undo / savat yo'q — 300 ta xato xabar qaytarilmaydi | 🟡 O'rta | T14 |
-| F16 | Bulk operatsiyada progress yo'q, qidiruv Enter + reload | 🟡 O'rta | T15 |
+| ~~F16~~ | ~~Bulk operatsiyada progress yo'q, qidiruv Enter + reload~~ | ✅ Yopildi | T15 |
 | F17 | Bot sessiyasi xotirada — deploy flowni uzadi, >1 replika yo'q | 🟢 Past | T16 |
-| F18 | Panel faqat o'zbekcha | 🟢 Past | T17 |
+| ~~F18~~ | ~~Panel faqat o'zbekcha~~ | ✅ Yopildi | T17 |
 | F19 | Paneldan rasm yuklash yo'q | 🟢 Past | T18 |
 | ~~F20~~ | ~~Dashboard operatsion emas (daromad grafigi = vanity metrika)~~ | ✅ Yopildi | T19 |
 | F21 | 7 ta hujjat, 17 commit — chirishga tayyor takror | 🟢 Past | T22 |
@@ -730,12 +731,21 @@ orqaga yo'l yo'q. Soft-deleted treklar uchun ko'rinish ham yo'q.
       navbatdan o'chirish. pg-boss `cancel` qo'llab-quvvatlaydi
 - [ ] `/tracks?deleted=1` savat ko'rinishi + tiklash
 
-### ☐ T15 · UX: progress va instant qidiruv
+### ☑ T15 · UX: progress va instant qidiruv — **BAJARILDI** (2026-07-27)
 
-- [ ] Bulk operatsiyada progress ("240 / 500") yoki hech bo'lmasa aniq holat
-- [ ] Qidiruvda debounce + instant natija (skaner uchun Enter ishlashi saqlanadi)
-- [ ] Optimistic UI: status o'zgarishi darhol ko'rinsin
-- [ ] `loading.tsx` faqat `/tracks`da bor — boshqa ekranlarga ham qo'shish
+- [x] Bulk operatsiyada aniq holat: `Spinner` + tugma yorlig'i o'zgarmaydi
+      (kenglik sakramaydi), natija toastda `N ta trek yangilandi · M ta xabar`
+- [x] Qidiruvda debounce (300 ms) + instant natija —
+      `components/shared/search-field.tsx`. Skaner uchun Enter darhol yuboradi
+      (skaner kodni yozib Enter bosadi — 300 ms kutish har quti uchun yo'qotish)
+- [x] Optimistic UI: `tracks-table.tsx` da status overlay — server javobini
+      kutmasdan darhol yangi status ko'rinadi, server qatorlari kelganda tushadi
+- [x] Barcha ekranlarga `loading.tsx` (11 ta yo'nalish) +
+      `components/shared/skeletons.tsx`
+
+Yo'lda qo'shildi: `/` klavish qisqartmasi (qidiruvga fokus — skaner ishi),
+`aria-live` status dialogida, tri-state «barchasini tanlash» checkbox,
+`role="radiogroup"` to'lov usullari va valyuta tanlashda.
 
 ### ☐ T16 · Bot sessiyasini Postgresga o'tkazish
 
@@ -749,11 +759,29 @@ flow o'rtasidagi foydalanuvchilar holatini yo'qotadi va >1 replikani bloklaydi.
 
 ## P3 — O'SISH VA RAQOBAT
 
-### ☐ T17 · Panelni ruscha qilish
+### ☑ T17 · Panelni ruscha qilish — **BAJARILDI** (2026-07-27)
 Toshkent kargolarida ofis xodimlari ko'pincha ruscha ishlaydi. Bot ikki tilli,
-panel emas — sotuvda e'tiroz bo'ladi.
-- [ ] Panel stringlarini `packages/shared/src/i18n/` ga ko'chirish
-- [ ] Admin tili `admin_users.lang` da saqlanadi
+panel emas edi — sotuvda e'tiroz bo'lardi.
+
+- [x] **next-intl** (v4), i18n routing**siz**: URL `/tracks` o'zgarmaydi,
+      til `NEXT_LOCALE` cookie'dan o'qiladi (`lib/locale.ts`, `i18n/request.ts`)
+- [x] Admin tili `admin_users.lang` da saqlanadi (migratsiya `0007`);
+      login cookie'ni shu ustundan qayta ekadi — yangi telefon/brauzerda ham
+      ruscha ochiladi
+- [x] Panel stringlari `apps/web/messages/{uz,ru}.json` da (13 namespace).
+      **`packages/shared/src/i18n/` ga ko'chirilmadi** — u yerdagi `Strings`
+      bot uchun, panelda ICU plural (ru: one/few/many) va next-intl kerak.
+      Ikkalasida ko'rinadigan lug'at (status nomlari, worklist, to'lov usuli,
+      Excel sarlavhalari) `packages/shared` da qoldi va locale bilan o'qiladi —
+      ikki nusxa bo'lsa, biri tahrirlanganda darhol ajralib ketadi
+- [x] Til almashtirgich: hisob menyusida + Sozlamalarda (`LanguageCard`).
+      Yorliqlar o'z tilida yozilgan (`O'zbekcha` / `Русский`) — tushunmaydigan
+      tilga tushib qolgan odam chiqish yo'lini topa olishi kerak
+- [x] Excel eksport ham admin tilida (sarlavha, status, to'lov usuli);
+      fayl nomi ASCII bo'lib qoladi (`treklar` / `treki`)
+- [x] `messages/messages.test.ts` — kalitlar parityi, ICU tekshiruvi va
+      placeholder mosligi (5 test). **`apps/web` uchun birinchi testlar** —
+      T24 ning poydevori
 
 ### ☐ T18 · Paneldan rasm yuklash
 Hozir faqat bot staff mode. Ofisdan tuzatish imkoni yo'q.
@@ -859,6 +887,36 @@ ushlab tura olmaydi. Doimiy qoplama — **T24**.
 
 **T21 hali ochiq.** Grafik olib tashlanmadi, faqat pastga surildi —
 o'chirish T21 ning qarori.
+
+### ☑ T25 · Bot UX — inline navigatsiya — **BAJARILDI** (2026-07-27)
+
+Bot to'g'ri ishlardi, lekin har bir natija «boshi berk ko'cha» edi: javob
+kelgandan keyin qayerga borishni faqat pastdagi reply klaviatura aytardi.
+SPEC.md §3.11 va §3.12 shu ish uchun yozildi.
+
+- [x] **Trek kartasi ro'yxatni o'rniga chiqadi** (`editMessageText`), o'zida
+      «⬅️ ro'yxatga» tugmasi bilan. Ilgari 5 ta trekni ochish chatda 11 ta
+      xabar qoldirardi va qaytgan ro'yxat eskirgan nusxa bo'lardi
+- [x] `🔄 Yangilash` — ro'yxatda ham, kartada ham; callback javobida
+      `Yangilandi` / `O'zgarish yo'q`
+- [x] **Har bir «keyingi xabarni yutadigan» promptda `❌ Bekor qilish`**
+      (trek qo'shish, kalkulyator vazni). Ilgari kalkulyator kutayotganda
+      yozilgan trek kodi jimgina vazn deb o'qilardi
+- [x] Kalkulyatorda qadam raqami: `1/2 · Tarifni tanlang` → `2/2 · Og'irlik`,
+      natijada `🧮 Qayta hisoblash`
+- [x] Natija xabarlarida yo'nalish qatorlari: qo'shish xulosasida
+      `➕ Yana qo'shish` / `📦 Yuklarim`, balansda `📦 Yuklarim`,
+      «tushunmadim» javobida `📦 / 💰 / ℹ️`
+- [x] `/help` + `help_card` — ro'yxatdan o'tgandan keyin avtomatik yuboriladi.
+      7 ta tugma bor edi, ularni tushuntiradigan hech narsa yo'q edi
+- [x] Til almashtirish endi ro'yxatdan o'tgan mijozni qaytadan
+      «xush kelibsiz» deb kutib olmaydi (`lang_choose`), tugmalar tozalanadi
+- [x] `📷` tugmasi — kartadagi ombor rasmi alohida xabar sifatida
+      (matnli xabarni rasmga aylantirib bo'lmaydi)
+- [x] `apps/bot/src/keyboards.test.ts` — 17 test: har bir tugmaning
+      `callback_data` si `registerHandlers` dagi regexlarga tushishini
+      tekshiradi. Bu ikkalasini bog'laydigan yagona joy — mos kelmasa,
+      tugma bosilganda abadiy aylanadi
 
 ### ☐ T20 · Telegram Mini App (raqobat uchun)
 Cargou'da bor, sizda yo'q. Bot yetadi, lekin demo taqqoslashda yutqazasiz.

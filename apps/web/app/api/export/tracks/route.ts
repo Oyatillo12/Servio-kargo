@@ -1,11 +1,14 @@
+import { getLocale } from 'next-intl/server';
 import { z } from 'zod';
 
 import {
+  EXPORT_FILE_BASE,
   EXPORT_MAX_ROWS,
   TRACK_STATUSES,
   TRACK_WORKLISTS,
   buildTracksSheet,
   truncationNotice,
+  type Lang,
 } from '@kargotrack/shared';
 
 import { requireAdmin } from '@/lib/auth';
@@ -32,6 +35,9 @@ const Query = z.object({
 
 export async function GET(req: Request) {
   const { tenant } = await requireAdmin();
+  // The spreadsheet leaves the building — an owner forwards it to an
+  // accountant — so it is written in the language the admin is working in.
+  const lang = (await getLocale()) as Lang;
 
   const params = new URL(req.url).searchParams;
   const { q, status, batch, work } = Query.parse({
@@ -50,7 +56,8 @@ export async function GET(req: Request) {
   });
 
   const sheet = buildTracksSheet(rows, {
-    notice: truncationNotice(total, EXPORT_MAX_ROWS),
+    lang,
+    notice: truncationNotice(total, EXPORT_MAX_ROWS, lang),
   });
-  return xlsxResponse(sheet, 'treklar');
+  return xlsxResponse(sheet, EXPORT_FILE_BASE[lang].tracks);
 }

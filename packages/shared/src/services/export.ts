@@ -87,6 +87,29 @@ export function exportFileName(base: string, at: Date): string {
   return `${base}-${tashkentDateKey(at)}.xlsx`;
 }
 
+/** The four exports the panel offers, keyed for {@link EXPORT_FILE_BASE}. */
+export type ExportKind = 'tracks' | 'customers' | 'debtors' | 'payments';
+
+/**
+ * Download-name stem per locale. Transliterated on purpose — `exportFileName`
+ * requires ASCII, so the Russian names are romanised rather than Cyrillic; the
+ * sheet inside is fully localised via {@link EXPORT_LABELS}.
+ */
+export const EXPORT_FILE_BASE: Record<Lang, Record<ExportKind, string>> = {
+  uz: {
+    tracks: 'treklar',
+    customers: 'mijozlar',
+    debtors: 'qarzdorlar',
+    payments: 'tolovlar',
+  },
+  ru: {
+    tracks: 'treki',
+    customers: 'klienty',
+    debtors: 'dolzhniki',
+    payments: 'platezhi',
+  },
+};
+
 // --- Labels (uz default, ru secondary — CLAUDE.md rule 5) -------------------
 
 interface ExportLabels {

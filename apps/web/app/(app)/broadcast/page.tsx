@@ -1,11 +1,16 @@
+import { getTranslations } from 'next-intl/server';
+
 import { formatDateTime } from '@kargotrack/shared';
 
 import { requireAdmin } from '@/lib/auth';
 import { listBroadcasts, listCustomerIdsWithTelegram } from '@/lib/queries';
+import { PageHeader } from '@/components/layout/page-header';
+import { BroadcastForm } from '@/features/broadcast/components/broadcast-form';
 
-import { BroadcastForm } from './broadcast-form';
-
-export const metadata = { title: 'Xabarnoma — SERVIO Kargo' };
+export async function generateMetadata() {
+  const t = await getTranslations('broadcast');
+  return { title: `${t('pageTitle')} — SERVIO Kargo` };
+}
 
 /** First 80 chars of the broadcast text, on a single line (SPEC §5.8 history). */
 function preview(text: string): string {
@@ -15,6 +20,7 @@ function preview(text: string): string {
 
 export default async function BroadcastPage() {
   const { tenant } = await requireAdmin();
+  const t = await getTranslations('broadcast');
 
   const [recipientIds, history] = await Promise.all([
     listCustomerIdsWithTelegram(tenant.id),
@@ -23,18 +29,18 @@ export default async function BroadcastPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <h1 className="text-xl font-bold text-foreground">Xabarnoma</h1>
+      <PageHeader title={t('pageTitle')} className="mb-0" />
 
       <BroadcastForm recipientCount={recipientIds.length} />
 
       <div>
         <h2 className="mb-2 text-[13.5px] font-semibold text-foreground">
-          Yuborilganlar tarixi
+          {t('historyTitle')}
         </h2>
         {history.length === 0 ? (
           <div className="rounded-xl border border-border bg-white p-8 text-center">
             <p className="text-[13px] text-muted-foreground">
-              Hali xabarnoma yuborilmagan.
+              {t('historyEmpty')}
             </p>
           </div>
         ) : (
@@ -49,7 +55,7 @@ export default async function BroadcastPage() {
                     {formatDateTime(b.createdAt)}
                   </span>
                   <span className="shrink-0 text-[11.5px] font-semibold text-primary">
-                    {b.sentCount} ta yuborildi
+                    {t('sentCount', { count: b.sentCount })}
                   </span>
                 </div>
                 <p className="mt-1 text-[13px] text-foreground">

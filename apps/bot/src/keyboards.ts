@@ -1,7 +1,8 @@
 /**
  * Keyboard builders. Reply keyboards for the main menu + phone request; inline
- * keyboards for language choice and My-tracks pagination. All labels come from
- * i18n (CLAUDE.md rule 5).
+ * keyboards for language choice, My-tracks navigation and the contextual
+ * "what now?" rows attached to result messages (SPEC §3.11). All labels come
+ * from i18n (CLAUDE.md rule 5).
  */
 
 import { InlineKeyboard, Keyboard } from 'grammy';
@@ -24,6 +25,7 @@ export function botCommands(s: Strings): BotCommand[] {
     { command: 'calc', description: s.commands.calc },
     { command: 'info', description: s.commands.info },
     { command: 'manzil', description: s.commands.manzil },
+    { command: 'help', description: s.commands.help },
   ];
 }
 
@@ -55,22 +57,44 @@ export function mainMenuKeyboard(s: Strings): Keyboard {
     .resized();
 }
 
+/**
+ * Single "cancel" row for a message that owns a pending prompt (SPEC §3.11).
+ *
+ * Multi-step flows used to have no exit: once the bot was waiting for a weight,
+ * anything the customer typed was read as an answer to that question, and the
+ * only escape was to notice the reply keyboard below and tap another section.
+ */
+export function cancelKeyboard(s: Strings): InlineKeyboard {
+  return new InlineKeyboard().text(s.nav.cancel, 'cancel');
+}
+
 /** Inline keyboard of active tariffs for the calculator (SPEC §3.9). */
-export function calcTariffsKeyboard(tariffs: Tariff[]): InlineKeyboard {
+export function calcTariffsKeyboard(
+  tariffs: Tariff[],
+  s: Strings,
+): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const tf of tariffs) kb.text(tf.name, `calc:${tf.id}`).row();
+  kb.text(s.nav.cancel, 'cancel');
   return kb;
+}
+
+/** After a calculation: run it again without re-opening the menu (§3.11). */
+export function calcResultKeyboard(s: Strings): InlineKeyboard {
+  return new InlineKeyboard().text(s.nav.recalc, 'calc:restart');
 }
 
 /**
  * My-tracks keyboard: one tappable button per track on the page (opens its full
  * status card via `track:{id}`), then a ◀️ / ▶️ pagination row when there is
- * more than one page.
+ * more than one page, and a refresh so a customer waiting on a delivery can
+ * re-check without retyping anything.
  */
 export function myTracksKeyboard(
   slice: Track[],
   page: number,
   pages: number,
+  s: Strings,
 ): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const track of slice) {
@@ -82,6 +106,50 @@ export function myTracksKeyboard(
   if (pages > 1) {
     if (page > 1) kb.text('◀️', `mytracks:${page - 1}`);
     if (page < pages) kb.text('▶️', `mytracks:${page + 1}`);
+    kb.row();
   }
+  kb.text(s.nav.refresh, `mytracks:${page}:refresh`);
   return kb;
+}
+
+/**
+ * Actions under a track's status card (SPEC §3.11).
+ *
+ * `fromPage` is set when the card replaced a My-tracks listing in place: the
+ * back button restores that exact page, so opening five parcels in a row costs
+ * one message instead of eleven.
+ */
+export function trackCardKeyboard(
+  s: Strings,
+  trackId: string,
+  fromPage?: number,
+): InlineKeyboard {
+  const kb = new InlineKeyboard().text(s.nav.refresh, `track:${trackId}:refresh`);
+  if (fromPage != null) kb.text(s.nav.backToList, `mytracks:${fromPage}`);
+  return kb;
+}
+
+/** "Where next?" row under the add-track summary (SPEC §3.11). */
+export function addSummaryKeyboard(s: Strings): InlineKeyboard {
+  return new InlineKeyboard()
+    .text(s.nav.addMore, 'addmore')
+    .text(s.nav.myTracks, 'mytracks:1');
+}
+
+/** "Where next?" row under the balance card (SPEC §3.11). */
+export function balanceKeyboard(s: Strings): InlineKeyboard {
+  return new InlineKeyboard().text(s.nav.myTracks, 'mytracks:1');
+}
+
+/**
+ * Shortcut row under the "I didn't understand that" fallback (SPEC §3.11).
+ * A confused customer is exactly the one who will not go hunting through a
+ * reply keyboard, so the two things they most likely wanted are one tap away.
+ */
+export function helpFallbackKeyboard(s: Strings): InlineKeyboard {
+  return new InlineKeyboard()
+    .text(s.nav.myTracks, 'mytracks:1')
+    .text(s.nav.balance, 'balance')
+    .row()
+    .text(s.commands.help, 'help');
 }

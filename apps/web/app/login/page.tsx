@@ -1,31 +1,34 @@
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 
 import { getSessionAdmin } from '@/lib/auth';
-import { RouteDots, Wordmark } from '@/components/brand';
+import { RouteDots, Wordmark } from '@/components/layout/brand';
+import { LoginForm } from '@/features/auth/components/login-form';
 
-import { LoginForm } from './login-form';
-
-export const metadata = { title: 'Kirish — SERVIO Kargo' };
+export async function generateMetadata() {
+  const t = await getTranslations('auth');
+  return { title: `${t('pageTitle')} — SERVIO Kargo` };
+}
 
 export default async function LoginPage() {
   // Already signed in → straight to the panel.
   if (await getSessionAdmin()) redirect('/dashboard');
+
+  const t = await getTranslations('auth');
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-7 px-5 py-10">
       <div className="flex flex-col items-center gap-2.5 text-center">
         <Wordmark className="h-9" />
         <RouteDots />
-        <p className="text-[13px] text-muted-foreground">
-          Xitoy → O&apos;zbekiston kargo boshqaruvi
-        </p>
+        <p className="text-[13px] text-muted-foreground">{t('tagline')}</p>
       </div>
 
       <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-5 shadow-sm">
         <LoginForm />
       </div>
 
-      <p className="text-[11px] text-muted-foreground">SERVIO Kargo admin panel</p>
+      <p className="text-[11px] text-muted-foreground">{t('footer')}</p>
     </main>
   );
 }

@@ -2,9 +2,14 @@
  * Status badge styling for the admin panel. Labels + emoji come from the
  * canonical `STATUS_META` in `@kargotrack/shared` (SPEC §2); the Tailwind colour
  * classes here mirror the SERVIO Kargo design system (design screen 17).
+ *
+ * Status names are deliberately NOT duplicated into `messages/{uz,ru}.json`:
+ * they are domain vocabulary the bot sends to customers too, and two copies
+ * would drift the moment one side is edited. The panel passes its next-intl
+ * locale in and reads the same table the bot does.
  */
 
-import { STATUS_META, type TrackStatus } from '@kargotrack/shared';
+import { STATUS_META, type Lang, type TrackStatus } from '@kargotrack/shared';
 
 /** Tailwind bg/text/border classes per status (colored badge, SPEC §5.2). */
 const STATUS_CLASS: Record<TrackStatus, string> = {
@@ -37,11 +42,16 @@ export interface StatusView {
   dot: string;
 }
 
-export function statusView(status: TrackStatus): StatusView {
+export function statusView(status: TrackStatus, lang: Lang): StatusView {
   return {
-    label: STATUS_META[status].uz,
+    label: STATUS_META[status][lang],
     emoji: STATUS_META[status].emoji,
     className: STATUS_CLASS[status],
     dot: STATUS_DOT[status],
   };
+}
+
+/** `📦 Xitoy omborida` — the emoji + label pairing used in every status picker. */
+export function statusOptionLabel(status: TrackStatus, lang: Lang): string {
+  return `${STATUS_META[status].emoji} ${STATUS_META[status][lang]}`;
 }

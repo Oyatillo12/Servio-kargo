@@ -1,27 +1,37 @@
+import { getTranslations } from 'next-intl/server';
+
 import { formatSom, formatUsd } from '@kargotrack/shared';
 
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { requireAdmin } from '@/lib/auth';
 import { listTariffs } from '@/lib/queries';
 import { getWebhookInfo } from '@/lib/telegram';
+import { CurrencyCard } from '@/features/settings/components/currency-card';
+import { LanguageCard } from '@/features/settings/components/language-card';
+import { SettingsForm } from '@/features/settings/components/settings-form';
+import {
+  TariffsCard,
+  type TariffView,
+} from '@/features/settings/components/tariffs-card';
 
-import { CurrencyCard } from './currency-card';
-import { SettingsForm } from './settings-form';
-import { TariffsCard, type TariffView } from './tariffs-card';
-
-export const metadata = { title: 'Sozlamalar — SERVIO Kargo' };
+export async function generateMetadata() {
+  const t = await getTranslations('settings');
+  return { title: `${t('pageTitle')} — SERVIO Kargo` };
+}
 
 export default async function SettingsPage() {
   const { tenant } = await requireAdmin();
+  const t = await getTranslations('settings');
+  const tCommon = await getTranslations('common');
 
-  // Live webhook state for the Ulangan/Uzilgan indicator (SPEC §5.7). Never
-  // throws — a bad/placeholder token just reads as "Uzilgan".
+  // Live webhook state for the connected/disconnected indicator (SPEC §5.7).
+  // Never throws — a bad/placeholder token just reads as "disconnected".
   const info = await getWebhookInfo(tenant.botToken);
   const webhookConnected = info.ok && !!info.data.url;
 
   const settings = tenant.settings;
   const isUsd = tenant.currency === 'USD';
-  const unitLabel = isUsd ? '$/kg' : "so'm/kg";
+  const unitLabel = isUsd ? `$/${tCommon('kg')}` : `${tCommon('som')}/${tCommon('kg')}`;
 
   const tariffRows = await listTariffs(tenant.id);
   const tariffs: TariffView[] = tariffRows.map((tf) => ({
@@ -30,8 +40,8 @@ export default async function SettingsPage() {
     isDefault: tf.isDefault,
     active: tf.active,
     priceText: isUsd
-      ? `${formatUsd(tf.pricePerKgMinor)}/kg`
-      : `${formatSom(tf.pricePerKgMinor)} so'm/kg`,
+      ? `${formatUsd(tf.pricePerKgMinor)}/${tCommon('kg')}`
+      : `${formatSom(tf.pricePerKgMinor)} ${unitLabel}`,
     editValue: isUsd
       ? String(tf.pricePerKgMinor / 100)
       : String(Math.round(tf.pricePerKgMinor / 100)),
@@ -39,7 +49,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-3">
-      <PageHeader title="Sozlamalar" className="mb-0" />
+      <PageHeader title={t('pageTitle')} className="mb-0" />
 
       <div className="space-y-3 md:grid md:grid-cols-2 md:items-start md:gap-3 md:space-y-0">
         <TariffsCard tariffs={tariffs} unitLabel={unitLabel} />
@@ -49,6 +59,7 @@ export default async function SettingsPage() {
             tenant.usdRateTiyin != null ? formatSom(tenant.usdRateTiyin) : ''
           }
         />
+        <LanguageCard />
       </div>
 
       <SettingsForm

@@ -34,6 +34,13 @@ export async function langCallback(ctx: KargoContext): Promise<void> {
     // Language switch for an existing customer — persist + re-render the menu.
     await setCustomerLang(ctx.customer.id, lang);
     ctx.customer = { ...ctx.customer, lang };
+    // Drop the language buttons from the message that offered them: leaving
+    // them live invites a second tap that would look like it did nothing.
+    try {
+      await ctx.editMessageReplyMarkup({ reply_markup: undefined });
+    } catch {
+      // The picker came from a message we can no longer edit — harmless.
+    }
     await ctx.reply(s.langSwitched, { reply_markup: mainMenuKeyboard(s) });
     return;
   }
@@ -79,4 +86,8 @@ export async function contactHandler(ctx: KargoContext): Promise<void> {
   await ctx.reply(s.registered(customer.clientCode), {
     reply_markup: mainMenuKeyboard(s),
   });
+  // …and immediately follow with the one-message tour. A brand-new customer is
+  // looking at seven unexplained buttons; this is the cheapest moment to say
+  // what they do (§3.12).
+  await ctx.reply(s.helpCard);
 }
