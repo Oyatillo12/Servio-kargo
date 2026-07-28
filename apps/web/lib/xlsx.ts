@@ -8,29 +8,66 @@ import 'server-only';
 
 import * as XLSX from 'xlsx';
 
-import type { ExportSheet } from '@kargotrack/shared';
+import {
+  MAX_CELL_LENGTH,
+  MAX_IMPORT_COLUMNS,
+  MAX_IMPORT_ROWS,
+  type ExportSheet,
+} from '@kargotrack/shared';
 
-/** Read an .xlsx buffer and return all non-empty cell values as strings. */
-export function readXlsxCandidates(buffer: Buffer): string[] {
+export interface XlsxGrid {
+  /** Row-major cells, trimmed strings, blanks kept so row numbers stay true. */
+  rows: string[][];
+  /** Sheet the grid was read from — shown so the admin can spot a wrong tab. */
+  sheetName: string;
+  /** True when the file had more rows than {@link MAX_IMPORT_ROWS}. */
+  truncated: boolean;
+}
+
+/**
+ * Read an .xlsx buffer as a GRID (SPEC §5.4 column mapping), not as a bag of
+ * cells: the mapping step needs to know which column a value sat in.
+ *
+ * Cells are read formatted (`raw: false`) so a code stored as a number comes
+ * back as `775123456789` rather than `7.75123e+11`, and `1,5` keeps the
+ * separator the file showed. Blank rows are KEPT so a row number in the preview
+ * matches the row number in Excel; trailing blank rows are trimmed.
+ *
+ * Only the first sheet that holds data is read — a workbook's second tab is
+ * almost always last month's flight, and importing it silently would be worse
+ * than ignoring it.
+ */
+export function readXlsxGrid(buffer: Buffer): XlsxGrid {
   const wb = XLSX.read(buffer, { type: 'buffer' });
-  const out: string[] = [];
+
   for (const sheetName of wb.SheetNames) {
     const sheet = wb.Sheets[sheetName];
     if (!sheet) continue;
-    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
       header: 1,
-      blankrows: false,
+      blankrows: true,
       defval: '',
+      raw: false,
     });
-    for (const row of rows) {
-      for (const cell of row) {
-        if (cell == null) continue;
-        const str = String(cell).trim();
-        if (str) out.push(str);
-      }
+
+    const rows: string[][] = raw
+      .slice(0, MAX_IMPORT_ROWS)
+      .map((row) =>
+        (row ?? [])
+          .slice(0, MAX_IMPORT_COLUMNS)
+          .map((cell) =>
+            cell == null ? '' : String(cell).trim().slice(0, MAX_CELL_LENGTH),
+          ),
+      );
+    while (rows.length > 0 && rows[rows.length - 1]!.every((c) => c === '')) {
+      rows.pop();
     }
+    if (rows.length === 0) continue;
+
+    return { rows, sheetName, truncated: raw.length > MAX_IMPORT_ROWS };
   }
-  return out;
+
+  return { rows: [], sheetName: '', truncated: false };
 }
 
 // --- Export (AUDIT.md T2) ---------------------------------------------------
@@ -64,7 +101,9 @@ export function writeXlsx(sheets: readonly ExportSheet[]): Buffer {
     // A capped export says so in the file itself, one blank row below the data.
     if (sheet.notice) aoa.push([], [sheet.notice]);
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = columnWidths(sheet.header, sheet.rows).map((wch) => ({ wch }));
+    ws['!cols'] = columnWidths(sheet.header, sheet.rows).map((wch) => ({
+      wch,
+    }));
     // Header filter dropdowns — the owner's first move is "show me only
     // Topshirildi". Covers the data rows only, never the notice row.
     ws['!autofilter'] = {

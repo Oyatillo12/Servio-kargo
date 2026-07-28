@@ -313,12 +313,30 @@ two copies would drift the moment one side is edited.
   the common case that the owner is not in the system yet.
   Assignment events appear in the timeline as `Mijozga biriktirildi` /
   `Mijozdan ajratildi` / `Mijoz o'zgartirildi`, not as a status.
-- **5.4 /import** — 3 steps:
-  1. Upload `.xlsx` OR paste raw text (textarea).
-  2. Preview: counts + expandable lists — `Yangi: {n}`, `Yangilanadi: {n}`
-     (already in DB), `Xato qator: {n}` (skipped). Status select applied to
-     all + OPTIONAL `Reys` select (attach all imported tracks to a batch).
-  3. Apply → result: created / updated / `{M} ta xabar navbatga qo'yildi`.
+- **5.4 /import** — 4 steps:
+  1. Upload `.xlsx` OR paste raw text (textarea). Text pasted WITH tabs is read
+     as columns (copy out of Excel); without tabs it stays one code per line.
+  2. **Ustunlar** — column mapping. A cargo Excel is a table, not a bag of
+     codes: the admin binds each column to `Trek kodi` (majburiy), `Mijoz`,
+     `Vazn (kg)` and `Narx (so'm)`, with a `Birinchi qator — sarlavha` toggle
+     and a 6-row sample of the file. The layout is GUESSED first (header
+     keywords in uz/ru/en, and the code column verified against the data), so
+     the usual file needs no touching. Only the fields the role may write are
+     offered (`tracks.assign` for the owner column, `tracks.weigh` for kg and
+     price — rule 9, enforced server-side too).
+  3. Preview: counts + expandable lists — `Yangi: {n}`, `Yangilanadi: {n}`
+     (already in DB), `Xato qator: {n}` (skipped), plus, when those columns are
+     mapped, `Mijozga biriktiriladi: {n}`, `Mijoz topilmadi: {n}`,
+     `Vazn kiritiladi: {n}`, `Narx kiritiladi: {n}` and the kg/price cells that
+     could not be read. Every count describes what will CHANGE, not what the
+     file holds (see 7.2). Status select applied to all + OPTIONAL `Reys`
+     select (attach all imported tracks to a batch).
+  4. Apply → result: created / updated / attached / filled /
+     `{M} ta xabar navbatga qo'yildi`.
+
+  The file (or the pasted text) is re-sent at every step and re-parsed
+  server-side; the browser never hands back a list of rows to write. Capped at
+  10 000 rows and 12 columns per run.
 - **5.5 /customers** — search; columns: Kod, Ism, Telefon, Treklar, Qarz
   (red if > 0). Header carries `⬇️ Excel` (5.11). Paged 20 per page like
   /tracks, with search and page carried together in the URL; the header count
@@ -490,6 +508,29 @@ default tariff + owner.
   chosen status. Backward status moves are allowed (mistake correction) and
   logged like any change. If a batch was selected, set batch_id on ALL rows
   in the import (new and existing).
+  **Mapped columns (5.4) FILL EMPTY FIELDS ONLY.** A new track takes the
+  owner, kg and price the file gives it. An existing track takes only what it
+  is missing: a parcel already weighed on the Tashkent scales, already priced,
+  or already attached to a customer is never overwritten by a file — the
+  warehouse is the source of truth for what it measured, and re-importing
+  yesterday's Excel must not undo today's work. A row therefore counts as
+  `Yangilanadi` when its status, its batch **or** one of those empty fields
+  changes.
+  - The owner cell is matched in one order: `client_code` → phone (7.12 key) →
+    full name. A name several customers answer to is reported as ambiguous and
+    left UNATTACHED — a parcel on the wrong Alisher is a bill to the wrong
+    person. A cell nobody matches is listed in the preview; the track is
+    imported without an owner and attached by hand later (5.2 `?work=`).
+  - Attaching an owner during an import appends the 7.3 assignment event and
+    sends NOTHING, exactly as a panel assignment does.
+  - A price in the file is stored as a MANUAL price (`price_manual = true`,
+    7.4): it is the sum the company agreed, not something kg × tariff can
+    reproduce. Without a price column, kg × default tariff is computed as at
+    weighing time, freezing `usd_rate_used` for USD tenants. A `$` amount is
+    refused rather than guessed — the stored price is always so'm.
+  - An unreadable kg/price cell is a WARNING, not a rejection: the parcel still
+    enters the system, and one weight is fixed afterwards more easily than a
+    file is re-cut. Only an unusable track code drops a row.
 - **7.3 Claiming & admin assignment:** track with `customer_id IS NULL` →
   attach to the claiming customer. Attached to someone else → refuse (see
   4.3). Codes are unique per tenant, collisions across tenants are fine.

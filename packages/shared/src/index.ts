@@ -143,6 +143,32 @@ export {
   type ImportSplit,
   type ChannelExtractResult,
 } from './services/import';
+// Column-mapped import: code + customer + kg + price (SPEC §5.4)
+export {
+  IMPORT_FIELDS,
+  MAX_IMPORT_ROWS,
+  MAX_IMPORT_COLUMNS,
+  MAX_CELL_LENGTH,
+  parseImportWeight,
+  parseImportPrice,
+  isBlankCell,
+  clientCodeKey,
+  customerNameKey,
+  customerRefKeys,
+  detectImportLayout,
+  classifyMappedRows,
+  planImportPricing,
+  type ImportField,
+  type ColumnMapping,
+  type CustomerRefKeys,
+  type DetectedLayout,
+  type CellWarning,
+  type MalformedRow,
+  type MappedImportRow,
+  type MappedParseResult,
+  type ImportPriceFields,
+  type ImportPricingContext,
+} from './services/importMapping';
 export {
   NOTIFY_QUEUE,
   notifyDedupeKey,

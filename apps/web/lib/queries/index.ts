@@ -18,6 +18,7 @@ export * from './track-pricing';
 export * from './track-mutations';
 export * from './exports';
 export * from './customers';
+export * from './customer-refs';
 export * from './settings';
 export * from './tariffs';
 export * from './broadcasts';

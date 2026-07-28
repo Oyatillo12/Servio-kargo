@@ -1,67 +1,173 @@
 /**
- * Track-code import (SPEC §5.4, §7.2).
+ * Track-code import (SPEC §5.4, §7.2, §7.3, §7.4).
+ *
+ * An import row can now carry more than a code: an owner, a weight and an
+ * agreed price (column mapping, §5.4). The extra columns follow one rule —
+ * **fill empty fields only**. A track already weighed on the Tashkent scales,
+ * or already attached to a customer, is never overwritten by a file: the
+ * warehouse is the source of truth for what it measured, and a re-imported
+ * yesterday's Excel must not undo today's work.
  */
 
 import 'server-only';
 
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import { enqueueNotifications } from '@kargotrack/db/queue';
-import { trackEvents, tracks } from '@kargotrack/db/schema';
+import { tenants, trackEvents, tracks } from '@kargotrack/db/schema';
 import {
   BULK_CHUNK,
   chunked,
+  planAssignCustomer,
+  planImportPricing,
   planStatusChange,
+  type AssignEventMeta,
   type ImportCode,
+  type ImportPricingContext,
   type TrackStatus,
 } from '@kargotrack/shared';
 
+import { getDefaultTariff } from './tariffs';
+
+/** What an existing track already holds — the fill-empty rule reads this. */
+export interface ImportTarget {
+  hasCustomer: boolean;
+  hasWeight: boolean;
+  hasPrice: boolean;
+}
+
 /**
- * Which of `normalizedCodes` already exist for this tenant. Includes
- * soft-deleted rows because the (tenant_id, code_normalized) unique index does
- * — so the preview split matches what upsert can actually do (§7.2).
+ * Which of `normalizedCodes` already exist for this tenant, and which of the
+ * mapped fields they already hold. Includes soft-deleted rows because the
+ * (tenant_id, code_normalized) unique index does — so the preview split matches
+ * what upsert can actually do (§7.2).
+ *
+ * The preview and the write share this so the numbers an admin confirms are the
+ * numbers they get: a file that names an owner for 500 parcels attaches it to
+ * the 200 that have none, and the preview says 200, not 500.
  */
-export async function getExistingNormalizedCodes(
+export async function getImportTargets(
   tenantId: string,
   normalizedCodes: string[],
-): Promise<Set<string>> {
-  if (normalizedCodes.length === 0) return new Set();
-  const rows = await getDb()
-    .select({ code: tracks.codeNormalized })
-    .from(tracks)
-    .where(
-      and(
-        eq(tracks.tenantId, tenantId),
-        inArray(tracks.codeNormalized, normalizedCodes),
-      ),
-    );
-  return new Set(rows.map((r) => r.code));
+): Promise<Map<string, ImportTarget>> {
+  const found = new Map<string, ImportTarget>();
+  if (normalizedCodes.length === 0) return found;
+
+  for (const chunk of chunked(normalizedCodes, BULK_CHUNK)) {
+    const rows = await getDb()
+      .select({
+        code: tracks.codeNormalized,
+        customerId: tracks.customerId,
+        weightGrams: tracks.weightGrams,
+        priceTiyin: tracks.priceTiyin,
+      })
+      .from(tracks)
+      .where(
+        and(
+          eq(tracks.tenantId, tenantId),
+          inArray(tracks.codeNormalized, chunk),
+        ),
+      );
+    for (const row of rows) {
+      found.set(row.code, {
+        hasCustomer: row.customerId != null,
+        hasWeight: row.weightGrams != null,
+        hasPrice: row.priceTiyin != null,
+      });
+    }
+  }
+  return found;
+}
+
+/** The pricing inputs an import needs, loaded once per run (§7.4). */
+export async function getImportPricingContext(
+  tenantId: string,
+): Promise<ImportPricingContext> {
+  const db = getDb();
+  const [tenant] = await db
+    .select({ currency: tenants.currency, usdRateTiyin: tenants.usdRateTiyin })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+  const tariff = await getDefaultTariff(tenantId);
+
+  return {
+    currency: tenant?.currency ?? 'UZS',
+    usdRateTiyin: tenant?.usdRateTiyin ?? null,
+    tariff: tariff
+      ? { id: tariff.id, pricePerKgMinor: tariff.pricePerKgMinor }
+      : null,
+  };
+}
+
+/** One import row: the code plus whatever the mapped columns supplied. */
+export interface ImportRow extends ImportCode {
+  /** Resolved owner, or null when the file had no owner column / no match. */
+  customerId?: string | null;
+  weightGrams?: number | null;
+  /** Agreed so'm price from the file (tiyin) — a manual override (§7.4). */
+  priceTiyin?: number | null;
 }
 
 export interface ImportResult {
   created: number;
   updated: number;
   queued: number;
+  /** Tracks that gained an owner (new or previously unattached). */
+  assigned: number;
+  /** Tracks that gained a weight and/or a price. */
+  enriched: number;
+}
+
+/** Enrichment write for one existing row; `null` fields are left untouched. */
+interface EnrichWrite {
+  id: string;
+  customerId: string | null;
+  weightGrams: number | null;
+  priceTiyin: number | null;
+  priceUsdCents: number | null;
+  usdRateUsed: number | null;
+  tariffId: string | null;
+  priceManual: boolean | null;
 }
 
 /**
- * Apply an import: upsert each code to `status` and append audit events (§7.2).
- * Existing rows only change (+ event + notify) when the status actually differs
- * or the row was soft-deleted (revived); same-status rows are no-ops (§2).
+ * Apply an import: upsert each code to `status`, fill the mapped columns and
+ * append audit events (§7.2). Existing rows only change status (+ event +
+ * notify) when the status actually differs or the row was soft-deleted
+ * (revived); same-status rows are no-ops (§2) — but they still accept a batch
+ * and still accept values for fields they are missing.
+ *
  * Every status change on an attached, non-deleted track enqueues a notification
- * (§4.2). New (unclaimed) tracks never notify.
+ * (§4.2). New (unclaimed) tracks never notify, and an ownership change never
+ * notifies at all (§7.3) — a day-0 import that attaches 500 historical parcels
+ * must not blast 500 "your parcel is ready" messages.
  */
 export async function applyImport(
   tenantId: string,
   status: TrackStatus,
-  codes: ImportCode[],
+  codes: ImportRow[],
   createdBy: string,
   batchId: string | null = null,
 ): Promise<ImportResult> {
   const db = getDb();
-  const result: ImportResult = { created: 0, updated: 0, queued: 0 };
+  const result: ImportResult = {
+    created: 0,
+    updated: 0,
+    queued: 0,
+    assigned: 0,
+    enriched: 0,
+  };
   if (codes.length === 0) return result;
+
+  // Only load tariff/currency when a row actually carries kg or a price.
+  const needsPricing = codes.some(
+    (c) => c.weightGrams != null || c.priceTiyin != null,
+  );
+  const pricing: ImportPricingContext = needsPricing
+    ? await getImportPricingContext(tenantId)
+    : { currency: 'UZS', usdRateTiyin: null, tariff: null };
 
   // Enqueued only AFTER the transaction commits: pg-boss writes through its own
   // connection, so a job sent mid-transaction would survive a rollback and
@@ -70,25 +176,41 @@ export async function applyImport(
 
   // All writes in one transaction — an import either fully applies or not at all.
   await db.transaction(async (tx) => {
-    // Preload existing rows for this batch in one query.
-    const existingRows = await tx
-      .select({
-        id: tracks.id,
-        codeNormalized: tracks.codeNormalized,
-        currentStatus: tracks.currentStatus,
-        customerId: tracks.customerId,
-        deletedAt: tracks.deletedAt,
-      })
-      .from(tracks)
-      .where(
-        and(
-          eq(tracks.tenantId, tenantId),
-          inArray(
-            tracks.codeNormalized,
-            codes.map((c) => c.normalized),
+    // Preload existing rows for this batch in one query per chunk.
+    const existingRows: Array<{
+      id: string;
+      codeNormalized: string;
+      currentStatus: TrackStatus;
+      customerId: string | null;
+      deletedAt: Date | null;
+      weightGrams: number | null;
+      priceTiyin: number | null;
+      tariffId: string | null;
+    }> = [];
+    for (const chunk of chunked(
+      codes.map((c) => c.normalized),
+      BULK_CHUNK,
+    )) {
+      const rows = await tx
+        .select({
+          id: tracks.id,
+          codeNormalized: tracks.codeNormalized,
+          currentStatus: tracks.currentStatus,
+          customerId: tracks.customerId,
+          deletedAt: tracks.deletedAt,
+          weightGrams: tracks.weightGrams,
+          priceTiyin: tracks.priceTiyin,
+          tariffId: tracks.tariffId,
+        })
+        .from(tracks)
+        .where(
+          and(
+            eq(tracks.tenantId, tenantId),
+            inArray(tracks.codeNormalized, chunk),
           ),
-        ),
-      );
+        );
+      existingRows.push(...rows);
+    }
     const existingByCode = new Map(
       existingRows.map((r) => [r.codeNormalized, r]),
     );
@@ -101,37 +223,87 @@ export async function applyImport(
       const inserted = await tx
         .insert(tracks)
         .values(
-          chunk.map((code) => ({
-            tenantId,
-            codeNormalized: code.normalized,
-            codeOriginal: code.original,
-            currentStatus: status,
-            batchId,
-          })),
+          chunk.map((code) => {
+            const price = planImportPricing(
+              {
+                weightGrams: code.weightGrams ?? null,
+                priceTiyin: code.priceTiyin ?? null,
+              },
+              pricing,
+            );
+            return {
+              tenantId,
+              codeNormalized: code.normalized,
+              codeOriginal: code.original,
+              currentStatus: status,
+              batchId,
+              customerId: code.customerId ?? null,
+              weightGrams: price?.weightGrams ?? null,
+              priceTiyin: price?.priceTiyin ?? null,
+              priceUsdCents: price?.priceUsdCents ?? null,
+              usdRateUsed: price?.usdRateUsed ?? null,
+              tariffId: price?.tariffId ?? null,
+              priceManual: price?.priceManual ?? false,
+            };
+          }),
         )
         .onConflictDoNothing({
           target: [tracks.tenantId, tracks.codeNormalized],
         })
-        .returning({ id: tracks.id });
+        .returning({ id: tracks.id, codeNormalized: tracks.codeNormalized });
+
       if (inserted.length > 0) {
+        const byCode = new Map(chunk.map((c) => [c.normalized, c]));
         await tx.insert(trackEvents).values(
-          inserted.map((t) => ({
-            trackId: t.id,
-            status,
-            meta: { source: 'import' },
-            createdBy,
-          })),
+          inserted.map((t) => {
+            const row = byCode.get(t.codeNormalized);
+            return {
+              trackId: t.id,
+              status,
+              // One event for a created track: the import that created it. The
+              // owner/kg it arrived with are part of that same act, so they ride
+              // in `meta` instead of becoming separate audit rows.
+              meta: {
+                source: 'import',
+                ...(row?.customerId ? { customerId: row.customerId } : {}),
+                ...(row?.weightGrams != null
+                  ? { weightGrams: row.weightGrams }
+                  : {}),
+                ...(row?.priceTiyin != null
+                  ? { priceTiyin: row.priceTiyin }
+                  : {}),
+              },
+              createdBy,
+            };
+          }),
         );
+        for (const t of inserted) {
+          const row = byCode.get(t.codeNormalized);
+          if (row?.customerId) result.assigned++;
+          if (row?.weightGrams != null || row?.priceTiyin != null) {
+            result.enriched++;
+          }
+        }
       }
       result.created += inserted.length;
-      // new tracks are unclaimed → no notification
+      // A created track never notifies — not even one the file attached to an
+      // owner. §7.3: attaching is not a status change, and a day-0 import of
+      // historical parcels would otherwise message every customer at once.
     }
 
     // Existing codes → plan each row, then group ids by identical SET so every
-    // group is one bulk UPDATE instead of a per-row round trip.
+    // group is one bulk UPDATE instead of a per-row round trip. Per-row values
+    // (owner, kg, price) cannot share a SET, so they go through one
+    // `UPDATE … FROM (VALUES …)` per chunk instead.
     const writeIds: string[] = []; // status change and/or revive
     const batchOnlyIds: string[] = []; // §7.2 batch attach on a §2 no-op row
     const eventIds: string[] = [];
+    const enrich: EnrichWrite[] = [];
+    const assignEvents: Array<{
+      trackId: string;
+      status: TrackStatus;
+      meta: AssignEventMeta;
+    }> = [];
 
     for (const code of codes) {
       const existing = existingByCode.get(code.normalized);
@@ -143,18 +315,94 @@ export async function applyImport(
         customerId: existing.customerId,
         wasDeleted: existing.deletedAt != null,
       });
+
+      // --- Fill-empty enrichment (§5.4 mapping) ---------------------------
+      // Never reassign from a file: an owner already on the track wins, so the
+      // only ownership move an import can make is `attach`.
+      const fillCustomerId =
+        existing.customerId == null ? (code.customerId ?? null) : null;
+
+      const fillWeight =
+        existing.weightGrams == null ? (code.weightGrams ?? null) : null;
+      let fillPrice: number | null = null;
+      let fillUsdCents: number | null = null;
+      let fillRate: number | null = null;
+      let fillTariffId: string | null = null;
+      let fillManual: boolean | null = null;
+
+      if (existing.priceTiyin == null) {
+        if (code.priceTiyin != null) {
+          // An agreed price from the file is a manual price (§7.4).
+          fillPrice = code.priceTiyin;
+          fillManual = true;
+          if (
+            existing.tariffId == null &&
+            (fillWeight ?? existing.weightGrams) != null
+          ) {
+            fillTariffId = pricing.tariff?.id ?? null;
+          }
+        } else if (fillWeight != null) {
+          const price = planImportPricing(
+            { weightGrams: fillWeight, priceTiyin: null },
+            pricing,
+          );
+          if (price) {
+            fillPrice = price.priceTiyin;
+            fillUsdCents = price.priceUsdCents;
+            fillRate = price.usdRateUsed;
+            if (existing.tariffId == null) fillTariffId = price.tariffId;
+          }
+        }
+      }
+
+      const hasEnrichment =
+        fillCustomerId != null || fillWeight != null || fillPrice != null;
+      if (hasEnrichment) {
+        enrich.push({
+          id: existing.id,
+          customerId: fillCustomerId,
+          weightGrams: fillWeight,
+          priceTiyin: fillPrice,
+          priceUsdCents: fillUsdCents,
+          usdRateUsed: fillRate,
+          tariffId: fillTariffId,
+          priceManual: fillManual,
+        });
+        if (fillCustomerId != null) {
+          result.assigned++;
+          // §7.3: an ownership change is its own audit row, carrying the
+          // track's status (the column is NOT NULL) — `meta.action` is what
+          // marks it as an assignment rather than a status move. The meta comes
+          // from the shared planner so the panel's and the import's assignment
+          // rows can never drift apart.
+          const assign = planAssignCustomer({
+            currentCustomerId: null,
+            newCustomerId: fillCustomerId,
+          });
+          assignEvents.push({
+            trackId: existing.id,
+            status: plan.willWrite ? status : existing.currentStatus,
+            meta: assign.eventMeta!,
+          });
+        }
+        if (fillWeight != null || fillPrice != null) result.enriched++;
+      }
+
       // §7.2: a selected batch attaches to ALL rows, even ones whose status is
       // a §2 no-op. Skip only when there is nothing at all to write.
       if (plan.willWrite) writeIds.push(existing.id);
       else if (batchId != null) batchOnlyIds.push(existing.id);
-      else continue;
+      else if (!hasEnrichment) continue;
 
-      // §2: only a real status change appends an event.
+      // §2: only a real status change appends a status event.
       if (plan.willEvent) eventIds.push(existing.id);
       result.updated += 1;
 
       if (plan.willNotify) {
-        toNotify.push({ trackId: existing.id, customerId: existing.customerId! });
+        toNotify.push({
+          trackId: existing.id,
+          customerId: existing.customerId!,
+        });
       }
     }
 
@@ -169,12 +417,50 @@ export async function applyImport(
     for (const chunk of chunked(batchOnlyIds, BULK_CHUNK)) {
       await tx.update(tracks).set({ batchId }).where(inArray(tracks.id, chunk));
     }
+
+    // Per-row fills in one statement per chunk. `COALESCE(v.x, t.x)` is the
+    // fill-empty rule in SQL: a NULL in the VALUES list means "leave alone",
+    // and the planning above already refused to produce a value for a column
+    // that was occupied.
+    for (const chunk of chunked(enrich, BULK_CHUNK)) {
+      const values = sql.join(
+        chunk.map(
+          (r) =>
+            sql`(${r.id}::uuid, ${r.customerId}::uuid, ${r.weightGrams}::integer, ${r.priceTiyin}::bigint, ${r.priceUsdCents}::bigint, ${r.usdRateUsed}::bigint, ${r.tariffId}::uuid, ${r.priceManual}::boolean)`,
+        ),
+        sql`, `,
+      );
+      await tx.execute(sql`
+        UPDATE ${tracks} AS t SET
+          customer_id = COALESCE(v.customer_id, t.customer_id),
+          weight_grams = COALESCE(v.weight_grams, t.weight_grams),
+          price_tiyin = COALESCE(v.price_tiyin, t.price_tiyin),
+          price_usd_cents = COALESCE(v.price_usd_cents, t.price_usd_cents),
+          usd_rate_used = COALESCE(v.usd_rate_used, t.usd_rate_used),
+          tariff_id = COALESCE(v.tariff_id, t.tariff_id),
+          price_manual = COALESCE(v.price_manual, t.price_manual)
+        FROM (VALUES ${values}) AS v(id, customer_id, weight_grams, price_tiyin,
+          price_usd_cents, usd_rate_used, tariff_id, price_manual)
+        WHERE t.id = v.id AND t.tenant_id = ${tenantId}::uuid
+      `);
+    }
+
     for (const chunk of chunked(eventIds, BULK_CHUNK)) {
       await tx.insert(trackEvents).values(
         chunk.map((trackId) => ({
           trackId,
           status,
           meta: { source: 'import' },
+          createdBy,
+        })),
+      );
+    }
+    for (const chunk of chunked(assignEvents, BULK_CHUNK)) {
+      await tx.insert(trackEvents).values(
+        chunk.map((e) => ({
+          trackId: e.trackId,
+          status: e.status,
+          meta: { ...e.meta, source: 'import' },
           createdBy,
         })),
       );
