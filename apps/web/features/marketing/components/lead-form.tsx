@@ -30,7 +30,7 @@ function SubmitButton({ labels }: { labels: LeadFormLabels }) {
     <button
       type="submit"
       disabled={pending}
-      className="h-12 w-full rounded-lg bg-[#2B2687] text-[15px] font-semibold text-white transition-colors hover:bg-[#221e6e] disabled:opacity-60"
+      className="h-12 w-full rounded-lg bg-[#1A1D21] text-[15px] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#3B45B8] disabled:opacity-60"
     >
       {pending ? labels.submitting : labels.submit}
     </button>
@@ -53,7 +53,7 @@ export function LeadForm({
     return (
       <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 text-center">
         <CheckCircle2 className="h-10 w-10 text-[#1F8A4C]" aria-hidden />
-        <p className="max-w-[26ch] text-[15px] font-semibold text-[#16143B]">
+        <p className="max-w-[26ch] text-[15px] font-semibold text-[#1A1D21]">
           {state.message ?? labels.success}
         </p>
       </div>
@@ -61,7 +61,7 @@ export function LeadForm({
   }
 
   const inputCls =
-    'h-12 w-full rounded-lg border border-[#d5d5dc] bg-white px-3.5 text-[15px] text-[#101014] outline-none transition-colors placeholder:text-[#8A8A96] focus:border-[#2B2687] focus:ring-2 focus:ring-[#2B2687]/20';
+    'h-12 w-full rounded-lg border border-[#E4E6EA] bg-white px-3.5 text-[15px] text-[#101014] outline-none transition-colors placeholder:text-[#8A909C] focus:border-[#3B45B8] focus:ring-2 focus:ring-[#3B45B8]/20';
 
   return (
     <form action={formAction} className="space-y-4">
@@ -78,7 +78,7 @@ export function LeadForm({
       <div>
         <label
           htmlFor="lead-name"
-          className="mb-1.5 block text-[12.5px] font-semibold text-[#55555F]"
+          className="mb-1.5 block text-[12.5px] font-semibold text-[#5C6270]"
         >
           {labels.name}
         </label>
@@ -97,7 +97,7 @@ export function LeadForm({
       <div>
         <label
           htmlFor="lead-phone"
-          className="mb-1.5 block text-[12.5px] font-semibold text-[#55555F]"
+          className="mb-1.5 block text-[12.5px] font-semibold text-[#5C6270]"
         >
           {labels.phone}
         </label>
@@ -115,7 +115,7 @@ export function LeadForm({
       <div>
         <label
           htmlFor="lead-company"
-          className="mb-1.5 block text-[12.5px] font-semibold text-[#55555F]"
+          className="mb-1.5 block text-[12.5px] font-semibold text-[#5C6270]"
         >
           {labels.company}
         </label>

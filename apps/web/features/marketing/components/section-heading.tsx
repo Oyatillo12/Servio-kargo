@@ -1,40 +1,44 @@
 import { cn } from '@/lib/utils';
 
 /**
- * Manifest-style section heading: a numbered monospace kicker over the title,
- * like a field label on a waybill.
+ * A section title, and nothing else.
+ *
+ * The previous version stacked a mono index ("01 —") over an uppercase kicker
+ * over the title, on every one of eight sections. Repeated that many times the
+ * device stops labelling anything and just reads as decoration, so it's gone:
+ * a heading and an optional line of lead copy carry the section on their own.
  */
 export function SectionHeading({
-  index,
-  kicker,
   title,
+  lead,
   dark = false,
   className,
 }: {
-  index: string;
-  kicker: string;
   title: string;
+  lead?: string;
   dark?: boolean;
   className?: string;
 }) {
   return (
     <div className={cn('max-w-2xl', className)}>
-      <p
-        className={cn(
-          'font-mono text-[11px] font-semibold uppercase tracking-[0.22em]',
-          dark ? 'text-[#E0873A]' : 'text-[#C2691E]',
-        )}
-      >
-        {index} — {kicker}
-      </p>
       <h2
         className={cn(
-          'mt-2.5 text-[26px] font-extrabold leading-tight tracking-tight sm:text-[32px]',
-          dark ? 'text-white' : 'text-[#16143B]',
+          'text-[26px] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[34px]',
+          dark ? 'text-white' : 'text-[#1A1D21]',
         )}
       >
         {title}
       </h2>
+      {lead ? (
+        <p
+          className={cn(
+            'mt-3 text-[15px] leading-relaxed',
+            dark ? 'text-[#9CA3AF]' : 'text-[#5C6270]',
+          )}
+        >
+          {lead}
+        </p>
+      ) : null}
     </div>
   );
 }

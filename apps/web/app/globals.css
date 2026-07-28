@@ -202,14 +202,43 @@
 
 /* --- Public landing page (marketing root layouts) ------------------------ */
 
-/* Dot-grid backdrop for the dark indigo panels — a nod to route maps. */
-.landing-grid-dark {
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    rgb(255 255 255 / 0.06) 1px,
-    transparent 0
+/*
+ * The landing wears the product's own colours — the same neutrals and indigo
+ * as `.theme-panel` above. That is the point: the page is carried by real
+ * screenshots of the panel and the bot, and a screenshot only looks like
+ * evidence when the page around it shares its palette. On a tinted ground it
+ * reads as a picture someone pasted in.
+ *
+ * Two earlier grounds are gone — the indigo dot-grid slab (the single most
+ * common generated-SaaS texture there is) and the warm paper that followed it.
+ */
+.theme-landing {
+  --canvas: #ffffff;
+  --canvas-alt: #f7f8f9;
+  --rule: #e4e6ea;
+  --ink: #1a1d21;
+  --body: #5c6270;
+  --muted: #8a909c;
+  --accent: #3b45b8;
+}
+
+/*
+ * Marker stroke under the payoff half of the headline. A background gradient
+ * rather than a border so it sits behind the descenders like a highlighter,
+ * and `box-decoration-clone` keeps it intact when the phrase wraps. The band
+ * stops short of the line box on both sides — run to the bottom it fills the
+ * leading and reads as a rectangle behind the text, not a stroke over it.
+ */
+.headline-mark {
+  background-image: linear-gradient(
+    to bottom,
+    transparent 70%,
+    rgb(59 69 184 / 0.2) 70%,
+    rgb(59 69 184 / 0.2) 92%,
+    transparent 92%
   );
-  background-size: 22px 22px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 /* FAQ <details>: hide the native marker, rotate our plus icon when open. */
@@ -224,11 +253,4 @@
 }
 .landing-faq details[open] .faq-icon {
   transform: rotate(45deg);
-}
-
-/* Slower variant for the chat bubbles inside the hero phone mockup. */
-@media (prefers-reduced-motion: no-preference) {
-  .landing-bubble {
-    animation: fade-in-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
 }

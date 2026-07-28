@@ -14,57 +14,48 @@ export async function LandingFooter({ locale }: { locale: Lang }) {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-[#e3e3ea] bg-white">
-      <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-6">
-        <div className="flex flex-col justify-between gap-8 sm:flex-row">
+    <footer className="border-t border-[#E4E6EA] bg-[#FFFFFF]">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex items-center gap-2.5">
+          <BrandMark className="h-7 w-7" />
           <div>
-            <div className="flex items-center gap-2.5">
-              <BrandMark className="h-7 w-7" />
-              <span className="text-[15px] font-bold tracking-tight text-[#16143B]">
-                SERVIO <span className="font-normal text-[#55555F]">Kargo</span>
-              </span>
-            </div>
-            <p className="mt-3 text-[13px] text-[#55555F]">
-              {t('footerTagline')}
+            <p className="text-[14px] font-bold tracking-tight text-[#1A1D21]">
+              SERVIO <span className="font-normal text-[#5C6270]">Kargo</span>
             </p>
-            <p className="mt-1 text-[12px] text-[#8A8A96]">
-              {t('footerMadeFor')}
+            <p className="font-mono text-[11px] text-[#8A909C]">
+              {t('footerRights', { year })}
             </p>
           </div>
-
-          <nav className="flex flex-col items-start gap-2.5 text-[13.5px] sm:items-end">
-            <a
-              href={TELEGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-[#2B2687] hover:underline"
-            >
-              Telegram
-            </a>
-            {CONTACT_PHONE ? (
-              <a
-                href={`tel:${CONTACT_PHONE.replace(/[^+\d]/g, '')}`}
-                className="font-mono text-[13px] text-[#55555F] hover:text-[#16143B]"
-              >
-                {CONTACT_PHONE}
-              </a>
-            ) : null}
-            <a href="/login" className="text-[#55555F] hover:text-[#16143B]">
-              {t('login')}
-            </a>
-            <Link
-              href={otherHref}
-              rel="alternate"
-              className="font-mono text-[12px] text-[#8A8A96] hover:text-[#16143B]"
-            >
-              {t('otherLang')}
-            </Link>
-          </nav>
         </div>
 
-        <p className="mt-8 border-t border-dashed border-[#d5d5dc] pt-5 font-mono text-[11px] text-[#8A8A96]">
-          {t('footerRights', { year })}
-        </p>
+        <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13.5px]">
+          <a
+            href={TELEGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[#3B45B8] hover:underline"
+          >
+            Telegram
+          </a>
+          {CONTACT_PHONE ? (
+            <a
+              href={`tel:${CONTACT_PHONE.replace(/[^+\d]/g, '')}`}
+              className="text-[13.5px] text-[#5C6270] hover:text-[#1A1D21]"
+            >
+              {CONTACT_PHONE}
+            </a>
+          ) : null}
+          <a href="/login" className="text-[#5C6270] hover:text-[#1A1D21]">
+            {t('login')}
+          </a>
+          <Link
+            href={otherHref}
+            rel="alternate"
+            className="text-[#8A909C] hover:text-[#1A1D21]"
+          >
+            {t('otherLang')}
+          </Link>
+        </nav>
       </div>
     </footer>
   );

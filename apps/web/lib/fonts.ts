@@ -4,10 +4,16 @@
  * next/font dedupes per-module, so they all import from here.
  */
 
-import { IBM_Plex_Mono, IBM_Plex_Sans, Inter } from 'next/font/google';
+import { IBM_Plex_Mono, IBM_Plex_Sans, Manrope } from 'next/font/google';
 
-export const inter = Inter({
-  subsets: ['latin', 'cyrillic'],
+/**
+ * The public landing's typeface. Manrope rather than the panel's Plex Sans:
+ * the landing is read once by a stranger on a phone, so it wants a warmer,
+ * higher-contrast headline face than the dense data screens do. Cyrillic is
+ * in the subset because `/ru` renders the same components.
+ */
+export const manrope = Manrope({
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
   variable: '--font-sans',
   display: 'swap',
 });
@@ -32,7 +38,7 @@ export const plexMono = IBM_Plex_Mono({
 });
 
 /** `className` for the `<html>` element of the marketing root layouts. */
-export const fontVariables = `${inter.variable} ${plexMono.variable}`;
+export const fontVariables = `${manrope.variable} ${plexMono.variable}`;
 
 /** `className` for the `<html>` element of the panel root layout. */
 export const panelFontVariables = `${plexSans.variable} ${plexMono.variable} theme-panel`;

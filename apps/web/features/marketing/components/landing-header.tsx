@@ -5,46 +5,68 @@ import type { Lang } from '@kargotrack/shared';
 
 import { BrandMark } from '@/components/layout/brand';
 
+import { HeaderShell } from './header-shell';
+
 /**
- * Sticky landing header. Deliberately zero client JS: two links and an anchor
- * button need no hamburger. `/login` is a plain <a> — it crosses into the
- * panel root layout, so it is a full navigation anyway.
+ * Landing nav. Server-rendered and handed to {@link HeaderShell}, which owns
+ * the only piece of behaviour here (detaching on scroll).
+ *
+ * "Kirish" is a plain <a> because it crosses into the panel root layout, and
+ * it is always shown: an admin with a session never reaches this page,
+ * `middleware.ts` sends them to /dashboard.
  */
 export async function LandingHeader({ locale }: { locale: Lang }) {
   const t = await getTranslations({ locale, namespace: 'landing' });
-  const otherHref = locale === 'uz' ? '/ru' : '/';
+
+  const langs = [
+    { code: 'uz' as const, href: '/', label: 'UZ' },
+    { code: 'ru' as const, href: '/ru', label: 'RU' },
+  ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#16143B]/95 backdrop-blur">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-6">
-        <div className="flex items-center gap-2.5">
-          <BrandMark className="h-7 w-7" />
-          <span className="text-[15px] font-bold tracking-tight text-white">
-            SERVIO <span className="font-normal text-white/70">Kargo</span>
-          </span>
-        </div>
-        <nav className="flex items-center gap-1 sm:gap-2">
-          <Link
-            href={otherHref}
-            rel="alternate"
-            className="rounded-lg px-2.5 py-2 font-mono text-[12px] text-white/70 transition-colors hover:text-white"
-          >
-            {t('otherLang')}
-          </Link>
-          <a
-            href="/login"
-            className="rounded-lg px-2.5 py-2 text-[13px] font-medium text-white/85 transition-colors hover:text-white"
-          >
-            {t('login')}
-          </a>
-          <a
-            href="#demo"
-            className="ml-1 rounded-lg bg-[#E0873A] px-3.5 py-2 text-[13px] font-semibold text-[#16143B] transition-colors hover:bg-[#eda45f]"
-          >
-            {t('headerCta')}
-          </a>
-        </nav>
+    <HeaderShell>
+      <div className="flex items-center gap-2.5">
+        <BrandMark className="h-7 w-7" />
+        <span className="text-[15px] font-bold tracking-tight text-[#1A1D21]">
+          SERVIO <span className="font-normal text-[#8A909C]">Kargo</span>
+        </span>
       </div>
-    </header>
+
+      <nav className="flex items-center gap-3 sm:gap-4">
+        {/* A two-state switch, not a lone "Русский" link — which language you
+            are reading is visible without clicking anything. */}
+        <div className="flex items-center text-[12px] font-semibold">
+          {langs.map((lang, i) => (
+            <span key={lang.code} className="flex items-center">
+              {i > 0 && <span className="px-1 text-[#C7CBD1]">/</span>}
+              {lang.code === locale ? (
+                <span className="text-[#1A1D21]">{lang.label}</span>
+              ) : (
+                <Link
+                  href={lang.href}
+                  rel="alternate"
+                  className="text-[#8A909C] transition-colors hover:text-[#1A1D21]"
+                >
+                  {lang.label}
+                </Link>
+              )}
+            </span>
+          ))}
+        </div>
+
+        <a
+          href="/login"
+          className="hidden text-[13.5px] font-medium text-[#5C6270] transition-colors hover:text-[#1A1D21] sm:block"
+        >
+          {t('login')}
+        </a>
+        <a
+          href="#demo"
+          className="inline-flex h-10 items-center rounded-full bg-[#3B45B8] px-5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#2C3494]"
+        >
+          {t('headerCta')}
+        </a>
+      </nav>
+    </HeaderShell>
   );
 }

@@ -14,6 +14,9 @@ export const viewport = landingViewport;
  * marketing pages hardcode `<html lang>` per locale and never read cookies,
  * which keeps them statically rendered. No NextIntlClientProvider — the
  * landing tree is RSC and client leaves receive translated strings as props.
+ *
+ * `theme-landing` carries the product palette (see globals.css); the body sets
+ * the ground colour directly so it also paints the overscroll area.
  */
 export default function UzMarketingLayout({
   children,
@@ -21,8 +24,8 @@ export default function UzMarketingLayout({
   children: ReactNode;
 }) {
   return (
-    <html lang="uz" className={fontVariables}>
-      <body className="font-sans">{children}</body>
+    <html lang="uz" className={`${fontVariables} theme-landing`}>
+      <body className="bg-white font-sans">{children}</body>
     </html>
   );
 }

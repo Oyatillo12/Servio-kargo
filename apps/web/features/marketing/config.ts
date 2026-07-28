@@ -1,12 +1,10 @@
 /**
- * Contact points shown on the public landing page.
+ * Everything about the public landing page that an owner edits without
+ * touching a component: contacts, the demo video, the price.
  *
- * Plain code constants on purpose: the landing pages are statically rendered,
- * so env vars would be baked at build time anyway — this file is the single
- * honest place to edit them.
- *
- * TODO(owner): replace the placeholders with the real Telegram username and
- * phone before launch.
+ * Plain code constants on purpose — the landing pages are statically
+ * rendered, so env vars would be baked at build time anyway, and this file is
+ * the single honest place to change them.
  */
 
 /** Telegram deep link for the "write to us" CTA. */
@@ -16,4 +14,40 @@ export const TELEGRAM_URL = 'https://t.me/Oyatilloi2';
  * Publicly shown contact phone in international format, or null to hide the
  * phone everywhere on the landing until there is a real number.
  */
-export const CONTACT_PHONE: string | null = "+998 99 556 24 16";
+export const CONTACT_PHONE: string | null = '+998 99 556 24 16';
+
+/** A self-hosted demo recording, played in place after a click. */
+export interface DemoVideo {
+  /** Path under `public/`, e.g. `/demo.mp4`. Keep it under ~15 MB. */
+  src: string;
+  /** Poster frame under `public/`, e.g. `/demo-poster.jpg`, 16:9. */
+  poster: string;
+  /** Running time as shown on the play button, e.g. `2:10`. */
+  duration: string;
+}
+
+/**
+ * TODO(owner): drop the recording and its poster frame into `apps/web/public/`
+ * and fill this in — the hero then plays it instead of showing the
+ * "book a live demo" placeholder. Nothing else on the page needs to change.
+ *
+ *   export const DEMO_VIDEO: DemoVideo | null = {
+ *     src: '/demo.mp4',
+ *     poster: '/demo-poster.jpg',
+ *     duration: '2:10',
+ *   };
+ */
+export const DEMO_VIDEO: DemoVideo | null = {
+  src: "/placeholder-video.mp4",
+  poster: "https://placeholdervideo.dev/poster/1920x1080",
+  duration: "0:10",
+};
+
+/**
+ * Monthly subscription in whole so'm, or null while the number is still being
+ * decided — the pricing section then says the price is agreed per company
+ * instead of showing a figure.
+ *
+ * TODO(owner): set this once the tariff is fixed, e.g. `500_000`.
+ */
+export const PRICE_MONTHLY_SOM: number | null = null;

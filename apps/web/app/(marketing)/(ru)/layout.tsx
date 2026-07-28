@@ -14,8 +14,8 @@ export default function RuMarketingLayout({
   children: ReactNode;
 }) {
   return (
-    <html lang="ru" className={fontVariables}>
-      <body className="font-sans">{children}</body>
+    <html lang="ru" className={`${fontVariables} theme-landing`}>
+      <body className="bg-white font-sans">{children}</body>
     </html>
   );
 }

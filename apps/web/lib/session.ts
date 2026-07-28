@@ -14,7 +14,8 @@
 
 import crypto from 'node:crypto';
 
-export const COOKIE_NAME = 'kt_session';
+export { COOKIE_NAME } from './session-cookie';
+
 export const MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days (SPEC §8)
 
 function secret(): string {

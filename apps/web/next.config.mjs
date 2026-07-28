@@ -6,7 +6,8 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Panel i18n (AUDIT.md T17): locale comes from a cookie, not the URL, so there
-// is no middleware and no `[locale]` segment — just the request config.
+// is no `[locale]` segment and no i18n middleware — just the request config.
+// (`middleware.ts` exists, but only to bounce signed-in admins off the landing.)
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 /** @type {import('next').NextConfig} */
