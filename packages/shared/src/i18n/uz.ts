@@ -51,7 +51,6 @@ export const uz: Strings = {
     cancel: '❌ Bekor qilish',
     recalc: '🧮 Qayta hisoblash',
     photo: '📷 Rasm',
-    menu: '🏠 Menyu',
   },
   cancelled: 'Bekor qilindi.',
   refreshedNoChange: "O'zgarish yo'q",
@@ -149,8 +148,6 @@ export const uz: Strings = {
   lookupNotFound: (code) => `🔍 ${code} — bunday trek topilmadi.`,
 
   // --- §3.9 calculator (§4.5) ---
-  calcChooseTariff: 'Tarifni tanlang:',
-  calcAskKg: "Og'irlikni kiriting (kg), masalan: 3.2",
   calcStepTariff: '🧮 1/2 · Tarifni tanlang',
   calcStepKg: "🧮 2/2 · Og'irlikni kiriting (kg), masalan: 3.2",
   calcResult: ({ tariffName, kg, som, usd }) =>

@@ -5,10 +5,10 @@ import { REDACTED, scrubText, scrubValue } from './scrub';
 describe('scrubText', () => {
   it('redacts a Telegram bot token', () => {
     const out = scrubText(
-      'setWebhook failed for 8872793732:AAEp7wq-ayj5nT_uinYQovAjETp2QoLfw1o',
+      'setWebhook failed for 7000000002:FAKE_SECRET_FOR_SCRUB_TEST_ONLY_0000',
     );
     expect(out).toContain(REDACTED.token);
-    expect(out).not.toContain('AAEp7wq');
+    expect(out).not.toContain('FAKE_SECRET');
   });
 
   it('redacts credentials in a postgres connection string', () => {

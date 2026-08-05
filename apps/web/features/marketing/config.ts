@@ -37,11 +37,7 @@ export interface DemoVideo {
  *     duration: '2:10',
  *   };
  */
-export const DEMO_VIDEO: DemoVideo | null = {
-  src: "/placeholder-video.mp4",
-  poster: "https://placeholdervideo.dev/poster/1920x1080",
-  duration: "0:10",
-};
+export const DEMO_VIDEO: DemoVideo | null = null;
 
 /**
  * Monthly subscription in whole so'm, or null while the number is still being

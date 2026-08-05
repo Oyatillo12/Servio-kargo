@@ -52,7 +52,6 @@ export const ru: Strings = {
     cancel: '❌ Отмена',
     recalc: '🧮 Пересчитать',
     photo: '📷 Фото',
-    menu: '🏠 Меню',
   },
   cancelled: 'Отменено.',
   refreshedNoChange: 'Без изменений',
@@ -150,10 +149,8 @@ export const ru: Strings = {
   lookupNotFound: (code) => `🔍 ${code} — трек не найден.`,
 
   // --- §3.9 calculator (§4.5) ---
-  calcChooseTariff: 'Выберите тариф:',
   calcStepTariff: '🧮 1/2 · Выберите тариф',
   calcStepKg: '🧮 2/2 · Введите вес (кг), например: 3.2',
-  calcAskKg: 'Введите вес (кг), например: 3.2',
   calcResult: ({ tariffName, kg, som, usd }) =>
     `🧮 ${tariffName}\n${kg} кг ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nТочная сумма рассчитывается при взвешивании.`,
   calcInvalid: 'Введите число, например: 2.5',

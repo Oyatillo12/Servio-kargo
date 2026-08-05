@@ -86,11 +86,11 @@ Run `crontab -e` and add (nightly at 03:00, keeps 14 days in `/var/backups/kargo
 
 | Workflow                        | Trigger                                        | What it does                                                                                                                 |
 | ------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml`      | every pull request; called by `deploy.yml`      | `pnpm typecheck`, `pnpm lint`, `pnpm test`                                                                                    |
+| `.github/workflows/ci.yml`      | every pull request; called by `deploy.yml`      | `pnpm typecheck`, `pnpm lint` (`pnpm test` is part of the local definition of done and not yet a CI gate)                     |
 | `.github/workflows/deploy.yml`  | push to `main`; manual run from the Actions tab | **verify** (reuses `ci.yml`) → **build** web + bot images and push to GHCR → **deploy**: SSH to the VPS, which pulls, migrates and restarts |
 
-A failure at any stage stops the ones after it, so a red test or a broken
-`Dockerfile` never reaches the server. Deploys run one at a time
+A failure at any stage stops the ones after it, so a type error, a lint error
+or a broken `Dockerfile` never reaches the server. Deploys run one at a time
 (`concurrency: deploy-production`) and queue rather than cancel, because a
 half-applied migration is worse than a slow deploy.
 
@@ -98,8 +98,8 @@ The images are built on GitHub's runners, **not on your VPS** — a Next.js buil
 does not fit comfortably in 2 vCPU / 4 GB while the site is serving traffic. The
 VPS only pulls a finished image.
 
-`pnpm format:check` is not a gate; the repo predates Prettier being enforced and
-126 files still fail it. Run `pnpm format` once and add it to `ci.yml` if you want it.
+`pnpm format:check` is not a gate: Prettier was added late and most of the repo
+still fails it. Run `pnpm format` once and add it to `ci.yml` if you want it.
 
 ### 10.2 Create a deploy user and SSH key
 

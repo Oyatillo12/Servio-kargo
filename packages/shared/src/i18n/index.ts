@@ -120,7 +120,6 @@ export interface Strings {
     cancel: string;
     recalc: string;
     photo: string;
-    menu: string;
   };
 
   /** Confirmation after a flow is abandoned via the inline cancel button. */
@@ -168,8 +167,6 @@ export interface Strings {
   lookupNotFound(code: string): string;
 
   // --- §3.9 calculator (§4.5) ---
-  calcChooseTariff: string;
-  calcAskKg: string;
   /** `1/2 · …` step prefix shown above the tariff picker (§3.11). */
   calcStepTariff: string;
   /** `2/2 · …` step prefix shown above the weight prompt (§3.11). */

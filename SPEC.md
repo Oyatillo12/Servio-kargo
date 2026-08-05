@@ -377,9 +377,7 @@ two copies would drift the moment one side is edited.
   - **🇨🇳 Xitoy ombori manzili**: textarea, hint `{client_code} — mijoz kodi
     o'rniga qo'yiladi`.
   - **Ma'lumot matni** (info_text): textarea — taqiqlangan yuklar, qoidalar.
-  - **Xodimlar** — a link to 5.12. Employees used to be edited right here as
-    a list of raw Telegram ids in `settings.staff_tg_ids`: no names, no roles,
-    and no way to revoke panel access. That field is retired.
+  - **Xodimlar** — a link to 5.12 (`settings.staff_tg_ids` is retired).
   - Haftalik avto-eslatma (toggle + kun + soat, default Dushanba 10:00).
   - Bot username (read-only), webhook holati indikatori + `Webhookni qayta
     o'rnatish` button.

@@ -14,8 +14,8 @@
  *
  * Full auto-instrumentation needs `@sentry/nextjs`, which adds a build-time
  * webpack plugin. That is deliberately deferred: `next build` in this repo has a
- * known local failure mode (PROJECT.md §8), so the change could not be verified
- * before the pilot. See AUDIT.md T13.
+ * known local failure mode (README.md § Known quirks), so the change could not
+ * be verified before the pilot. See AUDIT.md T13.
  */
 
 import 'server-only';

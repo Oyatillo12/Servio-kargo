@@ -1,1181 +1,284 @@
-# AUDIT.md — SERVIO Kargo: holat tahlili va ish rejasi
+# AUDIT.md — SERVIO Kargo: ochiq ishlar ro'yxati
 
-> Sana: 2026-07-26 · Tahlil asosi: `main` @ `5ba1f97` (17 commit, 19–21 iyul 2026)
-> Bu fayl — **ishchi hujjat**. Har task bajarilganda `[ ]` → `[x]` qiling.
-> Vazifa IDlari (T1, T2…) barqaror — commit xabarlarida havola qiling.
+> Asl tahlil: 2026-07-26, `main` @ `5ba1f97`. Oxirgi verifikatsiya: 2026-07-29.
+> Bu fayl — **ishchi hujjat**. Task IDlari (T1, T2…) barqaror: commit
+> xabarlarida havola qiling. Bajarilgan tasklar § 2 da bitta qatorga
+> yig'ilgan; batafsil bayoni git tarixida qoldi.
+>
+> ⚠️ 2026-07-29 dan keyingi commitlar (marketing, CI/CD, XLSX import) bu
+> audit doirasida **tekshirilmagan**.
 
 ---
 
-## 1. Yakuniy hukm
+## 1. Holat
 
-| Ssenariy | Tayyorlik | Nima to'sqinlik qiladi |
-| ---------------------------------- | --------- | ----------------------------------- |
+| Ssenariy | Tayyorlik | To'sqinlik |
+| ---------------------------------- | --------- | ---------- |
 | Tanish kargoga demo ko'rsatish | **95 %** | Bugun ishlaydi |
-| 1 ta haqiqiy pilot (14 kun, tekin) | **100 %** | **P0 bloklari yopildi** |
-| 3–5 pullik mijoz, 6 oy | **55 %** | T6–T12 |
+| 1 ta haqiqiy pilot (14 kun, tekin) | **100 %** | P0 yopildi |
+| 3–5 pullik mijoz, 6 oy | **55 %** | T9–T14, T20 |
 
-**Asosiy xulosa:** kod bazasi sifatli va Spec.md'ga to'liq javob beradi — lekin
-Spec.md'ning o'zida ikkita hayotiy teshik bor edi (admin trekni mijozga biriktira
-olmaydi, eksport yo'q). Bu **spec bo'shligi, kod bo'shligi emas**. Xavf: mahsulot
-tayyor deb demo qilinadi, ega "boshlaymiz" deydi, 0-kunda 500 ta egasiz trek
-qoladi va pilot "ishlamadi" deb yopiladi.
+Asl auditning ikkita hayotiy teshigi (admin trekni mijozga biriktira olmasligi,
+eksport yo'qligi) **spec bo'shligi** edi, kod bo'shligi emas — ikkalasi ham
+yopildi. **P0 (T1–T5) to'liq yopildi, pilotni boshlash mumkin** — § 4 dagi
+pilotdan oldingi ro'yxatni bajarib.
 
-**Holat (2026-07-27):** ikkala teshik ham **yopildi** — T1 biriktirish oqimi
-va T2 Excel eksporti. T3 (o'tkazuvchanlik) ham yopildi va yo'l-yo'lakay
-**uchinchi**, ro'yxatda bo'lmagan xatoni ochdi: per-chat kechikish global
-jadvalni surib yuborardi va tezlikni 25 msg/s o'rniga ~2.4 msg/s da ushlab
-turardi (T3 ga qarang). **P0 (T1–T5) to'liq yopildi.**
+**Tasdiqlangan asoslar** (da'vo emas, tekshirilgan): `typecheck` 4/4 toza,
+`lint` 0 warning, **351 test** (304 shared + 30 bot + 17 web), har query
+`tenant_id` bilan chegaralangan, pul integer tiyinda, argon2id + HMAC sessiya +
+path-traversal himoyasi, `parse_mode` faqat HTML escape bilan.
 
-**Tavsiya: pilotni boshlash mumkin.** Sotuvdan oldin bitta ish qoldi —
-panelni brauzerda bir marta qo'lda bosib chiqish (T1 va T2 dagi
-«halol cheklov» izohlariga qarang).
+**Test qoplami hamon nomutanosib:** `apps/web` da 17 test (i18n kataloglari +
+`messages.test.ts`), 11 700 satr `apps/*` kodi esa qoplanmagan — **T24**.
 
 ---
 
-## 2. Tasdiqlangan kuchli tomonlar (buzmang)
+## 2. Bajarilgan ishlar (arxiv)
 
-Bular haqiqatan tekshirildi, shunchaki da'vo emas:
+Batafsil o'lchovlar, verifikatsiya jadvallari va qarorlar git tarixida.
 
-| Tekshiruv | Natija |
-| ------------------ | ---------------------------------------------------------------- |
-| `pnpm typecheck` | ✅ 4/4 workspace toza |
-| `pnpm lint` | ✅ 0 warning |
-| `pnpm test` | ✅ 252 test / 24 fayl (T19 dan keyin; boshlang'ich holat 166/18) |
-| Multi-tenancy | ✅ Har query `tenant_id` bilan chegaralangan — chin, bezak emas |
-| Pul hisobi | ✅ Integer tiyin, float yo'q, USD kursi trekda muzlatilgan |
-| Xavfsizlik asoslari | ✅ argon2id, HMAC sessiya, path-traversal himoyasi, rasm validatsiyasi |
-| `parse_mode` | ✅ Faqat `china.ts`da, HTML escape bilan — injection yo'q |
-| Import yo'li | ✅ Chunked + tranzaksiya + `ON CONFLICT DO NOTHING` (namuna kod) |
-
-**Test qoplami nomutanosib:** testlar deyarli faqat `packages/shared`da.
-T3 bilan `apps/bot` ga vitest qo'shildi (13 test, `rateLimiter`), lekin
-`apps/web` uzoq vaqt **0 test** edi; T17 bilan `messages.test.ts` qo'shildi
-(5 test — i18n kataloglari). Qolgani hamon T24 da.
-
----
-
-## 3. Topilmalar xaritasi
-
-| # | Topilma | Jiddiylik | Task |
-| --- | -------------------------------------------------------- | --------- | ------- |
-| ~~F1~~ | ~~Admin trekni mijozga biriktira olmaydi, mijoz yaratolmaydi~~ | ✅ Yopildi | T1 |
-| ~~F2~~ | ~~Eksport yo'q — sotuv skriptida 2 marta va'da qilingan~~ | ✅ Yopildi | T2 |
-| ~~F3~~ | ~~Xabar o'tkazuvchanligi ~5× past (`batchSize: 1`)~~ — aslida **14×** | ✅ Yopildi | T3 |
-| ~~F4~~ | ~~Rate limiter hamma tenantga umumiy → multi-tenant adolatsizligi~~ | ✅ Yopildi | T3 |
-| ~~F3b~~ | ~~Per-chat kechikish global jadvalni surardi (T3 da topildi)~~ | ✅ Yopildi | T3 |
-| ~~F5~~ | ~~Xatolik kuzatuvi va web healthcheck yo'q~~ | ✅ Yopildi | T5 |
-| ~~F6~~ | ~~Layoutda `listDebtors` — har sahifada to'liq jadval skani~~ | ✅ Yopildi | T6 |
-| ~~F7~~ | ~~Kritik indekslar yo'q (`track_events.track_id` va boshq.)~~ | ✅ Yopildi | T4 |
-| ~~F8~~ | ~~Bulk operatsiyalar tranzaksiyasiz, per-row tsikl~~ | ✅ Yopildi | T7 |
-| ~~F9~~ | ~~`role` majburlanmaydi; admin qo'shish/parol UI yo'q~~ | ✅ Yopildi | T8 |
-| F10 | Loginda rate limit yo'q (brute force + argon2 DoS) | 🟡 O'rta | T9 |
-| F11 | "Barchasini tanlash" faqat ko'rinadigan 20 qatorni oladi | 🟡 O'rta | T10 |
-| ~~F12~~ | ~~Biriktirilmagan treklar uchun alohida ko'rinish yo'q~~ | ✅ Yopildi | T11 |
-| ~~F13~~ | ~~`/customers`, `/debtors` pagination yo'q~~ | ✅ Yopildi | T12 |
-| F14 | Xabar yetkazish jurnali yo'q (bloklagan mijoz ko'rinmaydi) | 🟡 O'rta | T13 |
-| F15 | Undo / savat yo'q — 300 ta xato xabar qaytarilmaydi | 🟡 O'rta | T14 |
-| ~~F16~~ | ~~Bulk operatsiyada progress yo'q, qidiruv Enter + reload~~ | ✅ Yopildi | T15 |
-| F17 | Bot sessiyasi xotirada — deploy flowni uzadi, >1 replika yo'q | 🟢 Past | T16 |
-| ~~F18~~ | ~~Panel faqat o'zbekcha~~ | ✅ Yopildi | T17 |
-| F19 | Paneldan rasm yuklash yo'q | 🟢 Past | T18 |
-| ~~F20~~ | ~~Dashboard operatsion emas (daromad grafigi = vanity metrika)~~ | ✅ Yopildi | T19 |
-| F21 | 7 ta hujjat, 17 commit — chirishga tayyor takror | 🟢 Past | T22 |
+| # | Task | Sana | Natija |
+| --- | ---------------------------- | ---------- | ------------------------------------------------------------- |
+| T1 | Trekni mijozga biriktirish | 2026-07-26 | `planAssignCustomer` + panel picker + bulk; bot /start telefon bo'yicha mavjud yozuvni ulaydi (migr. `0006`) |
+| T2 | Excel eksport | 2026-07-26 | tracks / customers / payments; ekran va fayl bitta filtrdan (`tracksFilter`) |
+| T3 | Xabar o'tkazuvchanligi | 2026-07-27 | 1.0 → **14.2 msg/s** (14×); slot-based limiter (**F3**: per-chat kechikish global jadvalni surardi), per-bot byudjet (**F4**: adolat), batch xato izolyatsiyasi |
+| T4 | Yo'q indekslar | 2026-07-26 | `0005` — 7 indeks; treklar ro'yxati 58 ms → **0.56 ms** (104×) |
+| T5 | Sentry + healthcheck | 2026-07-26 | PII scrub (umumiy), error boundary'lar, docker healthcheck + log rotation |
+| T6 | Layoutdan `listDebtors` | 2026-07-27 | SQL aggregate: 655 ms → **41 ms**, heap 29 MB → 0.1 MB |
+| T7 | Bulk = tranzaksiya + chunk | 2026-07-27 | 2×N statement → 2 UPDATE + 2 INSERT; notify commitdan keyin, 1 `boss.insert` |
+| T8 | Rollar + xodimlar boshqaruvi | 2026-07-27 | `permissions.ts` (3 rol × 17 qobiliyat), `admin_invites`, `session_epoch`, `staff_tg_ids` → `admin_users` (migr. `0009`) |
+| T11 | Biriktirilmagan treklar | 2026-07-27 | `?work=unassigned` + qator ichida tez biriktirish |
+| T12 | Pagination: mijoz/qarzdor | 2026-07-27 | butun jadvalni Node'ga tortish → bitta CTE query |
+| T15 | UX: progress + instant qidiruv | 2026-07-27 | debounce 300 ms (skanerga Enter), optimistic status, 11 ta `loading.tsx` |
+| T17 | Panel ruscha | 2026-07-27 | next-intl, i18n routing**siz** (cookie); `admin_users.lang` (migr. `0007`) |
+| T19 | Dashboard operatsion | 2026-07-27 | 3 worklist bitta skanda (77 ms), karta → `/tracks?work=…` |
+| T21 | Daromad grafigi | 2026-07-29 | **Qaror: QOLADI** — T19 dan keyin xalaqit bermaydi, demoda foydali |
+| T22 | Hujjatlarni qisqartirish | 2026-07-29 | `PROJECT.md` o'chirildi, `DEPLOY.md` → `docs/`, `docs/ONBOARDING.md` yozildi, nomlar kanonik (`CLAUDE.md`/`SPEC.md`) |
+| T25 | Bot UX — inline navigatsiya | 2026-07-27 | karta ro'yxat o'rniga (`editMessageText`), `❌ Bekor qilish`, `/help`, 17 keyboard test |
 
 ---
 
-## 4. TASK RO'YXATI
+## 3. Ochiq tasklar
 
-### Har task uchun majburiy DoD (CLAUDE.md)
+Har task uchun majburiy DoD (CLAUDE.md):
 
 ```
 [ ] pnpm typecheck && pnpm lint && pnpm test — hammasi o'tadi
 [ ] Migratsiya toza bazada ishlaydi
 [ ] Happy path qo'lda tekshirilgan (qadamlar commit izohida)
 [ ] Yangi user-facing string HAM uz, HAM ru da mavjud
-[ ] Xatti-harakat o'zgargan bo'lsa — Spec.md yangilangan (u kontrakt)
+[ ] Xatti-harakat o'zgargan bo'lsa — SPEC.md yangilangan (u kontrakt)
 ```
 
----
-
-## P0 — PILOTDAN OLDIN (majburiy, ~4 kun)
-
-### ☑ T1 · Trekni mijozga biriktirish + paneldan mijoz yaratish — **BAJARILDI** (2026-07-26)
-
-**Vazifalar:**
-- [x] `packages/shared/src/services/assignCustomer.ts` — `planAssignCustomer`
-      planner (`attach` / `detach` / `reassign` / `noop`) + 8 test
-- [x] `apps/web/.../tracks/[id]/actions.ts` — `attachCustomerAction`,
-      `detachCustomerAction` (tenant-scoped, `track_events` ga meta bilan yozish)
-- [x] Trek detalida mijoz tanlash (`components/customer-picker.tsx` —
-      client_code / ism / telefon bo'yicha debounced qidiruv, ichida
-      «Yangi mijoz qo'shish» ham bor)
-- [x] `apps/web/lib/customer-actions.ts` — `createCustomerAction`: telefon + ism
-      → `client_code` avtomatik (`nextClientCode`), `tg_user_id = NULL`;
-      `/customers` da «Yangi mijoz» tugmasi
-- [x] Mijoz botga /start bosganda mavjud (tg_user_id NULL) yozuvni telefon
-      bo'yicha topib **ulash** — dublikat yaratmaslik
-- [x] Bulk: tanlangan treklarni bitta mijozga biriktirish (`/tracks` bulk barida
-      uchinchi tugma)
-- [x] Testlar: biriktirish, ajratish, qayta biriktirish, telefon normalizatsiyasi
-      (**192 test**, 177 → +15)
-- [x] Spec.md § 5.2 / § 5.3 / § 5.5 / § 7.3 yangilandi + yangi **§ 7.12**
-      (telefon moslashtirish va mijozni ulash qoidasi)
-
-**Ikkita ataylab qilingan qaror:**
-
-1. **Biriktirish xabar yubormaydi.** §4.2 xabarlari *status* o'zgarishiga
-   tegishli. 0-kunda 500 ta tarixiy trekni egalariga biriktirish 500 ta
-   «yukingiz tayyor» xabarini yuborardi — allaqachon olib ketilgan yuklar
-   haqida. Mijoz ularni 📦 Mening yuklarim da darhol ko'radi, maqsad ham shu.
-   Sabab bilan Spec § 7.3 ga yozib qo'yildi.
-2. **`phone_normalized` unique EMAS.** Ustun prod ma'lumotidan keyin qo'shildi
-   va bir kargoda bitta raqamga ikkita yozuv qolgan bo'lishi mumkin. Dublikat
-   ilova darajasida rad etiladi (`createCustomer`), chunki u yerda xatoni
-   ko'rsatish mumkin — unique indeks esa bot ro'yxatdan o'tishini flow
-   o'rtasida uzib qo'yardi.
-
-**Sxema o'zgarishi:** `0006_magenta_marvel_boy.sql` — `customers.phone_normalized`
-+ `customers_tenant_phone_idx (tenant_id, phone_normalized)` + backfill.
-Backfill SQL (`NULLIF(right(regexp_replace(phone,'\D','','g'), 9), '')`)
-**ataylab** JS `normalizePhone` bilan aynan bir xil; 12 ta holatda
-yonma-yon solishtirildi, hammasi mos keldi. Sabab: bitta raqam uch xil yoziladi —
-Telegram `998901234567`, admin `+998 90 123-45-67`, import `901234567`.
-
-**Qo'lda tekshirilgan qadamlar** (toza `postgres:16`, 55432-port):
-
-1. Toza konteyner → `drizzle-kit migrate` → **7 ta migratsiya toza o'tdi**,
-   ustun va indeks joyida.
-2. Backfill SQL ni 12 ta xom telefonda ishga tushirib, `phone.test.ts` dagi
-   kutilgan natijalar bilan solishtirildi — **12/12 mos**.
-3. `db:seed` → haqiqiy `apps/web/lib/queries.ts` va `apps/bot/src/queries.ts`
-   funksiyalarini to'g'ridan-to'g'ri chaqiruvchi harness bilan **42 ta tekshiruv**:
-
-   | Tekshirilgan | Natija |
-   | --------------------------------------------------------- | ------ |
-   | Mijoz yaratish: `client_code` avtomatik, `tg_user_id` NULL | ✅ |
-   | Bir xil telefon boshqa formatda → rad, mavjud mijoz qaytadi | ✅ |
-   | Qidiruv: kod / ism / telefon (uchinchi formatda) | ✅ |
-   | Biriktirish → `meta.action=attach`, **status o'zgarmaydi** | ✅ |
-   | Qayta biriktirish → no-op, ortiqcha audit yozuvi yo'q | ✅ |
-   | Reassign / detach → to'g'ri meta, `fromCustomerId` saqlanadi | ✅ |
-   | Boshqa tenant mijozi → `NO_CUSTOMER`; qidiruv sizmaydi | ✅ |
-   | Bir xil telefon **boshqa** tenantda ruxsat etiladi | ✅ |
-   | Soft-deleted treklar biriktirilmaydi (§7.8) | ✅ |
-   | 10 trekni bulk biriktirish, bitta tranzaksiya | ✅ |
-   | **Bot /start: qo'lda kiritilgan yozuvni telefon bo'yicha uladi** | ✅ |
-   | → dublikat mijoz **yaratilmadi**, `client_code` saqlandi | ✅ |
-   | → biriktirilgan 10 ta trek mijoz bilan birga qoldi | ✅ |
-   | Notanish telefon → oddiy yangi ro'yxatdan o'tish | ✅ |
-   | Takroriy /start → o'sha yozuv qaytadi | ✅ |
-
-**DoD:** ✅ typecheck · ✅ lint (0 warning) · ✅ **192 test** (177 → +15) ·
-✅ toza bazada 7 ta migratsiya + backfill · ✅ yuqoridagi 3 qadam ·
-✅ Spec.md yangilandi · yangi bot stringi yo'q (ulanish mavjud `registered`
-matnini qayta ishlatadi, shuning uchun uz/ru ikkalasi ham qamrab olingan).
-
-**⚠️ Halol cheklov.** Yuqoridagi tekshiruv **ma'lumot qatlamini** to'liq
-qamraydi (haqiqiy query funksiyalari, haqiqiy baza). Brauzerda **UI bo'ylab
-qo'lda bosib chiqish qilinmadi** — panelga kirish parol kiritishni talab
-qiladi. UI yupqa qatlam (server action'larni chaqiruvchi client komponentlar)
-va typecheck/lint toza, lekin pilotdan oldin bir marta qo'lda bosib chiqing:
-`/tracks` bulk «Mijozga biriktirish» → trek detali mijoz kartasi →
-`/customers` «Yangi mijoz».
-
-<details>
-<summary>Asl vazifa tavsifi (arxiv)</summary>
-
-**Nega bloker.** Kodda tasdiqlandi:
-- `insert(customers)` faqat 3 joyda: `apps/bot/src/queries.ts:127` (bot
-  self-registration), `seed.ts`, `demo-import.ts`. Panelda mijoz yaratish **yo'q**.
-- `apps/web/app/(app)/tracks/[id]/actions.ts` — faqat `setWeightAction`.
-  `customerId`ni o'zgartiradigan action **umuman yo'q**.
-
-Natijada 0-kunda kanal tarixi import qilinsa → 500 trek `customer_id = NULL` →
-hech kimga xabar ketmaydi, hech kimning qarzi hisoblanmaydi, hech kimning
-"Mening yuklarim"ida ko'rinmaydi. Demoning "VAU momenti" egasi uchun 0 beradi.
-Qo'shimcha: mijoz xato kod da'vo qilsa (`addTrack.ts:44` birinchi da'vogarga
-biriktiradi) — admin tuzata olmaydi.
-
-**Ish hajmi:** ~1 kun
-
-**Diqqat:** `customers.tg_user_id` nullable, unique index `(tenant_id, tg_user_id)` —
-Postgresda NULLlar farqli hisoblanadi, shuning uchun ko'p qo'lda kiritilgan mijoz
-muammo tug'dirmaydi. Lekin telefon bo'yicha dublikat nazoratini qo'shish kerak.
-
-</details>
-
-**Yo'l-yo'lakay topilgan nosozlik (T2 dan oldin ko'ring):** `apps/web/.next` da
-eski **production build** qolib ketgan bo'lsa, `next dev` har sahifaga 404
-qaytaradi (static chunk'lar ham). `.next` ni o'chirgach darhol tuzaldi. Bu
-PROJECT.md § 8 dagi `next build` nosozligining sababi bo'lishi mumkin —
-toza `.next` bilan bir marta `next build` ni sinab ko'rishga arziydi.
-
----
-
-### ☑ T2 · Excel eksport — **BAJARILDI** (2026-07-26)
-
-**Vazifalar:**
-- [x] `apps/web/lib/xlsx.ts` ga `writeXlsx(sheets)` — ustun kengliklari +
-      sarlavhada filtr tugmalari (`!autofilter`)
-- [x] `app/api/export/tracks` — joriy filtrlar bilan (status, reys, qidiruv)
-- [x] `app/api/export/customers` — qarz ustuni bilan (`?debtors=1` → qarzdorlar)
-- [x] `app/api/export/payments` (`?customer=<id>` → bitta mijoz hisoboti)
-- [x] "⬇️ Excel" tugmasi: `/tracks`, `/customers`, `/debtors` sarlavhasida va
-      mijoz kartasidagi «To'lovlar tarixi» bo'limida
-- [x] Sana Asia/Tashkent, `deleted_at` chiqmaydi, tenant bo'yicha chegaralangan
-- [x] `packages/shared/src/services/export.ts` — sof qatorshakllantirish +
-      **24 test**; tenant-scoping esa jonli bazada tekshirildi (pastda)
-
-**Ikkita ataylab qilingan chetlanish (asl vazifadan):**
-
-1. **Pul `formatSom` bilan EMAS, son sifatida yoziladi.** Vazifada `formatSom`
-   deyilgan edi, lekin u `"1 250 000"` qatorini beradi — Excel uni **matn**
-   deb saqlaydi va `SUM()` 0 qaytaradi. Eksportning butun ma'nosi ega faylni
-   ochib ishlay olishi: qarz ustunini yig'ish, narx bo'yicha saralash. Shuning
-   uchun pul **butun so'mda son**, og'irlik **kg da son**, o'lchov birligi esa
-   ustun nomida. Avans (manfiy qarz) ishorasini saqlaydi — aks holda ustun
-   yig'indisi kassa bilan mos kelmaydi.
-2. **Sana Excel «date serial» emas, matn.** `DD.MM.YYYY HH:mm` Asia/Tashkent.
-   Date serial vaqt mintaqasini olib yurmaydi, ya'ni Toshkentda bo'lmagan
-   kompyuterda o'sha katak boshqa vaqtni ko'rsatardi (§7.9).
-
-**Qo'shimcha qarorlar:**
-
-- **50 000 qator cheklovi.** Undan oshsa fayl **ichida** ogohlantirish qatori
-  chiqadi va haqiqiy sonni aytadi — jim qirqish "hammasi shu" degan
-  taassurot qoldirardi.
-- **Sarlavhalar uz va ru da.** Panel hozircha faqat o'zbekcha (T17), lekin
-  jadval binodan chiqib ketadi — ega uni buxgalterga yuboradi. `EXPORT_LABELS`
-  ikkala tilni saqlaydi, panel `uz` so'raydi. T17 uchun tayyor.
-- **Filtr bir joyda.** `tracksFilter()` ni `listTracks` va
-  `listTracksForExport` birga ishlatadi — "⬇️ Excel" hech qachon ekrandagidan
-  boshqa qatorlarni bera olmaydi. 6 xil filtrda ikkalasi solishtirildi.
-- **Formula injeksiyasi yo'q.** `aoa_to_sheet` har matnni `t:'s'` (matn) deb
-  yozadi, formula deb emas — CSV dan farqli o'laroq `=cmd|...` ko'rinishidagi
-  import qilingan trek kodi zararsiz va **buzilmasdan** chiqadi.
-
-**Qo'lda tekshirilgan qadamlar** (toza `kargotrack_verify` bazasi, lokal
-Postgres 18):
-
-1. Toza baza → `drizzle-kit migrate` → **7 migratsiya toza o'tdi**,
-   9 jadval + 23 indeks joyida.
-2. Loyihaning `db:seed` i ishladi (1 tenant, 5 mijoz, 30 trek, 106 event).
-3. Verifikatsiya harness'i (bir martalik, repoda saqlanmagan) — **haqiqiy**
-   `lib/queries.ts` funksiyalarini, haqiqiy sheet builder'larni va `writeXlsx` ni
-   chaqiradi, keyin yozilgan `.xlsx` ni **qayta o'qib** kataklarni tekshiradi.
-   Ikki tenant ataylab **bir xil** ma'lumot bilan yaratildi: bir xil mijoz
-   ismi, bir xil telefon, bir xil trek kodi. **72/72 tekshiruv o'tdi:**
-
-   | Tekshirilgan | Natija |
-   | ----------------------------------------------------------- | ------ |
-   | Tenant B ning treki / to'lovi / mijozi A faylida yo'q (6 marker) | ✅ |
-   | Bir xil kod ikki tenantda → A faylida **bitta** qator | ✅ |
-   | Soft-deleted trek va uning narxi chiqmaydi (§7.8) | ✅ |
-   | Qarz va trek soni ham soft-deleted'ni hisoblamaydi | ✅ |
-   | Og'irlik/narx katagi **son** tipida, Excel yig'a oladi | ✅ |
-   | Avans manfiy son bo'lib qoladi | ✅ |
-   | `15:30Z` → `20:30`, `23:00Z` → **ertasi kun** `04:00` (Toshkent) | ✅ |
-   | Biriktirilmagan trek: mijoz ustunlari bo'sh, «—» emas | ✅ |
-   | 6 xil filtrda eksport == ekran (status, qidiruv ×3, reys) | ✅ |
-   | Boshqa tenant mijozining id si bilan to'lov so'rash → bo'sh | ✅ |
-   | Cheklov ogohlantirishi faylga tushadi va haqiqiy sonni aytadi | ✅ |
-   | Fayl nomi ASCII va Toshkent kalendar kuni bilan | ✅ |
-
-**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ testlar (pastga qarang) ·
-✅ toza bazada 7 migratsiya + seed · ✅ yuqoridagi 3 qadam ·
-✅ Spec.md § 5.2 / § 5.5 / § 5.6 yangilandi + yangi **§ 5.11** ·
-✅ yangi stringlar uz va ru da (`EXPORT_LABELS`).
-
-**⚠️ Halol cheklov.** Tekshiruv **ma'lumot va fayl qatlamini** to'liq qamraydi
-(haqiqiy query'lar, haqiqiy baza, yozilgan fayl qayta o'qildi). Brauzerda
-tugmani **qo'lda bosib** ko'rilmadi — panelga kirish parol talab qiladi.
-Tugma — `<a href download>`, marshrut esa `requireAdmin()` bilan qo'riqlangan
-va typecheck/lint toza; lekin pilotdan oldin bir marta bosib chiqing.
-
----
-
-### ☑ T3 · Xabar o'tkazuvchanligi + tenantlar orasida adolat — **BAJARILDI** (2026-07-27)
-
-**Vazifalar:**
-- [x] `TelegramRateLimiter` — bot tokeni bo'yicha alohida byudjet
-      (`Map<token, Bucket>`); per-chat oynasi ham (bot, chat) juftligi bo'yicha
-- [x] `batchSize: 20` + batch ichida `Promise.allSettled` bilan parallel
-- [x] Notify job ichidagi 4 ta ketma-ket query → **bitta join**
-      (`getNotifyContext`); reminder va broadcast ham 2 → **1** (`getSendContext`)
-- [x] `apps/bot/src/rateLimiter.test.ts` — **13 test** (apps/bot ga vitest
-      qo'shildi; T24 uchun ham poydevor)
-- [x] Broadcast fan-out `boss.insert` bilan 1000 lik bo'laklarda
-      (`enqueueBroadcasts`) — endi har oluvchi uchun alohida round trip yo'q
-- [x] O'lchandi: oldin/keyin (pastda)
-
-**Uchinchi xato — o'lchamasa topilmasdi.** Vazifada ikkitasi yozilgan edi,
-lekin aslida uchtasi bor edi va **eng kattasi ro'yxatda yo'q edi**:
-
-> **Per-chat kechikish global jadvalni ham surib yuborardi.** Eski limiter
-> bitta `globalNext` markerini saqlardi va uni har safar `grantedAt + 40ms` ga
-> surardi. Mijozning ikkinchi yuki uchun xabar chat oynasi tufayli 1 soniya
-> kechiksa, marker ham 1 soniya oldinga sakrardi — ya'ni **o'sha soniyada
-> yuborilishi mumkin bo'lgan 24 ta boshqa mijoz** ham orqaga suriladi.
-> O'zbek kargosida mijozda odatda bir nechta yuk bo'ladi, ya'ni har ommaviy
-> status o'zgarishi shunday takrorlarga to'la.
-
-Sof jadval simulyatsiyasi (500 xabar, 300 mijoz, 100 tasida 3 tadan yuk):
-eski algoritm **212 s** da tugatadi — **2.4 msg/s**, 25 msg/s shift o'rniga.
-Ya'ni `batchSize` tuzatilgan bo'lsa ham tezlik shu yerda qolib ketardi.
-Yechim: jadval bitta harakatlanuvchi marker emas, **band qilingan 40 ms
-slotlar to'plami** — kechiktirilgan xabar uzoqdagi slotni oladi, yaqindagilar
-boshqa chatlarga qoladi.
-
-**Yana bitta nozik joy — batch xatolikni izolyatsiya qilish.** pg-boss batch
-callback'ini «hammasi yoki hech biri» deb qaraydi: callback throw qilsa,
-`manager.watch` batchdagi **hamma** job'ni fail qiladi. Ya'ni bitta bloklagan
-chat tufayli qolgan 19 mijozga xabar **qayta yuborilardi**. Shuning uchun
-`runBatch` throw qilmaydi — yiqilgan job'larni `boss.fail(queue, id)` bilan
-alohida belgilaydi (retry/backoff aynan o'sha), keyin normal qaytadi.
-pg-boss ning `complete` SQL i `state = 'active'` bilan cheklangan, `fail` esa
-qatorni o'sha holatdan chiqarib yuborgan — shuning uchun yiqilganlar
-«muvaffaqiyat» deb belgilanmaydi. `boss.fail` ning o'zi yiqilsa ham callback
-throw qilmaydi (aks holda 19 ta takroriy xabar) — logga yoziladi.
-
-**O'lchov** (toza baza, Telegram `Api.prototype` darajasida 40 ms bilan
-stub qilingan, 150 xabar: 60 mijozda 1 tadan yuk, 30 mijozda 3 tadan —
-takroriy chatlar aynan shu uchun):
-
-| | Vaqt | Tezlik | Yetkazildi |
-| ---------------------------- | -------- | ------------ | ---------- |
-| **Oldin** (batchSize 1, ketma-ket, eski limiter, 3 query) | 150.2 s | **1.0 msg/s** | 150/150 |
-| **Keyin** (batchSize 20, parallel, yangi limiter, 1 query) | 10.5 s | **14.2 msg/s** | 150/150 |
-| Tezlanish | | **14.3×** | |
-| Telegram shifti (25/s) | 6.0 s | 25 msg/s | — |
-
-Qolgan farq (10.5 s vs 6.0 s) — 90 ta takroriy chatning haqiqiy 1 msg/s
-oynasi va pg-boss ning 1 soniyalik polling'i. Bu Telegram qoidasi, xato emas.
-
-**Qo'lda tekshirilgan qadamlar:**
-
-1. Toza baza → `drizzle-kit migrate` (7 migratsiya) → `db:seed`.
-2. Ikkala variant **bitta jarayonda, ketma-ket**, bir xil baza, bir xil
-   qatorlar, bir xil stub kechikishi bilan ishlatildi. «Oldin» varianti —
-   T3 dan avvalgi kodning aynan qayta tiklangan nusxasi.
-3. Har ikkalasida: **150/150 handler chaqirildi, 150/150 yuborildi,
-   0 xato, navbatda 0 qoldi** — ya'ni tezlik xabarni yo'qotish hisobiga emas.
-4. **Broadcast fan-out:** `enqueueBroadcasts` bilan 300 job → navbatda
-   **300** ✅ (`BROADCAST_QUEUE` policy `standard`, singleton kalit e'tiborga
-   olinmaydi — bo'sh kalit bilan bulk insert `short` navbatda job'larni bitta
-   qilib yuborardi; shu tekshiruv aynan buni ushlab turadi).
-5. pg-boss ning o'zi alohida sinaldi: `batchSize: 20` da 150 job → callback
-   **150 tasini** ko'radi (8 batch), ya'ni yo'qotish yo'q.
-
-**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ **229 test**
-(216 shared + 13 bot; T2 dan oldin 192) · ✅ toza bazada migratsiya ·
-✅ yuqoridagi 5 qadam · ✅ Spec.md § 8 yangilandi ·
-yangi user-facing string yo'q (sof infratuzilma).
-
-**⚠️ Ops eslatmasi.** `pnpm test` endi `--parallel` EMAS: ikkinchi vitest
-workspace qo'shilgach, ikkita worker pool bir vaqtda ishga tushib mashina
-xotirasini tugatardi (`Fatal process out of memory`). `lint`/`typecheck` —
-har biri bitta jarayon — parallel qolgan.
-
-**⚠️ Halol cheklov.** O'lchov haqiqiy Telegram bilan emas, `Api.prototype`
-darajasidagi stub bilan qilingan — ya'ni tarmoq jitter'i va Telegram ning
-o'z 429 javoblari qamralmagan. Nisbat (14×) ishonchli, mutlaq son esa
-haqiqiy tarmoqda past bo'ladi. Shuningdek, `postgres` pool default `max: 10`;
-3 ta worker × 20 batch = 60 gacha parallel handler bo'lishi mumkin, lekin har
-biri endi **bitta** query qiladi va keyin limiter'da kutadi — o'lchovda
-muammo ko'rinmadi, lekin haqiqiy yukda kuzatib borish kerak.
-
----
-
-### ☑ T4 · Yo'q indekslarni qo'shish — **BAJARILDI** (2026-07-26)
-
-**Natija:** `0005_chubby_master_mold.sql` — 7 ta indeks.
-Toza `postgres:16` da o'lchandi: 80 000 trek, 160 000 event, 24 000 to'lov,
-6 000 mijoz, 2 tenant. Har query 3 marta (issiq), `EXPLAIN ANALYZE`.
-
-| Query | Oldin | Keyin | Tezlanish |
-| ------------------------------- | -------- | -------- | --------- |
-| Treklar ro'yxati (1-sahifa) | 58.2 ms | **0.56 ms** | **104×** |
-| Trek tarixi (detal sahifasi) | 16.2 ms | **0.14 ms** | **115×** |
-| Status filtri (count) | 16.2 ms | **3.9 ms** | 4.2× |
-| Dashboard tushum (sum) | 5.29 ms | **3.00 ms** | 1.8× |
-| Dashboard event count | 41.0 ms | **24.1 ms** | 1.7× |
-| Login (telefon bo'yicha) | 0.161 ms | **0.106 ms** | 1.5× |
-| Qarz: to'lovlar skani | 3.59 ms | 3.63 ms | — ¹ |
-
-¹ Bu query tenantning **yarim** jadvalini o'qiydi — Seq Scan to'g'ri tanlov.
-Uni indeks emas, **T6** hal qiladi (aggregate'ga o'tkazish).
-
-**Yo'l-yo'lakay topilgan 2 ta nozik xato** (o'lchamasa sezilmasdi):
-
-1. **Partial index shart.** `WHERE deleted_at IS NULL` predikati indeksda
-   bo'lmasa, planner tenantning barcha 40 000 qatorini bitmap-scan qilib,
-   keyin top-N sort qiladi. Predikat mos kelganda esa indeks tartibi bo'yicha
-   yurib LIMIT 20 da to'xtaydi. **56 ms → 0.75 ms.** Gap indeks hajmida emas
-   (soft-delete qilinganlar kam), predikat **mosligida**.
-2. **`.desc()` yetarli emas — `.nullsFirst()` kerak.** SQL'da
-   `ORDER BY x DESC` = `DESC NULLS FIRST`, Drizzle'ning yalang'och `.desc()`
-   esa `DESC NULLS LAST` chiqaradi. Mos kelmagani uchun planner indeksni
-   **tartib uchun ishlatmaydi** va jimgina to'liq sortga tushadi:
-
-   | Indeks varianti | Vaqt | Ordered scan |
-   | ------------------- | -------- | ------------ |
-   | `DESC NULLS LAST` | 47.9 ms | ❌ |
-   | `DESC NULLS FIRST` | 0.60 ms | ✅ |
-   | plain `ASC` (teskari) | 0.56 ms | ✅ |
-
-   Ikkalasi ham `schema.ts` izohlarida yozib qo'yilgan — keyingi indeks
-   qo'shganda takrorlanmasin.
-
-**DoD:** ✅ typecheck · ✅ lint (0 warning) · ✅ 166 test · ✅ toza bazada 6 ta
-migratsiya o'tdi · ✅ loyihaning haqiqiy `db:seed` i ishladi · yangi
-user-facing string yo'q (sof DB o'zgarishi).
-
-**⚠️ Prod eslatmasi:** `CREATE INDEX` (CONCURRENTLY emas) yozuvni qulflaydi.
-Hozirgi hajmda bu millisekundlar — muammo yo'q. Jadvallar millionga chiqqanda
-kelajakdagi indekslarni `CONCURRENTLY` bilan, migratsiyadan **tashqarida**
-qo'llash kerak (drizzle-kit migratsiyani tranzaksiyaga o'raydi, `CONCURRENTLY`
-esa tranzaksiya ichida ishlamaydi).
-
-**Keyingi qadam (T4 dan o'sib chiqdi):** dashboard event count faqat 1.7×
-tezlashdi, chunki `track_events` da `tenant_id` yo'q — indeks tenantlar bo'yicha
-ajratilmaydi. Hajm oshsa `tenant_id` ni denormalizatsiya qilish kerak.
-Bu `schema.ts` da izoh sifatida belgilangan.
-
-<details>
-<summary>Asl vazifa tavsifi (arxiv)</summary>
-
-**Nega.** Butun bazada **5 ta** indeks bor (`0000`, `0002` migratsiyalari):
-`customers_tenant_client_code_uq`, `customers_tenant_tg_user_uq`,
-`tracks_tenant_code_uq`, `tracks_customer_idx`, `tracks_batch_idx`.
-
-Eng muhimi yo'q: **`track_events.track_id`** — bu eng tez o'sadigan jadval
-(har status o'zgarishi qator qo'shadi), Postgres FK'ni avtomatik indekslamaydi.
-Dashboard va trek tarixi seq scan qiladi.
-
-**Ish hajmi:** ~15 daqiqa. **Eng yuqori ROI.**
-
-**Vazifalar:**
-- [ ] `track_events(track_id, created_at DESC)`
-- [ ] `payments(customer_id)`
-- [ ] `payments(tenant_id, created_at)`
-- [ ] `tracks(tenant_id, created_at DESC)` — ro'yxat sortirovkasi
-- [ ] `tracks(tenant_id, current_status)` — status filtri
-- [ ] `admin_users(phone)` — login lookup
-- [ ] `packages/db/src/schema.ts` ga ham qo'shish (schema = yagona haqiqat)
-- [ ] `pnpm db:generate` + toza bazada `db:migrate` tekshirish
-
-</details>
-
----
-
-### ☑ T5 · Kuzatuv: Sentry + healthcheck — **BAJARILDI** (2026-07-26)
-
-**Tanlov:** Sentry (bepul tier) + PII filtri. DSN **ixtiyoriy** — `SENTRY_DSN`
-bo'sh bo'lsa ikkala ilova ham avvalgidek, hisobotsiz ishlaydi.
-
-**Nima qo'shildi:**
-
-| Fayl | Vazifa |
-| ------------------------------------------------ | ---------------------------------------------- |
-| `packages/shared/src/observability/scrub.ts` | PII tozalash — sof, testlangan, ikkalasi uchun umumiy |
-| `packages/shared/src/observability/scrub.test.ts` | 11 test |
-| `apps/bot/src/sentry.ts` | Bot uchun init + `captureError` + `flushSentry` |
-| `apps/web/lib/observability.ts` | Panel uchun init + `captureError` |
-| `apps/web/lib/report-error.ts` | Error boundary'dan hisobot yuboruvchi server action |
-| `apps/web/app/error.tsx` | Route error boundary — **o'zbekcha UI** + hisobot |
-| `apps/web/app/global-error.tsx` | Root boundary (layout ham qulasa) |
-
-Ulangan nuqtalar: `bot.catch` (har handler xatosi, tenantId + updateId bilan),
-`uncaughtException` / `unhandledRejection`, startup xatosi, 3 ta worker
-ishga tushmasligi, va **3 ta navbatning retry tugagandagi xatosi** — ya'ni
-yetkazilmagan xabar endi jimgina yo'qolmaydi.
-
-**Yo'l-yo'lakay tuzatilgan 2 ta nuqson:**
-
-1. **Panelda error boundary umuman yo'q edi.** Server component yoki action
-   xato bersa, admin Next'ning inglizcha default ekranini ko'rardi va hech
-   nima yozib olinmasdi. Endi o'zbekcha sahifa + "Qayta urinish" + `digest`
-   kodi, va xato hisobotga tushadi.
-2. **`@sentry/node` drizzle'ni ikkiga bo'lib yubordi.** Sentry
-   `@opentelemetry/api` ni olib keladi, u esa drizzle'ning **ixtiyoriy peer**'i —
-   natijada pnpm ikkinchi drizzle nusxasini yaratdi va `apps/bot` bilan
-   `packages/db` bir-biriga mos kelmaydigan tiplarni ko'ra boshladi
-   (typecheck qulab tushdi). Yechim: `@opentelemetry/api` ni `packages/db`,
-   `apps/web`, `apps/bot` ga aniq dependency qilib qo'shish — uchalasi bitta
-   nusxaga ulandi.
-
-**Xavfsizlik qarorlari (ataylab):**
-
-- `includeLocalVariables: false` — stack frame'dagi lokal o'zgaruvchilar
-  **jonli mijoz qatorini** (customer obyekti, trek qatori) hisobotga olib
-  chiqadigan yagona kanal. SDK defaulti ham shu, lekin aniq yozib qo'yildi.
-- Sentry'ning `OnUncaughtException` / `OnUnhandledRejection` integratsiyalari
-  **olib tashlandi** — ular jarayonni to'xtatishi mumkin, bu esa CLAUDE.md
-  8-qoidasini buzardi. O'rniga botning o'z traplari hisobot beradi va davom etadi.
-- `tracesSampleRate: 0` — tracing bepul tier kvotasini yeydi, kerak emas.
-- `contextLines` **qoldirildi**: u faqat bizning manba kod satrlarimizni
-  yuboradi (mijoz ma'lumoti manba kodda hech qachon bo'lmaydi) va hisobotni
-  o'qish mumkin qiladi.
-
-**Ops qismi:** `docker-compose.prod.yml` da `web` va `bot` uchun healthcheck
-(image debian-slim, curl/wget yo'q → Node 20 ning global `fetch` i ishlatildi;
-web `/login`, bot `/health`), va **4 ta servisga ham log cheklovi**
-(`max-size 10m × 5`) — Docker'ning default json-file drayveri cheksiz o'sib,
-oxir-oqibat VPS diskini to'ldirib Postgres'ni ham o'ldirardi.
-
-**Qo'lda tekshirilgan qadamlar:**
-
-1. Toza `postgres:16` → migratsiya → `db:seed`.
-2. Bot `SENTRY_DSN` **siz** ishga tushdi → `"SENTRY_DSN not set — error
-   reporting disabled"`, 3 ta worker start, polling ulandi.
-3. Bot `SENTRY_DSN` **bilan** → `"error reporting enabled"`, xatti-harakat aynan bir xil.
-4. **PII sizishi E2E tekshiruvi:** DSN lokal soxta ingest serveriga qaratildi,
-   ma'lumot ish vaqtida (env orqali) berildi — manba kodda emas, ya'ni prod
-   sharoiti. Yuborilgan payload tekshirildi:
-
-   | Tekshirilgan | Natija |
-   | --------------------------- | ---------- |
-   | Trek kodi (xabar ichida) | tozalandi ✓ |
-   | Trek kodi (kontekst ichida) | tozalandi ✓ |
-   | Telefon `+998901234567` | tozalandi ✓ |
-   | Telefon, probelli shakl | tozalandi ✓ |
-   | Baza paroli | tozalandi ✓ |
-   | Bot tokeni | tozalandi ✓ |
-   | Mijoz ismi | tozalandi ✓ |
-   | `tenantId` (PII emas) | **saqlandi** ✓ |
-
-5. `uncaughtException` sun'iy chiqarildi → jarayon **omon qoldi** (8-qoida).
-6. `docker compose config` — 3 healthcheck + 4 servisda log cheklovi tasdiqlandi.
-
-**DoD:** ✅ typecheck · ✅ lint (0 warning) · ✅ **177 test** (166 → +11) ·
-✅ toza bazada migratsiya · ✅ yuqoridagi 6 qadam.
-
-**⚠️ Halol cheklov.** `@sentry/node` Next.js 14 da server action / server
-component xatolarini **avtomatik ushlamaydi** — Next ularni error boundary'ga
-aylantiradi, jarayon darajasiga chiqarmaydi. Shuning uchun ular
-`app/error.tsx` orqali xabar qilinadi: admin **ko'rgan** har bir xato yoziladi,
-lekin marshrut + `digest` bilan, to'liq stack trace esa server logida qoladi.
-To'liq avtomatik ushlash `@sentry/nextjs` ni talab qiladi — u build-time webpack
-plugin qo'shadi va bu repoda `next build` ning ma'lum nosozligi bor
-(PROJECT.md §8), ya'ni pilotdan oldin **tekshirib bo'lmasdi**. T13 bilan birga
-qilinadi.
-
-<details>
-<summary>Asl vazifa tavsifi (arxiv)</summary>
-
-**Nega.** Sentry yo'q, alert yo'q, metrika yo'q. `web` konteynerida healthcheck
-yo'q (faqat `postgres`da bor) — Next.js osilib qolsa Docker qayta ishga
-tushirmaydi. Status xabarlari uchun panelda "yetkazildi/yetmadi" ko'rsatkichi
-yo'q. Siz **ishonchlilik sotmoqchisiz, lekin uni o'lchamaysiz.**
-
-**Ish hajmi:** ~1 soat
-
-**Vazifalar:**
-- [ ] `@sentry/node` (bot) + `@sentry/nextjs` (web), DSN `.env` dan (ixtiyoriy —
-      bo'sh bo'lsa jim o'tadi)
-- [ ] `bot.catch` va `uncaughtException` traplarini Sentry'ga ulash
-- [ ] Job retry tugagandagi `logger.error`larni Sentry'ga (worker.ts:145, 219, 305)
-- [ ] `docker-compose.prod.yml` — `web` uchun healthcheck (`GET /login` 200)
-- [ ] `bot` uchun healthcheck (`GET /health` allaqachon bor)
-- [ ] Docker log rotation: `logging.options.max-size` / `max-file` (disk to'lmasin)
-- [ ] `.env.example` yangilash
-
-</details>
-
----
-
-## P1 — PILOT DAVOMIDA (~1–2 hafta)
-
-### ☑ T6 · Layoutdan `listDebtors`ni olib tashlash — **BAJARILDI** (2026-07-27)
-
-**Vazifalar:**
-- [x] `getDebtTotals` — qarzdorlar soni **va** umumiy qarz bitta SQL aggregate
-      bilan (`lib/queries/customers.ts`); `countDebtors` — nishon uchun o'ram
-- [x] `layout.tsx` endi `countDebtors` chaqiradi
-- [x] `getDashboardStats` ichidagi `listDebtors` ham `getDebtTotals` ga o'tdi
-- [x] `computeDebtTiyin` qoidasi bitta joyda: `DEBT_OWED_STATUSES` eksport
-      qilindi, SQL `IN (…)` shu massivdan quriladi
-- [x] Test: har status uchun `computeDebtTiyin` va `DEBT_OWED_STATUSES` mos
-      kelishi (`debt.test.ts`, 8 ta yangi tekshiruv)
-
-**Suspense qilinmadi.** Ro'yxatdagi muqobil variant edi, lekin u sekin
-query'ni yashiradi, tezlashtirmaydi: baza ishi o'sha-o'sha qoladi, faqat
-nishon kechroq chiqadi. Aggregate ishning o'zini olib tashlaydi — 50 000
-trekda **0.1 MB** heap (29 MB o'rniga), ya'ni yashiradigan narsa qolmadi.
-
-**Qoida takrorlanmadi, ko'chirildi.** SQL `computeDebtTiyin` ning so'zma-so'z
-tarjimasi: soft-deleted chiqmaydi (§7.8), NULL narx 0, to'lovlar ayiriladi,
-`> 0` filtri esa **avansni boshqa mijozning qarziga qo'shib yubormaydi**.
-`customers` jadvali umuman skanerlanmaydi — faqat qarzli treki yoki to'lovi
-bor mijozda net nolga teng bo'lmasligi mumkin, shuning uchun ikkita
-guruhlangan tomon `FULL JOIN` qilinadi.
-
-**O'lchov** (toza `postgres:16`, 50 000 trek / 6 000 mijoz / 20 000 to'lov,
-har biri 3 marta issiq; harness bir martalik, repoda saqlanmadi):
-
-| Nishon (har sahifa yuklanishida) | Vaqt | Node heap |
-| ---------------------------------- | --------- | --------- |
-| **Oldin** — `listDebtors(...).length` | 655 ms | +29.0 MB |
-| **Keyin** — `countDebtors` (aggregate) | **41 ms** | **+0.1 MB** |
-| Tezlanish | **16×** | **290×** |
-
-**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ **252 test**
-(239 shared + 13 bot; T3 dan keyin 229) · ✅ toza bazada 7 migratsiya + seed ·
-✅ jonli bazada 38/38 tekshiruv (T19 bilan birga, pastda) · ✅ Spec.md § 5.10
-yangilandi · yangi user-facing string yo'q.
-
----
-
-### ☑ T7 · Bulk operatsiyalarni tranzaksiya + chunkga o'tkazish — **BAJARILDI** (2026-07-27)
-
-**Vazifalar:**
-- [x] `setTrackStatuses` (`lib/queries/track-mutations.ts`) — bitta tranzaksiya,
-      chunk boshiga bitta bulk `UPDATE` + bitta bulk event `INSERT`
-- [x] `changeBatchStatus` (`lib/queries/batches.ts`) — xuddi shunday, **reysning
-      o'z statusi ham o'sha tranzaksiyada**
-- [x] Notify enqueue faqat commitdan keyin (import'da qilinganidek)
-- [x] `IMPORT_CHUNK` → `BULK_CHUNK`: `packages/shared/src/services/bulk.ts`
-      (`chunked` bilan birga). Endi panel yozuvlari ham, `packages/db` dagi
-      pg-boss fan-out ham **bitta testlangan konstantadan** o'lchov oladi —
-      ilgari `IMPORT_CHUNK` (web) va `ENQUEUE_CHUNK` (db) alohida edi
-- [x] `planBulkStatusChange` (`packages/shared/.../statusChange.ts`) — tanlovni
-      `writeIds` / `eventIds` / `notify` ro'yxatlariga ajratuvchi sof planner
-- [x] Testlar: 2 500 trekda status o'zgarishi va parametr limiti
-      (**351 test**, 335 → +16)
-
-**Ro'yxatda bo'lmagan uchinchi joy — `enqueueNotifications`.** Vazifada
-notify'ni commitdan keyinga surish yozilgan edi, lekin import'dagi «to'g'ri
-namuna»ning o'zi ham har trek uchun bitta `boss.send` qilardi: 2 500 trekli
-reys = 2 500 queue round trip, admin so'rovi esa shuning hammasini kutadi.
-Endi T3 dagi `enqueueBroadcasts` naqshi bo'yicha bitta `boss.insert` — chunk
-boshiga bitta statement.
-
-**Dedupe saqlanib qoldi** (broadcast'dan farqli o'laroq): pg-boss 10.4.2 ning
-`insertJobs` SQL i `singletonKey` ni `send` ishlatadigan **o'sha** ustunga
-yozadi va `ON CONFLICT DO NOTHING` bilan tugaydi, ya'ni NOTIFY_QUEUE ning
-`short` policy unique indeksi §7.6 ni avvalgidek majburlaydi. Bitta chunk
-ichida to'qnashuv bo'lishi ham mumkin emas — bulk o'zgarishda har trek bir
-marta ro'yxatda.
-
-**Nima o'zgardi (round trip, 2 500 trekli reys):**
-
-| Operatsiya | Oldin | Keyin |
-| ------------------------------ | ---------------- | ------------------------- |
-| `setTrackStatuses` yozuvlari | 2×N statement | 2 UPDATE + 2 INSERT |
-| `changeBatchStatus` yozuvlari | 2×N + 1 | 2 + 2 + 1 (reys statusi) |
-| Notify enqueue | N `boss.send` | 1 `boss.insert` |
-| Atomiklik | yo'q | bitta tranzaksiya |
-
-**Nega reysning statusi ham tranzaksiya ichida.** Ilgari u tsikldan **keyin**,
-alohida yozilardi: uzilish yuz bersa reys «IN_TRANSIT» deb ko'rinardi, a'zolarining
-yarmi esa hamon CHINA_WAREHOUSE da qolardi — va aynan shu holatda admin qaysi
-yarmi ekanini bilmaydi. Endi ikkalasi birga commit bo'ladi.
-
-**`setTrackStatuses` ning revive holati yo'q.** Query `deleted_at IS NULL` bilan
-cheklangan, shuning uchun bu yerda `willWrite` = haqiqiy status o'zgarishi.
-Planner'ning revive tarmog'i import yo'liga tegishli (§7.2) — shu sabab
-`writeIds` va `eventIds` bu chaqiruvda doim teng bo'ladi, lekin planner ikkalasini
-alohida qaytaradi va DB qatlami taxmin qilmaydi.
-
-**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ **351 test**
-(304 shared + 30 bot + 17 web; T8 dan keyin 335) · migratsiya yo'q (sxema
-o'zgarmadi) · ✅ Spec.md § 8 yangilandi (bulk atomikligi + commitdan keyin
-enqueue) · yangi user-facing string yo'q (sof yozuv qatlami).
-
-**⚠️ Halol cheklov.** Tekshiruv **sof birlik testlari** darajasida:
-planner 2 500 qatorda, chunk hajmi parametr limitida. Jonli bazada
-o'lchov/rollback tekshiruvi (T3/T4/T6 dagi kabi harness) **qilinmadi** —
-ataylab, kelishilgan holda. Ya'ni «tranzaksiya haqiqatan orqaga qaytadi» va
-«enqueue qilingan job soni to'g'ri» degan da'volar kod o'qish darajasida,
-o'lchov darajasida emas. Pilotdan oldin bitta reysni panelda qo'lda
-o'zgartirib, `track_events` va navbatdagi job sonini solishtiring.
-
-### ☑ T8 · Rollarni majburlash + xodimlar boshqaruvi — **BAJARILDI** (2026-07-27)
-
-**Muammo ikki qavatli edi.** Birinchisi ro'yxatda bor edi: `role` ustuni faqat
-`layout.tsx` dagi "Egasi"/"Xodim" yozuvida ishlatilardi, ya'ni oddiy xodim
-valyutani almashtira, tariflarni tahrirlay, 3 000 mijozga broadcast yubora va
-trek o'chira olardi — **30 ta server action, hech birida tekshiruv yo'q**.
-
-Ikkinchisi ro'yxatda yo'q edi va og'irroq: tizimda **ikkita bir-biriga
-bog'lanmagan «xodim»** bor edi — panel uchun `admin_users`, bot uchun
-`tenants.settings.staff_tg_ids`. Ombor xodimi ikki xil identifikator bilan ikki
-marta mavjud edi, uning roli yo'q edi, va uni bekor qilishning yo'li yo'q edi.
-Shu sababli `payments` da `created_by` umuman yo'q edi: kim naqd pul olgani —
-kargo biznesida audit qilib bo'lmaydigan yagona teshik.
-
-**Vazifalar:**
-- [x] `packages/shared/src/services/permissions.ts` — 3 rol
-      (`owner`/`manager`/`warehouse`) × 17 qobiliyat matritsasi, `can()`,
-      `toAdminRole()` (noma'lum rol → eng kam huquqli), `canSignIn`,
-      `canUseStaffMode` + **28 test**
-- [x] `packages/shared/src/services/invite.ts` — taklif kodi: chalkashmaydigan
-      32 belgili alifbo (`O`/`0`, `I`/`1` yo'q), normalizatsiya, muddat + **20 test**
-- [x] Migratsiya `0009_team_roles` — enum, ustunlar, `admin_invites`,
-      `created_by` va backfill. **Enum `ADD VALUE` bilan emas, qayta yaratilgan**:
-      drizzle barcha kutilayotgan migratsiyalarni **bitta** tranzaksiyada
-      bajaradi, shuning uchun Postgres `55P04` beradi (o'sha tranzaksiyada
-      qo'shilgan enum qiymatini ishlatib bo'lmaydi) va fayllarga bo'lish
-      yordam bermaydi. `RENAME → CREATE → cast → DROP` esa ishlaydi, chunki
-      cheklov faqat `ALTER TYPE … ADD VALUE` ga tegishli
-- [x] `staff_tg_ids` → `admin_users.tg_user_id` ga ko'chirildi. Bitta odam,
-      bitta yozuv, ikkala yuzada; bot endi rolni ham biladi
-- [x] `lib/auth.ts` — `authorize()` (action uchun, tarjima qilingan xato) va
-      `requireCapability()` (sahifa uchun). **30 ta actionning hammasi** va
-      6 ta sahifa + 3 eksport route yopildi
-- [x] `session_epoch` — parol o'zgarishi, «hamma qurilmadan chiqarish» va
-      o'chirib qo'yish 30 kunlik tokenni darhol bekor qiladi. Eski cookie'lar
-      epoch 0 bilan o'qiladi, ya'ni deploy hech kimni chiqarib yubormaydi
-- [x] `/settings/team` — rol, Telegram holati, oxirgi kirish, kutilayotgan kod;
-      rolni o'zgartirish, kod berish/bekor qilish, Telegramni uzish,
-      sessiyalarni to'xtatish, o'chirib qo'yish/qayta yoqish
-- [x] Taklif oqimi: **egasi hech qachon xodim parolini bilmaydi**. Kod →
-      xodim `/login` da o'z parolini qo'yadi; ombor xodimi shu kodni botga
-      yuborsa Telegrami ulanadi
-- [x] Har bir xodim (rolidan qat'i nazar) o'z parolini almashtira oladi
-- [x] Audit: `payments`/`customers`/`broadcasts` ga `created_by`; timeline
-      UUID o'rniga **ism** ko'rsatadi (`staff:<tgid>` ham hal qilinadi, bot
-      orqali bo'lgani `· bot` deb belgilanadi); to'lov tarixida va Excel
-      eksportida kassir ismi; dashboardda **«Kassa — kim qabul qildi»** (egaga)
-- [x] Himoya: oxirgi egani pasaytirib/o'chirib bo'lmaydi, o'zini o'chirib
-      bo'lmaydi, bir tenantda bitta telefon bitta xodimga
-- [x] i18n: `roles` va `team` namespace'lari (71 kalit × 2 til), bot uchun
-      4 ta yangi string uz+ru
-
-**Rol o'zgarishi sessiyani bekor QILMAYDI** — bu ataylab. Rol har so'rovda
-yozuvdan o'qiladi, shuning uchun darhol kuchga kiradi; epochni oshirish esa
-ishlayotgan hamkasbni smena o'rtasida tizimdan chiqarib yuborardi.
-
-**Nima ko'rinmaydi, o'sha ham qaror.** Navigatsiya rolga qarab filtrlanadi
-(bo'sh ekranga olib boradigan havola tushuntirmaydi), lekin sahifa ichidagi
-tugmalar yo'qolmaydi — ular yo mavjud, yo umuman boshqa rolniki. Trekni
-o'chirish tugmasi menejerda yo'q: bu «ruxsat so'rasa bo'ladigan» narsa emas.
-
-**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ **335 test**
-(288 shared + 30 bot + 17 web; T8 dan oldin 287) · ✅ migratsiya **jonli
-bazada** (0008 → 0009, `staff_tg_ids` dan 1 ta ombor xodimi ko'chdi) **va toza
-bazada** (0000–0009 bitta tranzaksiyada, `admin_role_old` qolmaydi) ·
-✅ ilovaning Drizzle so'rovlari jonli sxemada tekshirildi (login, bot
-`getStaffByTg`, `listTeam` join, to'lov+muallif join) ·
-✅ Spec.md §1, §3.8, §5.9 yangilandi, §5.12 va §5.13 qo'shildi ·
-✅ CLAUDE.md ma'lumot modeli + 9-qoida · ✅ yangi stringlar uz+ru da
-
-### ☐ T9 · Login rate limit
-
-`apps/web/app/login/actions.ts` — hech qanday chegara yo'q. Yana: telefon
-global unique emas, shuning uchun har urinishda mos qatorlar soniga teng
-argon2 chaqiriladi (qimmat) → arzon DoS vektori.
+### ☐ T9 · Login rate limit 🟡
+
+`apps/web/app/login/actions.ts` — hech qanday chegara yo'q. Telefon global
+unique emas, shuning uchun har urinishda mos qatorlar soniga teng argon2
+chaqiriladi (qimmat) → arzon DoS vektori. T8 dan keyin xodimlar ko'paydi,
+login yuzasi ham kengaydi.
 
 - [ ] IP + telefon bo'yicha oyna (masalan 10 urinish / 15 daqiqa)
-- [ ] Postgresda saqlash (`login_attempts` jadvali) — konteyner qayta ishga
-      tushsa ham saqlanadi
-- [ ] Bir xil `LOGIN_ERROR` matni saqlanib qolsin (user enumeration bo'lmasin)
-- [ ] `/sa/login` uchun ham xuddi shunday
+- [ ] Postgresda saqlash (`login_attempts`) — konteyner restartdan omon qolsin
+- [ ] Bir xil `LOGIN_ERROR` matni (user enumeration bo'lmasin)
+- [ ] `/sa/login` uchun ham
 
-### ☐ T10 · "Filtrga mos hammasini tanlash"
+### ☐ T10 · "Filtrga mos hammasini tanlash" 🟡
 
-`tracks-table.tsx:75` — `toggleAll` faqat `rows` (20 qator) ustida ishlaydi.
+`tracks-table.tsx:75` — `toggleAll` faqat ko'rinadigan 20 qator ustida.
 500 trekni IN_TRANSIT qilish = 25 sahifa × qo'lda tanlash.
 
-- [ ] Bulk barda "Filtrga mos {N} tani tanlash" varianti
-- [ ] Action `trackIds` emas, **filtr** qabul qiladi (server tanlaydi) —
-      katta ro'yxatni client'dan yubormaslik
+- [ ] Bulk barda "Filtrga mos {N} tani tanlash"
+- [ ] Action `trackIds` emas, **filtr** qabul qiladi (server tanlaydi)
 - [ ] Tasdiq modalida aniq son: "{N} ta trek, {M} ta mijozga xabar"
 
-### ☑ T11 · "Biriktirilmagan treklar" ekrani — **BAJARILDI** (2026-07-27)
+### ☐ T13 · Xabar yetkazish jurnali 🟡
 
-**Ro'yxatning yarmi T19 bilan allaqachon yopilgan edi.** T19 operatsion
-worklist'larni qo'shganda `unassigned` ham ular orasida edi, ya'ni filtr,
-dashboard kartasi va bannerli ko'rinish bor edi. T1 esa bulk biriktirishni
-bergan edi. Qolgani — qator ichidagi tez biriktirish.
-
-**Vazifalar:**
-- [x] `/tracks?work=unassigned` filtri — T19 (alohida sahifa emas: bu
-      ko'rinishda qidiruv, reys filtri, Excel eksporti va bulk bar allaqachon
-      bor; ikkinchi sahifa hammasini takrorlardi)
-- [x] Bulk biriktirish — T1
-- [x] **Har qatorda tez biriktirish**: bo'sh «Mijoz» katagi endi
-      `+ Biriktirish` tugmasi (`tracks-table.tsx` → `CustomerCell`), o'sha
-      mijoz picker'ini **bitta trek** uchun ochadi
-- [ ] ~~Navigatsiyada son bilan nishon~~ — **ataylab qilinmadi**, pastga qarang
-
-**Nega alohida tugma emas, aynan o'sha katak.** Admin qaror qabul qilayotgan
-payt aynan shu katakka qaraydi («bu kimniki?»). Yangi ustun qo'shish jadvalni
-telefonda torroq qiladi, bulk bar orqali yurish esa har quti uchun uch teginish:
-belgila → bar → tanla. Endi bitta.
-
-**Dialog takrorlanadi, umumiy emas.** `CustomerAssignDialog` ning ikkinchi
-nusxasi qo'yildi (`trackIds={[bitta]}`), chunki bittasini id ro'yxatini
-almashtirib ishlatish yarim yig'ilgan bulk tanlovni buzardi.
-
-**Nima qilinmadi va nega — nav nishoni.** Vazifada «navigatsiyada son bilan
-nishon» bor edi. Bu `layout.tsx` ga **har sahifa yuklanishida** ishlaydigan
-yana bitta aggregate qo'shadi — T6 aynan shu narsani olib tashlagan edi, va
-`customer_id IS NULL` uchun mos indeks ham yo'q (partial index kerak bo'lardi).
-Son esa allaqachon dashboard'ning «Bugungi ish» blokida turibdi — admin
-kunini boshlaydigan ekran. Nishon takroriy ma'lumot uchun har klikka bitta
-query qo'shardi. Kelishilgan holda tashlab ketildi.
-
-**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ 351 test (o'zgarmadi —
-sof UI) · migratsiya yo'q · ✅ Spec.md § 5.2 yangilandi ·
-✅ yangi stringlar uz+ru (`tracks.quickAssign`, `tracks.quickAssignRow`).
-
-### ☑ T12 · Pagination: mijozlar va qarzdorlar — **BAJARILDI** (2026-07-27)
-
-**Vazifalar:**
-- [x] `TRACKS_PAGE_SIZE` naqshi mijozlarga: `CUSTOMERS_PAGE_SIZE = 20`,
-      `/customers` va `/debtors` da `Pagination` komponenti
-- [x] Qarz bo'yicha SQL sortirovka (xotira o'rniga)
-- [x] Qidiruv + pagination birga: `q` sahifa almashganda saqlanadi
-
-**Ro'yxatda yozilganidan kattaroq muammo topildi.** Vazifa DOM haqida edi
-(«3 000 mijoz = 3 000 qator»), lekin `listCustomersWithDebt` **tenantning butun
-`tracks` va `payments` jadvalini** Node'ga tortib, qarzni Map'da hisoblardi —
-T6 layout'dan olib tashlagan naqshning aynan o'zi, ustiga natijani to'liq
-render qilib. Ya'ni pagination faqat HTML ni kichraytirardi, bazadan keladigan
-yukni emas.
-
-Endi bitta statement: `owed` / `counted` / `paid` CTE lari + `customers` ga
-`left join`, `count(*) over ()` bilan sahifasiz jami ham o'sha o'tishda
-qaytadi — sahifa yuklanishi 1 round trip.
-
-**Qarz qoidasi takrorlanmadi.** T6 dagidek: `IN (…)` ro'yxati
-`DEBT_OWED_STATUSES` dan quriladi (test har status uchun `computeDebtTiyin`
-bilan mosligini tekshiradi), soft-deleted chiqmaydi (§7.8), NULL narx 0,
-to'lovlar ayiriladi. `getDebtTotals` dan farqi: bu yerda **manfiy net
-saqlanadi** — mijozlar ro'yxatida avans `Avans` bo'lib ko'rinishi kerak (§7.5);
-faqat `onlyDebtors` uni tashlaydi.
-
-**Saralashda `client_code` tiebreak.** `debt desc` yolg'iz noyob emas — bir xil
-qarzli ikki mijoz sahifalar orasida takrorlanib yoki tushib qolardi.
-
-**Qarzdorlar kartasi sahifaga bog'lanmadi.** Umumiy qarz va «Barchasiga
-eslatma» butun tenant bo'yicha qoladi (`getDebtTotals`, T6 aggregate'i): ega bu
-raqamni biznesning raqami deb o'qiydi, 2-sahifaga o'tgani uchun kichrayadigan
-summa umuman yo'q summadan yomonroq.
-
-**Eksport ham yutdi.** `listCustomersForExport` xuddi shu funksiyani
-`limit: EXPORT_MAX_ROWS` bilan chaqiradi — ekran va fayl bitta query'dan
-keladi (§5.11 kafolati), va eksport ham endi butun jadvalni Node'ga tortmaydi.
-
-**Jonli bazada tekshirildi** (lokal `kargotrack`, seed ma'lumoti; harness
-repoda saqlanmadi) — SQL ni typecheck ushlamaydi, shuning uchun 7 ta tekshiruv:
-
-| Tekshirilgan | Natija |
-| ------------------------------------------------------------ | ------ |
-| Qatorlar + `total_count` (sahifasiz jami) | ✅ |
-| 1- va 2-sahifa: jami bir xil, qator takrorlanmaydi | ✅ |
-| Qarzdorlar: `> 0` filtri va kamayish tartibi | ✅ |
-| Har mijoz uchun subquery bilan solishtirish (qarz + trek soni) | 0 farq ✅ |
-| Qidiruv (ism bo'yicha) va uning jamisi | ✅ |
-| Boshqa tenant qatorlari sizmaydi | ✅ |
-| Natija bo'sh → jami 0 ga tushadi (`rows[0]` yo'q) | ✅ |
-
-**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ 351 test (o'zgarmadi —
-qarz qoidasi testlari T6 dan o'sha joyida) · migratsiya yo'q ·
-✅ jonli bazada yuqoridagi 7 tekshiruv · ✅ Spec.md § 5.5 / § 5.6 yangilandi ·
-yangi user-facing string yo'q (`Pagination` stringlari mavjud edi).
-
-**⚠️ Halol cheklov.** Yangi Vitest testi yozilmadi (kelishilgan holda —
-so'rov sof SQL, birlik testi baza talab qiladi). Tekshiruv yuqoridagi jonli
-baza harness'i darajasida, seed hajmida (3 mijoz) — ya'ni to'g'rilik
-tasdiqlangan, **katta hajmdagi tezlik o'lchanmagan**. Shuningdek diapazondan
-tashqari `?page=999` bo'sh ro'yxat ko'rsatadi (pagination «oldingi» bilan
-qaytaradi) — qayta so'rov qilib qisqartirilmaydi.
-
----
-
-## P2 — BIRINCHI PULLIK MIJOZDAN KEYIN
-
-### ☐ T13 · Xabar yetkazish jurnali
-
-Hozir status xabari yuborilganini panelda ko'rish imkoni yo'q. Mijoz botni
-bloklagan bo'lsa (`worker.ts:136` — `isPermanentSendError` → jim tashlab
-ketiladi) admin bilmaydi. Bu sizning **asosiy qiymat da'vongizni isbotlaydi**.
+Xabar yuborilganini panelda ko'rish imkoni yo'q. Mijoz botni bloklagan bo'lsa
+(`worker.ts:136` — `isPermanentSendError` → jim tashlab ketiladi) admin
+bilmaydi. Bu **asosiy qiymat da'vongizni isbotlaydi** (§ 6 ga qarang).
 
 - [ ] `notifications` jadvali: track_id, customer_id, status, sent_at, error
-- [ ] Worker natijani yozadi (muvaffaqiyat ham, `permanent error` ham)
+- [ ] Worker natijani yozadi (muvaffaqiyat ham, permanent error ham)
 - [ ] Trek detalida "Xabarlar" bo'limi
 - [ ] Mijoz kartasida "🚫 Botni bloklagan" belgisi
 - [ ] Dashboardda "Yetmagan xabarlar: N"
+- [ ] Shu bilan birga: `@sentry/nextjs` (T5 ning ochiq quyrug'i, § 4)
 
-### ☐ T14 · Undo va savat
+### ☐ T14 · Undo va savat 🟡
 
 300 trekka xato "Topshirildi" bosilsa → 300 xato xabar bir zumda ketadi,
 orqaga yo'l yo'q. Soft-deleted treklar uchun ko'rinish ham yo'q.
 
-- [ ] Bulk operatsiyani "operation" sifatida yozish (`bulk_operations` jadvali)
+- [ ] Bulk operatsiyani yozish (`bulk_operations` jadvali)
 - [ ] 60 soniya ichida "Bekor qilish" — statuslarni qaytarish
-- [ ] Xabarlarni kechiktirib yuborish (`startAfter: 60s`) — bekor qilinsa
-      navbatdan o'chirish. pg-boss `cancel` qo'llab-quvvatlaydi
+- [ ] Xabarlarni `startAfter: 60s` bilan kechiktirish, bekor qilinsa
+      navbatdan o'chirish (pg-boss `cancel`)
 - [ ] `/tracks?deleted=1` savat ko'rinishi + tiklash
 
-### ☑ T15 · UX: progress va instant qidiruv — **BAJARILDI** (2026-07-27)
-
-- [x] Bulk operatsiyada aniq holat: `Spinner` + tugma yorlig'i o'zgarmaydi
-      (kenglik sakramaydi), natija toastda `N ta trek yangilandi · M ta xabar`
-- [x] Qidiruvda debounce (300 ms) + instant natija —
-      `components/shared/search-field.tsx`. Skaner uchun Enter darhol yuboradi
-      (skaner kodni yozib Enter bosadi — 300 ms kutish har quti uchun yo'qotish)
-- [x] Optimistic UI: `tracks-table.tsx` da status overlay — server javobini
-      kutmasdan darhol yangi status ko'rinadi, server qatorlari kelganda tushadi
-- [x] Barcha ekranlarga `loading.tsx` (11 ta yo'nalish) +
-      `components/shared/skeletons.tsx`
-
-Yo'lda qo'shildi: `/` klavish qisqartmasi (qidiruvga fokus — skaner ishi),
-`aria-live` status dialogida, tri-state «barchasini tanlash» checkbox,
-`role="radiogroup"` to'lov usullari va valyuta tanlashda.
-
-### ☐ T16 · Bot sessiyasini Postgresga o'tkazish
+### ☐ T16 · Bot sessiyasini Postgresga o'tkazish 🟢
 
 `apps/bot/src/bot.ts:20` — `session({ initial: ... })`, xotirada. Har deploy
-flow o'rtasidagi foydalanuvchilar holatini yo'qotadi va >1 replikani bloklaydi.
+flow o'rtasidagi foydalanuvchi holatini yo'qotadi va >1 replikani bloklaydi.
 
 - [ ] `@grammyjs/storage-*` yoki oddiy `bot_sessions` jadvali
 - [ ] TTL (masalan 1 soat) — eski yozuvlar tozalanadi
 
----
+### ☐ T18 · Paneldan rasm yuklash 🟢
 
-## P3 — O'SISH VA RAQOBAT
+Hozir faqat bot staff mode; ofisdan tuzatish imkoni yo'q.
 
-### ☑ T17 · Panelni ruscha qilish — **BAJARILDI** (2026-07-27)
-Toshkent kargolarida ofis xodimlari ko'pincha ruscha ishlaydi. Bot ikki tilli,
-panel emas edi — sotuvda e'tiroz bo'lardi.
-
-- [x] **next-intl** (v4), i18n routing**siz**: URL `/tracks` o'zgarmaydi,
-      til `NEXT_LOCALE` cookie'dan o'qiladi (`lib/locale.ts`, `i18n/request.ts`)
-- [x] Admin tili `admin_users.lang` da saqlanadi (migratsiya `0007`);
-      login cookie'ni shu ustundan qayta ekadi — yangi telefon/brauzerda ham
-      ruscha ochiladi
-- [x] Panel stringlari `apps/web/messages/{uz,ru}.json` da (13 namespace).
-      **`packages/shared/src/i18n/` ga ko'chirilmadi** — u yerdagi `Strings`
-      bot uchun, panelda ICU plural (ru: one/few/many) va next-intl kerak.
-      Ikkalasida ko'rinadigan lug'at (status nomlari, worklist, to'lov usuli,
-      Excel sarlavhalari) `packages/shared` da qoldi va locale bilan o'qiladi —
-      ikki nusxa bo'lsa, biri tahrirlanganda darhol ajralib ketadi
-- [x] Til almashtirgich: hisob menyusida + Sozlamalarda (`LanguageCard`).
-      Yorliqlar o'z tilida yozilgan (`O'zbekcha` / `Русский`) — tushunmaydigan
-      tilga tushib qolgan odam chiqish yo'lini topa olishi kerak
-- [x] Excel eksport ham admin tilida (sarlavha, status, to'lov usuli);
-      fayl nomi ASCII bo'lib qoladi (`treklar` / `treki`)
-- [x] `messages/messages.test.ts` — kalitlar parityi, ICU tekshiruvi va
-      placeholder mosligi (5 test). **`apps/web` uchun birinchi testlar** —
-      T24 ning poydevori
-
-### ☐ T18 · Paneldan rasm yuklash
-Hozir faqat bot staff mode. Ofisdan tuzatish imkoni yo'q.
 - [ ] Trek detalida rasm yuklash/o'chirish (JPEG, 10 MB — bot bilan bir xil qoida)
 
-### ☑ T19 · Dashboardni operatsion qilish — **BAJARILDI** (2026-07-27)
-
-**Vazifalar:**
-- [x] `packages/shared/src/services/worklist.ts` — 3 ta worklist kaliti,
-      uz+ru yorliqlar, 7 kunlik chegara, `stalePickupCutoff` + **14 test**
-- [x] "⚖️ Tortish kerak" (CHINA_WAREHOUSE, og'irliksiz)
-- [x] "🙋 Biriktirilmagan" (T11 ga kirish nuqtasi — `?work=unassigned`)
-- [x] "⏳ Olib ketilmagan" (7 kundan beri READY_FOR_PICKUP)
-- [x] `getWorklistCounts` — uchalasi **bitta** skanda, `FILTER` bilan
-- [x] `/tracks?work=…` — dashboard kartasi bosilganda aynan o'sha qatorlar
-- [x] "⬇️ Excel" ham `work` ni oladi — fayl ekrandan farq qilmaydi (T2 qoidasi)
-- [x] Daromad grafigi **pastga surildi**: operatsion blok endi eng tepada
-
-**Bir shart, ikki joyda emas — bitta joyda.** Har worklist yagona
-`trackWorklistCondition()` da yashaydi; dashboard uni `count(*) FILTER
-(WHERE …)` ichida, `/tracks` esa `WHERE` da ishlatadi. Shuning uchun
-karta hech qachon bo'sh ekranga olib borolmaydi. Bu T2 dagi `tracksFilter`
-naqshining o'zi.
-
-**"7 kun" qayerdan olinadi — muhim qaror.** `tracks` da status vaqti yo'q.
-`created_at` bo'yicha hisoblash noto'g'ri bo'lardi: u kod **import qilingan**
-kun, va qayta import qilingan kodda oylar farq qiladi. Shuning uchun
-`track_events` dagi **oxirgi** (`MAX`, `EXISTS` emas) `READY_FOR_PICKUP`
-yozuvi olinadi — READY → DELIVERED → yana READY bo'lgan trek yangi
-tayyorligi bo'yicha baholanadi. Audit yozuvi umuman bo'lmasa `created_at`
-zaxira sifatida ishlaydi (jonli bazada ikkala holat ham tekshirildi).
-Oyna — sof 7×24 soat, kalendar kuni emas: "bir haftadan beri turibdi" —
-davomiylik, unga vaqt mintaqasi kerak emas (§7.9 kun bucketlariga tegishli).
-
-**Worklistlar ataylab kesishadi.** Mijozsiz va tortilmagan trek ikkalasida
-ham ko'rinadi — har biri o'z savoliga javob beradi, "bo'linish" emas.
-Tekshiruvda buni birinchi urinishda o'tkazib yubordim (kutilgan 3, chiqdi 4);
-xato kodda emas, kutilgan sonda edi.
-
-**UI (mobil/desktop):** telefonda uchta baland qator (58 px, barmoq uchun),
-`sm` dan boshlab uch ustun — blok ekranning yarmini egallamaydi. Ish bo'lsa
-qatorlar sarg'ish (`#fffbf3`), soni to'q sariq; ish bo'lmasa oq va oqargan
-nol. Uchalasi nol bo'lsa blok bitta yashil `Navbat bo'sh` qatoriga yig'iladi.
-`/tracks` da worklist faolligida status chiplari **yashiriladi** va o'rniga
-banner + `✕ Filtrsiz` chiqadi: worklist allaqachon statusni belgilab
-qo'ygan, ustiga chip bosilsa ikkinchi filtr kabi ko'rinib bo'sh natija
-berardi.
-
-**Qo'lda tekshirilgan qadamlar** (toza `postgres:16`, 55433-port):
-
-1. Toza konteyner → `drizzle-kit migrate` (**7 migratsiya toza**) → `db:seed`.
-2. Verifikatsiya harness'i — **haqiqiy** `lib/queries/*` funksiyalarini
-   chaqiradi, ikkita tenantga **bir xil** ma'lumot quyadi.
-   **38/38 tekshiruv o'tdi:**
-
-   | Tekshirilgan | Natija |
-   | ------------------------------------------------------------- | ------ |
-   | T6: aggregate == `listDebtors` (soni va tiyini) — 2 tenantda | ✅ |
-   | T6: avans / faqat-to'lov / nol-net qarzdor hisoblanmaydi | ✅ |
-   | T6: soft-delete tiklandi/qaytarildi → ikkala yo'l bir xil ko'chdi | ✅ |
-   | T19: dashboard soni == `/tracks?work=` qatorlari (3 worklist × 2 tenant) | ✅ |
-   | T19: dashboard soni == Excel eksport qatorlari | ✅ |
-   | 7 kun **aniq chegara**: 8 kun ✅, 7 kun ✗, 6 kun ✗ | ✅ |
-   | READY → DELIVERED → READY (kecha) → stale **emas** (`MAX`) | ✅ |
-   | Audit yozuvsiz eski trek → `created_at` zaxirasi ishladi | ✅ |
-   | Topshirilgan trek eski READY yozuvi bilan → chiqmaydi | ✅ |
-   | Soft-deleted trek hech qaysi worklistda yo'q (§7.8) | ✅ |
-   | `now` surilganda chegara ham suriladi (+2 kun → +2 trek) | ✅ |
-   | worklist + qidiruv birga ishlaydi | ✅ |
-   | Boshqa tenant kodlari natijaga sizmaydi | ✅ |
-
-3. «Bugungi ish» bloki `renderToStaticMarkup` bilan haqiqiy HTML ga render
-   qilindi — **16/16**: uchala havola (`/tracks?work=…`), sonlar, nol
-   qatorning so'lg'inligi, bo'sh holat (havolasiz), `sm:grid-cols-3` va
-   `min-h-[58px]`.
-4. 50 000 trekda o'lchov (T6 jadvali yuqorida). Yangi blokning narxi:
-   **77 ms**, bitta skanda
-   (`unassigned` 10 ms + `to_weigh` 13 ms + `stale_pickup` 42 ms alohida
-   o'lchanganda). Dashboard barcha query'ni `Promise.all` bilan parallel
-   qiladi, ya'ni bu wall-clock ga qo'shilmaydi.
-
-**Yo'l-yo'lakay topilgan nozik joy.** Xom `sql` shablon ichida drizzle
-qiymatga ustun mapper'ini qo'llamaydi, postgres.js esa yalang'och `Date` ni
-serializatsiya qila olmaydi (`ERR_INVALID_ARG_TYPE`, faqat ishga tushirganda
-chiqadi — typecheck ushlamaydi). Chegara `::timestamptz` bilan aniq ISO
-matn sifatida beriladi.
-
-**DoD:** ✅ typecheck (4/4) · ✅ lint (0 warning) · ✅ **252 test** ·
-✅ toza bazada migratsiya + seed · ✅ yuqoridagi 4 qadam ·
-✅ Spec.md § 5.2 / § 5.10 yangilandi · ✅ yangi stringlar uz **va** ru da
-(`WORKLIST_META` — panel hozircha `uz` so'raydi, T17 uchun tayyor).
-
-**⚠️ Halol cheklov.** Tekshiruv **ma'lumot qatlamini** (haqiqiy query'lar,
-haqiqiy baza, ikki tenant) va «Bugungi ish» blokining **render natijasini**
-qamraydi, lekin brauzerda **qo'lda bosib chiqilmadi** — panelga kirish parol
-kiritishni talab qiladi. `/tracks` dagi worklist banneri render testiga
-kirmagan (u async sahifa ichida inline JSX). Pilotdan oldin bir marta bosib
-chiqing: Bosh sahifa → uchala karta → `✕ Filtrsiz` → «⬇️ Excel».
-
-Yuqoridagi uchala harness **bir martalik** edi va repoda saqlanmadi —
-`apps/web` da hamon doimiy test yo'q, ya'ni bu tekshiruvlar regressiyani
-ushlab tura olmaydi. Doimiy qoplama — **T24**.
-
-**T21 hali ochiq.** Grafik olib tashlanmadi, faqat pastga surildi —
-o'chirish T21 ning qarori.
-
-### ☑ T25 · Bot UX — inline navigatsiya — **BAJARILDI** (2026-07-27)
-
-Bot to'g'ri ishlardi, lekin har bir natija «boshi berk ko'cha» edi: javob
-kelgandan keyin qayerga borishni faqat pastdagi reply klaviatura aytardi.
-SPEC.md §3.11 va §3.12 shu ish uchun yozildi.
-
-- [x] **Trek kartasi ro'yxatni o'rniga chiqadi** (`editMessageText`), o'zida
-      «⬅️ ro'yxatga» tugmasi bilan. Ilgari 5 ta trekni ochish chatda 11 ta
-      xabar qoldirardi va qaytgan ro'yxat eskirgan nusxa bo'lardi
-- [x] `🔄 Yangilash` — ro'yxatda ham, kartada ham; callback javobida
-      `Yangilandi` / `O'zgarish yo'q`
-- [x] **Har bir «keyingi xabarni yutadigan» promptda `❌ Bekor qilish`**
-      (trek qo'shish, kalkulyator vazni). Ilgari kalkulyator kutayotganda
-      yozilgan trek kodi jimgina vazn deb o'qilardi
-- [x] Kalkulyatorda qadam raqami: `1/2 · Tarifni tanlang` → `2/2 · Og'irlik`,
-      natijada `🧮 Qayta hisoblash`
-- [x] Natija xabarlarida yo'nalish qatorlari: qo'shish xulosasida
-      `➕ Yana qo'shish` / `📦 Yuklarim`, balansda `📦 Yuklarim`,
-      «tushunmadim» javobida `📦 / 💰 / ℹ️`
-- [x] `/help` + `help_card` — ro'yxatdan o'tgandan keyin avtomatik yuboriladi.
-      7 ta tugma bor edi, ularni tushuntiradigan hech narsa yo'q edi
-- [x] Til almashtirish endi ro'yxatdan o'tgan mijozni qaytadan
-      «xush kelibsiz» deb kutib olmaydi (`lang_choose`), tugmalar tozalanadi
-- [x] `📷` tugmasi — kartadagi ombor rasmi alohida xabar sifatida
-      (matnli xabarni rasmga aylantirib bo'lmaydi)
-- [x] `apps/bot/src/keyboards.test.ts` — 17 test: har bir tugmaning
-      `callback_data` si `registerHandlers` dagi regexlarga tushishini
-      tekshiradi. Bu ikkalasini bog'laydigan yagona joy — mos kelmasa,
-      tugma bosilganda abadiy aylanadi
-
 ### ☐ T20 · Telegram Mini App (raqobat uchun)
+
 Cargou'da bor, sizda yo'q. Bot yetadi, lekin demo taqqoslashda yutqazasiz.
+
 - [ ] Mini App: mijoz kabineti — treklar jadvali, qarz, to'lov tarixi, rasmlar
 - [ ] Bot reply keyboard saqlanadi (hamma Mini App'ni ochmaydi)
 
----
-
-## ☐ OLIB TASHLASH / SODDALASHTIRISH
-
-### ☐ T21 · Dashboard daromad grafigi
-`tushum-chart.tsx` — hech kim unga qarab qaror qilmaydi. O'rniga T19 dagi
-operatsion navbat. (Agar egalar so'rasa — qaytarish oson.)
-
-### ☐ T22 · Hujjatlarni 7 dan 2 ga qisqartirish
-`CLAUDE.md`, `Spec.md`, `PROJECT.md`, `README.md`, `ONBOARDING.md`, `DEPLOY.md`,
-`BRANDING.md` — 17 commitli loyihaga juda ko'p, chirishga tayyor.
-`PROJECT.md` ~90 % `Spec.md` takrori.
-- [ ] Saqlash: `CLAUDE.md` (qoidalar) + `Spec.md` (kontrakt)
-- [ ] `README.md` — qisqa quick start
-- [ ] Qolganini `docs/` ga yoki `Spec.md` ilovasiga birlashtirish
-
 ### ☐ T23 · Bot kalkulyatorini qayta ko'rib chiqish
-Spec § 3.9. Narx bahsini chaqiradi ("kalkulyator 40 ming dedi"), egalar odatda
+
+SPEC § 3.9. Narx bahsini chaqiradi ("kalkulyator 40 ming dedi"), egalar odatda
 qo'lda kotirovka beradi. Flow/session holati saqlaydi.
+
 - [ ] Pilotda o'lchash: nechta mijoz ishlatdi
 - [ ] Kam ishlatilsa — olib tashlash
 
-### ⚠️ USD rejimi — hozir tegmang
-`currency` + `usd_rate_tiyin` + `price_usd_cents` + `usd_rate_used` + muzlatish
-+ `price_manual` — eng katta test yuki va murakkablik manbasi. **Olib tashlamang**
-(ko'p kargo $/kg da narx qo'yadi), lekin birinchi 3 mijoz UZSda bo'lsa — bu
-o'z-o'zini oqlamagan murakkablik ekanini yozib qo'ying.
+### ☐ T24 · Test qoplamini muvozanatlash (fon vazifasi)
 
----
+Hammasini emas, **eng xatarli yo'llarni**:
 
-## ☐ T24 · Test qoplamini muvozanatlash (fon vazifasi)
-
-11 700 satr `apps/*` kodi test bilan qoplanmagan. Hammasini emas, **eng
-xatarli yo'llarni**:
 - [ ] `lib/session.ts` — token imzo/muddat (xavfsizlik)
 - [ ] `lib/superadmin.ts` — constant-time solishtirish
-- [ ] `login/actions.ts` — noto'g'ri parol, buzilgan hash, rate limit
+- [ ] `login/actions.ts` — noto'g'ri parol, buzilgan hash, rate limit (T9)
 - [ ] `queries.ts` tenant-scoping: har funksiya boshqa tenant ma'lumotini
       **qaytarmasligi** (bitta parametrlashtirilgan test)
 - [ ] `apps/bot/src/handlers/text.ts` — router ustuvorligi (menyu > flow > lookup)
 
+Eslatma: T1/T2/T3/T6/T12/T19 dagi verifikatsiya harness'lari **bir martalik**
+edi va repoda saqlanmadi — ya'ni ular regressiyani ushlab tura olmaydi.
+
 ---
 
-## 5. Raqobat manzarasi (rostini aytganda)
+## 4. Pilotdan oldingi ochiq quyruqlar
+
+Bajarilgan tasklardan qolgan, hali yopilmagan mayda ishlar:
+
+- [ ] **Bot tokenini BotFather'da revoke qiling** — seed'dagi jonli token
+      soxtasiga almashtirildi (T22), lekin **git tarixida qolgan**.
+- [ ] **Panelni brauzerda bir marta qo'lda bosib chiqish.** T1/T2/T19 ning
+      tekshiruvi ma'lumot qatlamini to'liq qamraydi, lekin UI bo'ylab qo'lda
+      yurilmadi (kirish parol talab qiladi). Marshrut:
+      `/tracks` bulk «Mijozga biriktirish» → trek detali mijoz kartasi →
+      `/customers` «Yangi mijoz» → Bosh sahifa uchala worklist kartasi →
+      `✕ Filtrsiz` → «⬇️ Excel».
+- [ ] **T7 ni jonli bazada tasdiqlash:** bitta reysni panelda qo'lda
+      o'zgartirib, `track_events` va navbatdagi job sonini solishtiring.
+      T7 tekshiruvi sof birlik testlari darajasida qolgan.
+- [ ] **`pnpm test` ni CI'ga qo'shish.** `ci.yml` hozir faqat typecheck + lint
+      (T22 halollik tuzatishi). Tavsiya etiladi.
+- [ ] **`@sentry/nextjs`** — Next 14 da server action / server component
+      xatolari jarayon darajasiga chiqmaydi, hozir ular `app/error.tsx` orqali
+      marshrut + `digest` bilan xabar qilinadi (to'liq stack server logida).
+      To'liq ushlash build-time webpack plugin talab qiladi → T13 bilan birga.
+
+**Prod eslatmalari** (hozir muammo emas, hajm oshganda):
+
+- `CREATE INDEX` (CONCURRENTLY emas) yozuvni qulflaydi. Jadvallar millionga
+  chiqqanda kelajakdagi indekslarni migratsiyadan **tashqarida** qo'llang —
+  drizzle-kit migratsiyani tranzaksiyaga o'raydi, `CONCURRENTLY` esa
+  tranzaksiya ichida ishlamaydi.
+- `track_events` da `tenant_id` yo'q → dashboard event count indeks bilan
+  faqat 1.7× tezlashdi. Hajm oshsa denormalizatsiya qiling (`schema.ts` da
+  izoh bor).
+- `postgres` pool default `max: 10`; 3 worker × 20 batch = 60 gacha parallel
+  handler bo'lishi mumkin. Har biri endi bitta query qiladi va limiter'da
+  kutadi — o'lchovda muammo ko'rinmadi, lekin haqiqiy yukda kuzating.
+- T3 o'lchovi haqiqiy Telegram bilan emas, `Api.prototype` stubi bilan
+  qilingan: nisbat (14×) ishonchli, mutlaq son haqiqiy tarmoqda pastroq.
+
+---
+
+## 5. Saqlanadigan qarorlar
+
+Takrorlanmasligi uchun yozib qo'yilgan (ko'pi kod izohlarida ham bor):
+
+1. **Biriktirish xabar yubormaydi** (SPEC § 7.3). 0-kunda 500 ta tarixiy
+   trekni biriktirish 500 ta «yukingiz tayyor» xabarini yuborardi.
+2. **Eksportda pul — son, sana — matn.** `formatSom` qatori Excel'da matn
+   bo'lib qoladi va `SUM()` 0 beradi; date serial esa vaqt mintaqasini olib
+   yurmaydi (SPEC § 7.9).
+3. **Ekran va fayl bitta filtrdan.** `tracksFilter()` / `trackWorklistCondition()`
+   ni ro'yxat ham, eksport ham, dashboard kartasi ham ishlatadi — karta hech
+   qachon bo'sh ekranga olib borolmaydi.
+4. **Qarz qoidasi bitta joyda:** `DEBT_OWED_STATUSES` eksport qilinadi, SQL
+   `IN (…)` shu massivdan quriladi, test har status uchun `computeDebtTiyin`
+   bilan mosligini tekshiradi.
+5. **Drizzle `.desc()` = `DESC NULLS LAST`, SQL default esa `NULLS FIRST`.**
+   Mos kelmasa planner indeksni tartib uchun ishlatmaydi va jimgina to'liq
+   sortga tushadi (47.9 ms → 0.60 ms). Partial index predikati ham
+   query'dagi `WHERE deleted_at IS NULL` bilan **aynan** mos bo'lishi kerak.
+6. **Enum'ni `ALTER TYPE … ADD VALUE` bilan o'zgartirmang.** Drizzle barcha
+   kutilayotgan migratsiyalarni bitta tranzaksiyada bajaradi → `55P04`.
+   `RENAME → CREATE → cast → DROP` ishlaydi.
+7. **pg-boss batch callback throw qilmasligi kerak** — aks holda batchdagi
+   **hamma** job fail bo'ladi va 19 ta mijozga xabar qayta yuboriladi.
+   Yiqilganlar `boss.fail(queue, id)` bilan alohida belgilanadi.
+8. **Rol o'zgarishi sessiyani bekor qilmaydi** (rol har so'rovda o'qiladi);
+   parol o'zgarishi va o'chirib qo'yish esa `session_epoch` bilan bekor qiladi.
+9. **`pnpm test` `--parallel` EMAS** — ikkita vitest workspace bir vaqtda
+   ishga tushib xotirani tugatadi (`Fatal process out of memory`).
+10. **Sentry: `includeLocalVariables: false`**, `OnUncaughtException`
+    integratsiyasi olib tashlangan (CLAUDE.md 8-qoidasini buzardi),
+    `tracesSampleRate: 0`.
+11. **`customers.phone_normalized` unique EMAS** — dublikat ilova darajasida
+    rad etiladi, chunki unique indeks bot ro'yxatdan o'tishini flow o'rtasida
+    uzib qo'yardi.
+12. **`.next` da eski production build qolsa `next dev` har sahifaga 404
+    qaytaradi.** O'chirish yetadi (README § Known quirks bilan bog'liq).
+
+### ⚠️ USD rejimi — hozir tegmang
+
+`currency` + `usd_rate_tiyin` + `price_usd_cents` + `usd_rate_used` + muzlatish
++ `price_manual` — eng katta test yuki va murakkablik manbasi. **Olib
+tashlamang** (ko'p kargo $/kg da narx qo'yadi), lekin birinchi 3 mijoz UZSda
+bo'lsa — bu o'z-o'zini oqlamagan murakkablik ekanini yozib qo'ying.
+
+---
+
+## 6. Raqobat manzarasi
 
 ### Eng jiddiy: Cargou — [cargou.lovable.app](https://cargou.lovable.app/features)
-Aynan shu bozor, aynan shu mijoz. Ba'zi joyda **sizdan oldinda**:
 
 | Cargouda bor | Sizda |
-| ---------------------------------------------- | ----------------------- |
+| ------------------------------------------------------ | -------------------------- |
 | 1688 parser + AI (mahsulot kartasini o'qish) | ❌ |
 | Xarid/закупка boardi (to'lov, postavshik, Xitoy treki) | ❌ |
 | **Telegram Mini App** — to'liq mijoz kabineti | Reply keyboard bot (T20) |
-| Rol boshqaruvi: ega/admin/menejer/ombor — majburlangan | ✅ 3 rol, majburlangan (T8) |
+| Rol boshqaruvi, majburlangan | ✅ 3 rol (T8) |
 | QO kod (ombor identifikatsiyasi) | Ataylab olib tashlangan |
 
-**Sizning ustunligingiz (buni sotuvda old planga qo'ying):**
+**Sizning ustunligingiz (sotuvda old planga qo'ying):**
+
 - **Haqiqiy multi-tenancy — har kargo O'ZINING brendli boti bilan.** Cargou
-  bitta umumiy mini-app ko'rinadi. Bu eng katta differensiator.
-- **Qarz hisobi** — ular ro'yxatida yo'q, o'zbek kargosining № 2 og'rig'i.
-- 5 daqiqada onboarding (`/sa` + `getMe` + `setWebhook`).
+  bitta umumiy mini-app ko'rinadi. Eng katta differensiator.
+- **Qarz hisobi** — ularda yo'q, o'zbek kargosining № 2 og'rig'i.
+- 5 daqiqada onboarding (`/sa` + `getMe` + `setWebhook`) — `docs/ONBOARDING.md`.
 
 ### Prospektlaringiz allaqachon bot qurgan
+
 [Abu Sahiy](https://abusahiylogistics.uz/) (@AS_cargo_bot),
 [Premium Cargo](https://t.me/s/PremiumCargo) (@Premiumcargobot),
 [BTB Cargo](https://uz.tgstat.com/en/channel/@BTBCargo),
 [Transit Pro](https://transitpro.uz/) — hammasida bot bor.
-[iPost](https://ipost.uz/uz) esa 790 punkt + real-time tracking bilan mijoz
+[iPost](https://ipost.uz/uz) 790 punkt + real-time tracking bilan mijoz
 kutilmasini belgilab qo'ygan.
 
-➡️ **Eng katta kargolar sizning mijozingiz emas** — ular qurgan.
-Sizning bozori: **o'rta qatlam** — kanalida 2 000–20 000 obunachi, hali Excelda.
+➡️ **Eng katta kargolar sizning mijozingiz emas** — ular qurgan. Sizning
+bozoringiz: **o'rta qatlam** — kanalida 2 000–20 000 obunachi, hali Excelda.
 
 ### 💥 Narx ankeri muammosi
+
 [Kwork'da](https://kwork.ru/script-programming/34461407/telegram-bot-dlya-kargo)
 "kargo uchun Telegram bot" — **19 000 rubl (~$200), bir marta.**
 Siz: 1,2 mln so'm/oy ≈ **$95/oy = $1 140/yil.**
@@ -1183,28 +286,22 @@ Siz: 1,2 mln so'm/oy ≈ **$95/oy = $1 140/yil.**
 Ega albatta shu solishtiruvni qiladi. Javobingiz "bot" bo'lishi mumkin emas —
 bot arzon commodity. Sotadigan narsangiz: **panel + qarz hisobi + kafolatlangan
 yetkazish + support.** Ammo hozir "kafolatlangan yetkazish"ni tizim
-**o'lcholmaydi** (T5, T13) — ya'ni asosiy qiymat da'vosi isbotlanmagan.
-Shuning uchun T5 va T13 — marketing vazifasi, texnik vazifa emas.
+**o'lcholmaydi** (T13) — ya'ni asosiy qiymat da'vosi isbotlanmagan. Shuning
+uchun T13 — marketing vazifasi, texnik vazifa emas.
 
 ---
 
-## 6. Tavsiya etilgan tartib
+## 7. Keyingi tartib
 
 ```
-1-kun   T4 ✅ (indekslar) → T5 ✅ (Sentry+healthcheck)
-2-kun   T1 ✅ (biriktirish) — eng katta va eng muhim
-3-kun   T2 ✅ (eksport)
-4-kun   T3 ✅ (throughput+adolat)
-
-P0 YOPILDI. Qoldi: panelni brauzerda qo'lda bosib chiqish → demo yozib olish.
-
-Pilot boshlanadi. Pilot davomida: T6 ✅ → T8 ✅ → T7 → T11 → T10 → T9 → T12
-Birinchi to'lovdan keyin: T13 → T14 → T15 → T16
-Keyin: T17–T18, T20 (T19 ✅), va T21–T23 tozalash.
+Pilotdan oldin  § 4 ro'yxati (token revoke → qo'lda bosib chiqish → demo yozish)
+Pilot davomida  T10 → T9 → T14
+Birinchi to'lovdan keyin  T13 → T16
+Keyin  T18, T20, T23; fon: T24
 ```
 
-**Keyingi:** `T7` (bulk operatsiyalarni tranzaksiya + chunkga o'tkazish) —
-500 trekda yarim qo'llanilgan holat xavfi endi eng katta ochiq nuqson.
-Undan keyin T11 (biriktirilmagan ekrani — T19 dagi `?work=unassigned`
-allaqachon uning kirish nuqtasini berdi) va T9 (login rate limit, endi
-xodimlar ko'payganda login yuzasi ham kengaydi).
+**Keyingi:** `T10` (filtrga mos hammasini tanlash) — 500 trekli reysda bulk
+operatsiya hozir 25 sahifa qo'lda tanlashni talab qiladi, ya'ni pilot
+egasining kunlik ishida eng ko'p uchraydigan to'siq. Undan keyin T9 (login
+rate limit — T8 dan keyin login yuzasi kengaydi) va T14 (undo — T10 bulk
+operatsiyani osonlashtirgani sari xato narxi ham oshadi).

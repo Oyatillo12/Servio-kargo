@@ -26,7 +26,7 @@ data/uploads
 Thumbs.db
 
 # Docs & deploy scaffolding not needed at build time
-DEPLOY.md
+docs
 *.md
 !README.md
 .github

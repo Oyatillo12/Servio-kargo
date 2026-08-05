@@ -6,7 +6,7 @@ name: Deploy
 #   deploy  → SSH to the VPS, which pulls those exact images, migrates, restarts
 #
 # The VPS never builds anything: a Next.js build does not fit comfortably in
-# 2 vCPU / 4 GB while the site is serving traffic. See DEPLOY.md §10.
+# 2 vCPU / 4 GB while the site is serving traffic. See docs/DEPLOY.md §10.
 on:
   push:
     branches: [main]

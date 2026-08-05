@@ -89,8 +89,11 @@ async function main() {
     .values({
       name: 'SERVIO Kargo demo',
       codePrefix: 'DK',
-      botToken: '8872793732:AAEp7wq-ayj5nT_uinYQovAjETp2QoLfw1o',
-      botUsername: 'kargo_track_test_bot',
+      // Deliberately fake (real-format so scrub/validation code treats it like
+      // one). To talk to a real bot in dev, put your own BotFather token here
+      // or onboard through /sa — never commit a live token.
+      botToken: '1000000001:FAKE_TOKEN_FOR_LOCAL_SEED_ONLY_00000',
+      botUsername: 'servio_demo_bot',
       currency: 'UZS',
       usdRateTiyin: null,
       pickupAddress: "Toshkent sh., Chilonzor t., Bunyodkor ko'chasi 1",

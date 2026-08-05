@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Nightly Postgres backup. Dumps the database with pg_dump inside the running
 # postgres container and keeps the last 14 daily dumps. Wire up via cron (see
-# DEPLOY.md). Safe to run any time; read-only against the DB.
+# docs/DEPLOY.md). Safe to run any time; read-only against the DB.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."                     # repo root (holds .env)
