@@ -116,9 +116,8 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
 - `pnpm test` — Vitest
 - `pnpm lint && pnpm typecheck` — must pass before any task is "done"
 
-CI runs typecheck + lint on every PR (`.github/workflows/ci.yml`) — `pnpm test` is part
-of the local definition of done, not yet a CI gate; a push to `main` runs the same
-verify, then builds the web/bot images to GHCR and deploys them to the VPS over
+CI runs typecheck + lint + test on every PR (`.github/workflows/ci.yml`); a push to
+`main` runs the same verify, then builds the web/bot images to GHCR and deploys them to the VPS over
 SSH (`.github/workflows/deploy.yml`). Both CI and a hand-run deploy end in the same
 `deploy.sh` — put deploy logic there, not in the workflow YAML. Setup: docs/DEPLOY.md §10.
 

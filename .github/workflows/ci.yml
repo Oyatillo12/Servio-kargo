@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   verify:
-    name: typecheck · lint
+    name: typecheck · lint · test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -42,3 +42,6 @@ jobs:
 
       - run: pnpm typecheck
       - run: pnpm lint
+      # Vitest suites are pure (no DATABASE_URL / running Postgres needed),
+      # so the gate runs without a service container.
+      - run: pnpm test
