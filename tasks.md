@@ -45,6 +45,47 @@ ular hamma koddan muhimroq.
       so'raladi: mijozlar qanday to'laydi? (a) Click/Payme merchant hisobi
       bormi, (b) yoki shaxsiy kartaga o'tkazma olamimi? Javob C-bosqichning
       SHAKLINI belgilaydi (quyida) — bu javobsiz C boshlanmaydi.
+- [ ] **P7 · Attributsiya modeli validatsiyasi** (egasi + men) — pilot
+      tenant qanday ishlaydi: **trek-kod-first** (har posilka kod bilan
+      yuritiladi — hozirgi model) yoki **marka-first** (kodga qaralmaydi,
+      client_code + vazn yetadi)? Marka-first bo'lsa, import/attributsiya
+      oqimi ustuvorlashadi, bot'dagi "trek qo'shish" ikkinchi darajaga
+      tushadi. Shu bilan birga: Xitoy omboridan bizning domen VPNsiz
+      ochilishini xodim telefonida tekshirish (W uchun shart).
+
+---
+
+## W — Ombor "Tarozi rejimi" (panel ichida, alohida ilova EMAS)
+
+Qaror (2026-08-10, egasi bilan kelishildi): staff ishi uchun ALOHIDA
+panel/ilova qurilmaydi — mavjud panelda `warehouse` roli uchun to'liq
+ekranli ish-rejimi. Sabab: **Telegram Xitoyda bloklangan** — bot
+staff-rejimi aynan asosiy joyda (Guangzhou/Yiwu qabul posti) VPN'ga
+qaram; oddiy web-sahifa esa ochiladi. Auth/permissions/i18n/deploy —
+hammasi tayyor infratuzilmada. Bot staff-rejimi zaxira kanal bo'lib
+qoladi. Asosiy foydalanuvchi: Xitoy ombori; til: uz/ru (xitoycha —
+faqat pilot so'rasa); kirish: mavjud telefon+parol, 30 kunlik cookie.
+
+- [ ] **W1 · `/weigh` ekrani** — panel ichida, app-shell minimal (to'liq
+      ekran, katta touch-maydonlar, telefonga mo'ljallangan). Oqim:
+      kod-maydon (avtofokus, USB-skaner klaviatura kabi yozadi) → vazn →
+      ixtiyoriy marka (client_code) → Enter → keyingisi. Yonida bugungi
+      kiritilganlar ro'yxati (kod, kg, narx, ega belgisi) — xato darhol
+      ko'rinadi.
+- [ ] **W2 · Server tomoni** — bot'dagi `applyStaffWeighing` bilan BITTA
+      shared qoidalar: vazn+narx, CREATED→CHINA_WAREHOUSE event + notify,
+      noma'lum kod → egasiz trek. YANGI: marka berilsa va client_code
+      topilsa — darhol biriktirish (topilmasa egasiz, xato EMAS).
+- [ ] **W3 · Kamera-skan** — Android Chrome'dagi native `BarcodeDetector`
+      API bilan (dependensiyasiz); qurilma qo'llamasa tugma ko'rinmaydi,
+      qo'lda/USB ishlashda davom etadi. Tashqi kutubxona — faqat pilot
+      telefonlari qo'llamasa (trigger).
+- [ ] **W4 · Foto** — shu ekrandan kamera bilan (`capture` input, JPEG,
+      10 MB — bot bilan bir xil qoida). Bu A5/T18'ning asosiy qismini
+      yopadi; trek detalidagi foto boshqaruvi A5'da qoladi.
+- [ ] **W5 · Bot paritet** — bot staff-rejimi parseri `KOD VAZN MARKA`
+      formatini ham qabul qiladi (zaxira kanal ham biriktira olsin);
+      W2 bilan bitta shared parser.
 
 ---
 
@@ -54,7 +95,8 @@ ular hamma koddan muhimroq.
       kartasida "🚫 botni bloklagan" belgisi (oxirgi notify dropped bo'lsa);
       dashboardda "yetmagan xabarlar: N".
 - [ ] **A5 · T18** — trek detalidan foto yuklash/o'chirish (bot bilan bir
-      xil qoida: JPEG, 10 MB).
+      xil qoida: JPEG, 10 MB). Asosiy ehtiyojni W4 yopadi; bu faqat
+      ofisdan tuzatish uchun.
 - [ ] **A6 · Mijozni tahrirlash UI** — ism/telefon; `phone_normalized`
       qayta hisoblanadi.
 - [ ] **A7 · To'lovni bekor qilish** — storno yozuv (append-only, o'chirish
@@ -158,6 +200,8 @@ EMAS); frontend — rasmiy `telegram-web-app.js` + tor typed wrapper,
 
 Hozir qo'shiladigan YANGI kutubxona YO'Q. `@aws-sdk/client-s3` — faqat B8
 triggeri otilganda. Click uchun SDK olinmaydi (oddiy HTTPS + imzo, `fetch`
-yetadi). Ataylab olinmaydi: `@telegram-apps/sdk` (o'z wrapper bor),
-`@grammyjs/storage-*` (o'z adapter yozildi), Redis (pg-boss bor), alohida
-KMS (AES-GCM + hujjat). Yangi dependensiya = alohida asoslash.
+yetadi). Shtrix-kod skan (W3) — native `BarcodeDetector` API, kutubxonasiz;
+tashqi lib faqat pilot telefonlari qo'llamasa. Ataylab olinmaydi:
+`@telegram-apps/sdk` (o'z wrapper bor), `@grammyjs/storage-*` (o'z adapter
+yozildi), Redis (pg-boss bor), alohida KMS (AES-GCM + hujjat). Yangi
+dependensiya = alohida asoslash.
