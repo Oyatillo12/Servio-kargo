@@ -29,6 +29,8 @@ export const uz: Strings = {
   menuChinaAddress: '🇨🇳 Ombor manzili',
   menuInfo: "ℹ️ Ma'lumot",
   menuLang: '🌐 Til / Язык',
+  // Premium only: the reply-keyboard entry into the Mini App (tasks.md B7).
+  menuCabinet: '📱 Kabinet',
 
   // --- Telegram command-menu descriptions (setMyCommands) ---
   commands: {

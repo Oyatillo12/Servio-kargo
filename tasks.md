@@ -103,10 +103,9 @@ bloklamaydi, lekin A1–A3 pilotgacha yopilishi shart.
 - [x] **B6 · Ochiq trek-qidiruv** — `/m/[tenantId]/lookup`: registratsiyasiz,
       faqat holat + oxirgi yangilanish (narx/egasi YO'Q), `lookup:` scope
       IP-throttle.
-- [~] **B7 · Bot tomonи** — `setChatMenuButton` bajarildi: premium
-      onboarding'da o'rnatiladi, /sa reja-toggle'ida sinxronlanadi (basic →
-      default qaytadi). QOLDI: bot reply-klaviaturasida "📱 Kabinet"
-      tugmasi (premium tenantlarda), uz/ru.
+- [x] **B7 · Bot tomonи** — `setChatMenuButton` premium onboarding'da
+      o'rnatiladi, /sa reja-toggle'ida sinxronlanadi (basic → default);
+      reply-klaviaturada "📱 Kabinet" webApp tugmasi (faqat premium, uz/ru).
 - [ ] **B8 · Storage abstraksiyasi** — `apps/web/lib/storage.ts` +
       `apps/bot/src/storage.ts` o'rniga BITTA modul `packages/db`ga emas,
       yangi `packages/storage` (local-disk driver hozir, S3 driver

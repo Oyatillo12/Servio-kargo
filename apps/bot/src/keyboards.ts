@@ -41,9 +41,16 @@ export function phoneKeyboard(s: Strings): Keyboard {
   return new Keyboard().requestContact(s.askPhoneButton).resized().oneTime();
 }
 
-/** Main menu reply keyboard — 2 columns, 4 rows (SPEC §3.1). */
-export function mainMenuKeyboard(s: Strings): Keyboard {
-  return new Keyboard()
+/**
+ * Main menu reply keyboard — 2 columns, 4 rows (SPEC §3.1). A premium
+ * tenant's keyboard leads with a Mini App button (SPEC §10.1, tasks.md B7);
+ * pressing it opens the cabinet directly, no text update is sent, so the
+ * text router never sees it.
+ */
+export function mainMenuKeyboard(s: Strings, miniAppUrl?: string): Keyboard {
+  const kb = new Keyboard();
+  if (miniAppUrl) kb.webApp(s.menuCabinet, miniAppUrl).row();
+  return kb
     .text(s.menuAddTrack)
     .text(s.menuMyTracks)
     .row()

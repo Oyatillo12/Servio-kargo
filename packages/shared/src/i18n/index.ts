@@ -94,6 +94,8 @@ export interface Strings {
   menuChinaAddress: string;
   menuInfo: string;
   menuLang: string;
+  /** Premium reply-keyboard entry into the Mini App (SPEC §10.1). */
+  menuCabinet: string;
 
   // --- Telegram command-menu descriptions (setMyCommands) ---
   commands: {

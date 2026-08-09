@@ -12,6 +12,7 @@ import { t } from '@kargotrack/shared';
 
 import type { KargoContext } from '../context';
 import { langKeyboard, mainMenuKeyboard, phoneKeyboard } from '../keyboards';
+import { miniAppUrlFor } from '../miniApp';
 import { registerCustomer, setCustomerLang } from '../queries';
 
 /** /start — greet and offer the two language buttons. */
@@ -41,7 +42,9 @@ export async function langCallback(ctx: KargoContext): Promise<void> {
     } catch {
       // The picker came from a message we can no longer edit — harmless.
     }
-    await ctx.reply(s.langSwitched, { reply_markup: mainMenuKeyboard(s) });
+    await ctx.reply(s.langSwitched, {
+      reply_markup: mainMenuKeyboard(s, miniAppUrlFor(ctx.tenant)),
+    });
     return;
   }
 
@@ -84,7 +87,7 @@ export async function contactHandler(ctx: KargoContext): Promise<void> {
   ctx.session.step = 'awaiting_tracks';
 
   await ctx.reply(s.registered(customer.clientCode), {
-    reply_markup: mainMenuKeyboard(s),
+    reply_markup: mainMenuKeyboard(s, miniAppUrlFor(ctx.tenant)),
   });
   // …and immediately follow with the one-message tour. A brand-new customer is
   // looking at seven unexplained buttons; this is the cheapest moment to say

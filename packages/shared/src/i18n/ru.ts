@@ -30,6 +30,7 @@ export const ru: Strings = {
   menuChinaAddress: '🇨🇳 Адрес склада',
   menuInfo: 'ℹ️ Информация',
   menuLang: '🌐 Til / Язык',
+  menuCabinet: '📱 Кабинет',
 
   // --- Telegram command-menu descriptions (setMyCommands) ---
   commands: {
