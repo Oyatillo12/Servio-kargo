@@ -75,7 +75,12 @@
     "trackWeight": "Вес",
     "trackPrice": "Стоимость",
     "photoAlt": "Фото на складе",
-    "statusHistory": "История статусов"
+    "statusHistory": "История статусов",
+    "financeDebt": "Ваш долг",
+    "financeAdvance": "Аванс (переплата)",
+    "financeSettled": "Долга нет",
+    "paymentsHistory": "История платежей",
+    "noPayments": "Платежей пока нет."
   },
   "auth": {
     "pageTitle": "Вход",

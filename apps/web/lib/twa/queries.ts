@@ -13,13 +13,19 @@ import { getDb } from '@kargotrack/db';
 import {
   batches,
   customers,
+  payments,
   tenants,
   trackEvents,
   tracks,
   type Customer,
+  type Payment,
   type TrackStatus,
 } from '@kargotrack/db/schema';
-import { statusSortIndex, type TenantPlan } from '@kargotrack/shared';
+import {
+  computeDebtTiyin,
+  statusSortIndex,
+  type TenantPlan,
+} from '@kargotrack/shared';
 
 export interface TwaTenant {
   id: string;
@@ -216,6 +222,56 @@ export async function getTwaTrackPhotoPath(
     )
     .limit(1);
   return row?.photoPath ?? null;
+}
+
+export interface TwaFinance {
+  /** Positive = owes; negative = paid in advance (SPEC §7.5). */
+  debtTiyin: number;
+  payments: Pick<Payment, 'id' | 'amountTiyin' | 'method' | 'note' | 'createdAt'>[];
+}
+
+/** Balance + recent payments, computed by the ONE debt service (CLAUDE.md). */
+export async function getTwaFinance(
+  tenantId: string,
+  customerId: string,
+): Promise<TwaFinance> {
+  const db = getDb();
+  const [trackRows, paymentRows] = await Promise.all([
+    db
+      .select({
+        currentStatus: tracks.currentStatus,
+        priceTiyin: tracks.priceTiyin,
+        deletedAt: tracks.deletedAt,
+      })
+      .from(tracks)
+      .where(
+        and(eq(tracks.tenantId, tenantId), eq(tracks.customerId, customerId)),
+      ),
+    db
+      .select({
+        id: payments.id,
+        amountTiyin: payments.amountTiyin,
+        method: payments.method,
+        note: payments.note,
+        createdAt: payments.createdAt,
+      })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.tenantId, tenantId),
+          eq(payments.customerId, customerId),
+        ),
+      )
+      .orderBy(desc(payments.createdAt)),
+  ]);
+
+  return {
+    debtTiyin: computeDebtTiyin(
+      trackRows,
+      paymentRows.map((p) => ({ amountTiyin: p.amountTiyin })),
+    ),
+    payments: paymentRows.slice(0, 20),
+  };
 }
 
 export async function getTwaCustomerById(

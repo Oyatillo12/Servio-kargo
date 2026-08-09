@@ -75,7 +75,12 @@
     "trackWeight": "Og'irligi",
     "trackPrice": "Narxi",
     "photoAlt": "Ombordagi rasm",
-    "statusHistory": "Holatlar tarixi"
+    "statusHistory": "Holatlar tarixi",
+    "financeDebt": "Qarzingiz",
+    "financeAdvance": "Avans (ortiqcha to'lov)",
+    "financeSettled": "Qarz yo'q",
+    "paymentsHistory": "To'lovlar tarixi",
+    "noPayments": "To'lovlar hali yo'q."
   },
   "auth": {
     "pageTitle": "Kirish",
