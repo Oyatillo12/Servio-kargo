@@ -46,6 +46,10 @@ services:
     restart: unless-stopped
     logging: *default-logging
     env_file: .env
+    # .env's PORT belongs to the bot (8443); without this override Next.js
+    # standalone would bind there and the healthcheck below would never pass.
+    environment:
+      PORT: 3000
     volumes:
       - uploads:/data/uploads
     depends_on:
