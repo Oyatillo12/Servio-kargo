@@ -1,10 +1,9 @@
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
+import { CopyChip } from '@/features/twa/components/copy-chip';
+import { Screen } from '@/features/twa/components/screen';
 import { getTwaContext } from '@/lib/twa/auth';
-
-import { CopyButton } from './copy-button';
 
 export default async function TwaAddressPage({
   params,
@@ -21,36 +20,49 @@ export default async function TwaAddressPage({
   // Same substitution the bot's /manzil does (SPEC §3.7): the client code IS
   // the routing key the China warehouse sorts by.
   const address = tenant.chinaAddressTemplate
-    ? tenant.chinaAddressTemplate.replaceAll('{client_code}', customer.clientCode)
+    ? tenant.chinaAddressTemplate.replaceAll(
+        '{client_code}',
+        customer.clientCode,
+      )
     : null;
 
   return (
-    <div className="space-y-3">
-      <header className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-foreground">{t('navAddress')}</h1>
-        <Link
-          href={`/m/${tenant.id}`}
-          className="text-sm text-muted-foreground"
-        >
-          {t('backHome')}
-        </Link>
-      </header>
-
+    <Screen
+      title={t('navAddress')}
+      backHref={`/m/${tenant.id}`}
+      backLabel={t('backHome')}
+    >
       {address ? (
         <>
-          <p className="text-[12.5px] text-muted-foreground">
+          <p className="twa-hint twa-rise text-[13px] leading-relaxed">
             {t('addressHint')}
           </p>
-          <pre className="whitespace-pre-wrap break-words rounded-xl border border-[#eef0f4] bg-white px-4 py-3.5 font-mono text-[13px] leading-relaxed text-foreground">
+          <pre
+            className="twa-card twa-rise whitespace-pre-wrap break-words px-4 py-4 font-mono text-[13px] leading-relaxed"
+            style={{ '--twa-i': 1 } as React.CSSProperties}
+          >
             {address}
           </pre>
-          <CopyButton text={address} />
+          <div
+            className="twa-rise"
+            style={{ '--twa-i': 2 } as React.CSSProperties}
+          >
+            <CopyChip
+              text={address}
+              label={t('addressCopy')}
+              copiedLabel={t('addressCopied')}
+              block
+            />
+          </div>
         </>
       ) : (
-        <p className="rounded-xl border border-dashed border-[#dfe3ea] px-4 py-10 text-center text-sm text-muted-foreground">
+        <p
+          className="twa-hint twa-rise rounded-2xl border border-dashed px-4 py-10 text-center text-sm"
+          style={{ borderColor: 'var(--twa-border)' }}
+        >
           {t('addressMissing')}
         </p>
       )}
-    </div>
+    </Screen>
   );
 }

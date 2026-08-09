@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { ImageIcon, PlusCircle } from 'lucide-react';
 
 import { formatDate, formatKg, formatSom } from '@kargotrack/shared';
 
+import { Pipeline } from '@/features/twa/components/pipeline';
+import { Screen } from '@/features/twa/components/screen';
+import { StatusPill } from '@/features/twa/components/status-pill';
 import { getTwaContext } from '@/lib/twa/auth';
 import { listTwaTracks } from '@/lib/twa/queries';
-
-import { StatusPill } from '../status-pill';
 
 export default async function TwaTracksPage({
   params,
@@ -27,32 +29,61 @@ export default async function TwaTracksPage({
   const rows = await listTwaTracks(tenant.id, customer.id);
 
   return (
-    <div className="space-y-3">
-      <header className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-foreground">{t('navTracks')}</h1>
+    <Screen
+      title={t('navTracks')}
+      backHref={`/m/${tenant.id}`}
+      backLabel={t('backHome')}
+      action={
         <Link
-          href={`/m/${tenant.id}`}
-          className="text-sm text-muted-foreground"
+          href={`/m/${tenant.id}/add`}
+          aria-label={t('navAdd')}
+          className="twa-press flex h-9 w-9 items-center justify-center rounded-xl"
+          style={{
+            background: 'var(--twa-brand-soft)',
+            color: 'var(--twa-brand-ink)',
+          }}
         >
-          {t('backHome')}
+          <PlusCircle className="h-5 w-5" aria-hidden />
         </Link>
-      </header>
-
+      }
+    >
       {rows.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-[#dfe3ea] px-4 py-10 text-center text-sm text-muted-foreground">
-          {t('noTracks')}
-        </p>
+        <div
+          className="twa-rise flex flex-col items-center gap-3 rounded-2xl border border-dashed px-4 py-12 text-center"
+          style={{ borderColor: 'var(--twa-border)' }}
+        >
+          <p className="twa-hint text-sm leading-relaxed">{t('noTracks')}</p>
+          <Link
+            href={`/m/${tenant.id}/add`}
+            className="twa-btn twa-press w-auto px-5"
+          >
+            <PlusCircle className="h-4 w-4" aria-hidden />
+            {t('navAdd')}
+          </Link>
+        </div>
       ) : (
         <ul className="space-y-2">
-          {rows.map((tr) => (
-            <li key={tr.id}>
+          {rows.map((tr, i) => (
+            <li
+              key={tr.id}
+              className="twa-rise"
+              style={{ '--twa-i': Math.min(i, 10) } as React.CSSProperties}
+            >
               <Link
                 href={`/m/${tenant.id}/tracks/${tr.id}`}
-                className="block rounded-xl border border-[#eef0f4] bg-white px-4 py-3"
+                className="twa-card twa-press block px-4 py-3"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="truncate font-mono text-[13px] font-semibold text-foreground">
-                    {tr.codeOriginal}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate font-mono text-[13px] font-semibold">
+                      {tr.codeOriginal}
+                    </span>
+                    {tr.hasPhoto ? (
+                      <ImageIcon
+                        className="twa-hint h-3.5 w-3.5 flex-none"
+                        aria-hidden
+                      />
+                    ) : null}
                   </span>
                   <StatusPill
                     status={tr.currentStatus}
@@ -60,27 +91,26 @@ export default async function TwaTracksPage({
                     className="flex-none"
                   />
                 </div>
-                <p className="mt-1 flex items-center gap-3 font-mono text-[11.5px] text-muted-foreground">
-                  <span>{formatDate(tr.createdAt)}</span>
-                  {tr.weightGrams != null ? (
-                    <span>{formatKg(tr.weightGrams)} kg</span>
-                  ) : null}
-                  {tr.priceTiyin != null ? (
-                    <span>
-                      {formatSom(tr.priceTiyin)} {tCommon('som')}
-                    </span>
-                  ) : null}
-                  {tr.batchEta ? (
-                    <span>
-                      {t('etaShort')} {tr.batchEta}
-                    </span>
-                  ) : null}
-                </p>
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="w-16 flex-none">
+                    <Pipeline status={tr.currentStatus} mini />
+                  </div>
+                  <p className="twa-hint min-w-0 flex-1 truncate font-mono text-[11.5px]">
+                    {formatDate(tr.createdAt)}
+                    {tr.weightGrams != null
+                      ? ` · ${formatKg(tr.weightGrams)} kg`
+                      : ''}
+                    {tr.priceTiyin != null
+                      ? ` · ${formatSom(tr.priceTiyin)} ${tCommon('som')}`
+                      : ''}
+                    {tr.batchEta ? ` · ${t('etaShort')} ${tr.batchEta}` : ''}
+                  </p>
+                </div>
               </Link>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </Screen>
   );
 }

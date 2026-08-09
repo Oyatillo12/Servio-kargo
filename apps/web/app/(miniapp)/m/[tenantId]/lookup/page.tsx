@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { Search } from 'lucide-react';
 
 import {
   formatDateTime,
@@ -13,12 +13,13 @@ import {
   type TrackStatus,
 } from '@kargotrack/shared';
 
+import { Pipeline } from '@/features/twa/components/pipeline';
+import { Screen } from '@/features/twa/components/screen';
+import { StatusPill } from '@/features/twa/components/status-pill';
 import { clientIp } from '@/lib/client-ip';
 import { bumpThrottle } from '@/lib/queries/throttle';
 import { getTwaContext } from '@/lib/twa/auth';
 import { getTwaPublicTrack } from '@/lib/twa/queries';
-
-import { StatusPill } from '../status-pill';
 
 /**
  * Public track lookup (tasks.md B6) — the ONE Mini App screen that works
@@ -40,11 +41,9 @@ export default async function TwaLookupPage({
 
   if (gate.state === 'not_premium') {
     return (
-      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-2 text-center">
-        <p className="text-base font-bold text-foreground">
-          {t('notEnabledTitle')}
-        </p>
-        <p className="text-sm text-muted-foreground">{t('notEnabledBody')}</p>
+      <div className="twa-rise flex min-h-[70vh] flex-col items-center justify-center gap-2 text-center">
+        <p className="text-[17px] font-extrabold">{t('notEnabledTitle')}</p>
+        <p className="twa-hint text-sm leading-relaxed">{t('notEnabledBody')}</p>
       </div>
     );
   }
@@ -85,59 +84,73 @@ export default async function TwaLookupPage({
   }
 
   return (
-    <div className="space-y-3">
-      <header className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-foreground">{t('navLookup')}</h1>
-        <Link
-          href={`/m/${params.tenantId}`}
-          className="text-sm text-muted-foreground"
-        >
-          {t('backHome')}
-        </Link>
-      </header>
-
-      <form method="GET" className="flex gap-2">
+    <Screen
+      title={t('navLookup')}
+      backHref={`/m/${params.tenantId}`}
+      backLabel={t('backHome')}
+    >
+      <form method="GET" className="twa-rise flex gap-2">
         <input
           name="code"
           defaultValue={raw}
           placeholder={t('lookupPlaceholder')}
           inputMode="text"
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-xl border border-[#dfe3ea] px-3 py-2.5 font-mono text-sm outline-none focus:border-slate-400"
+          autoCapitalize="characters"
+          className="twa-input min-w-0 flex-1 font-mono"
         />
         <button
           type="submit"
-          className="flex-none rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+          aria-label={t('lookupButton')}
+          className="twa-btn twa-press w-auto flex-none px-4"
         >
-          {t('lookupButton')}
+          <Search className="h-[18px] w-[18px]" aria-hidden />
         </button>
       </form>
 
       {result.kind === 'invalid' ? (
-        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p
+          className="twa-rise rounded-xl px-4 py-3 text-sm"
+          style={{ background: 'var(--twa-error-soft)', color: 'var(--twa-error)' }}
+        >
           {t('lookupInvalid')}
         </p>
       ) : result.kind === 'throttled' ? (
-        <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <p
+          className="twa-rise rounded-xl px-4 py-3 text-sm"
+          style={{
+            background: 'var(--twa-warning-soft)',
+            color: 'var(--twa-warning)',
+          }}
+        >
           {t('lookupThrottled')}
         </p>
       ) : result.kind === 'not_found' ? (
-        <p className="rounded-xl border border-dashed border-[#dfe3ea] px-4 py-8 text-center text-sm text-muted-foreground">
+        <p
+          className="twa-hint twa-rise rounded-2xl border border-dashed px-4 py-8 text-center text-sm"
+          style={{ borderColor: 'var(--twa-border)' }}
+        >
           {t('lookupNotFound')}
         </p>
       ) : result.kind === 'found' ? (
-        <div className="rounded-xl border border-[#eef0f4] bg-white px-4 py-4">
+        <div className="twa-card twa-rise px-4 py-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="break-all font-mono text-[13.5px] font-semibold text-foreground">
+            <span className="min-w-0 break-all font-mono text-[13.5px] font-semibold">
               {raw}
             </span>
             <StatusPill status={result.status} lang={lang} className="flex-none" />
           </div>
-          <p className="mt-2 border-t border-[#eef0f4] pt-2 font-mono text-[11.5px] text-muted-foreground">
+          <div className="mt-3">
+            <Pipeline status={result.status} />
+          </div>
+          <p
+            className="twa-hint mt-3 border-t pt-2.5 font-mono text-[11.5px]"
+            style={{ borderColor: 'var(--twa-border)' }}
+          >
             {t('lookupLastUpdate')} {formatDateTime(result.lastEventAt)}
           </p>
         </div>
       ) : null}
-    </div>
+    </Screen>
   );
 }

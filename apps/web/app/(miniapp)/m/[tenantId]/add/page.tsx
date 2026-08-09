@@ -1,12 +1,11 @@
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
-import { CalcClient } from '@/features/twa/components/calc-client';
+import { AddTracksForm } from '@/features/twa/components/add-form';
 import { Screen } from '@/features/twa/components/screen';
 import { getTwaContext } from '@/lib/twa/auth';
-import { listTwaTariffs } from '@/lib/twa/queries';
 
-export default async function TwaCalcPage({
+export default async function TwaAddPage({
   params,
 }: {
   params: { tenantId: string };
@@ -17,19 +16,17 @@ export default async function TwaCalcPage({
   const { tenant, customer } = gate;
 
   const t = await getTranslations({ locale: customer.lang, namespace: 'twa' });
-  const tariffs = await listTwaTariffs(tenant.id);
 
   return (
     <Screen
-      title={t('navCalc')}
+      title={t('navAdd')}
       backHref={`/m/${tenant.id}`}
       backLabel={t('backHome')}
     >
-      <CalcClient
-        tariffs={tariffs}
-        currency={tenant.currency}
-        usdRateTiyin={tenant.usdRateTiyin}
-      />
+      <p className="twa-hint twa-rise text-[13px] leading-relaxed">
+        {t('addHint')}
+      </p>
+      <AddTracksForm tenantId={tenant.id} />
     </Screen>
   );
 }

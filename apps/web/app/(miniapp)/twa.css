@@ -1,0 +1,255 @@
+/*
+ * Mini App design tokens (tasks.md B / SPEC §10.3).
+ *
+ * Two layers:
+ *  1. SURFACES follow Telegram — the ThemeBridge copies the live
+ *     `themeParams` into --tg-* vars and stamps data-twa-theme, so the app
+ *     reads as a continuation of the chat it was opened from.
+ *  2. IDENTITY stays SERVIO — indigo (#2B2687) for actions, copper
+ *     (#C2691E) as the single moving accent (the parcel "in motion"),
+ *     status colors from the brand palette. Both flip for dark.
+ *
+ * Fallbacks below render correctly even before/without the bridge.
+ */
+
+:root {
+  --twa-page: var(--tg-theme-secondary-bg-color, #f2f2f6);
+  --twa-card: var(--tg-theme-bg-color, #ffffff);
+  --twa-text: var(--tg-theme-text-color, #16143b);
+  --twa-hint: var(--tg-theme-hint-color, #8a8a96);
+  --twa-border: rgba(22, 20, 59, 0.08);
+
+  --twa-brand: #2b2687;
+  --twa-brand-ink: #2b2687; /* brand as TEXT on card */
+  --twa-brand-soft: #eeedfa;
+  --twa-on-brand: #ffffff;
+  --twa-copper: #c2691e;
+  --twa-copper-soft: rgba(194, 105, 30, 0.12);
+
+  --twa-success: #1f8a4c;
+  --twa-success-soft: rgba(31, 138, 76, 0.12);
+  --twa-info: #3b6fd4;
+  --twa-info-soft: rgba(59, 111, 212, 0.12);
+  --twa-warning: #c77e10;
+  --twa-warning-soft: rgba(199, 126, 16, 0.14);
+  --twa-error: #cc3d33;
+  --twa-error-soft: rgba(204, 61, 51, 0.12);
+
+  --twa-radius: 16px;
+}
+
+[data-twa-theme='dark'] {
+  --twa-page: var(--tg-theme-secondary-bg-color, #0f0f14);
+  --twa-card: var(--tg-theme-bg-color, #1b1b24);
+  --twa-text: var(--tg-theme-text-color, #f2f2f6);
+  --twa-hint: var(--tg-theme-hint-color, #8f8f9c);
+  --twa-border: rgba(255, 255, 255, 0.09);
+
+  --twa-brand: #5b54d6;
+  --twa-brand-ink: #a7a3ea;
+  --twa-brand-soft: rgba(167, 163, 234, 0.14);
+  --twa-copper: #e0873a;
+  --twa-copper-soft: rgba(224, 135, 58, 0.16);
+
+  --twa-success: #3dbb72;
+  --twa-success-soft: rgba(61, 187, 114, 0.14);
+  --twa-info: #6d97e8;
+  --twa-info-soft: rgba(109, 151, 232, 0.14);
+  --twa-warning: #e0a13a;
+  --twa-warning-soft: rgba(224, 161, 58, 0.16);
+  --twa-error: #e0564b;
+  --twa-error-soft: rgba(224, 86, 75, 0.14);
+}
+
+/* --- Base ------------------------------------------------------------- */
+
+.twa-body {
+  background: var(--twa-page);
+  color: var(--twa-text);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100vh;
+}
+
+.twa-card {
+  background: var(--twa-card);
+  border: 1px solid var(--twa-border);
+  border-radius: var(--twa-radius);
+}
+
+.twa-hint {
+  color: var(--twa-hint);
+}
+
+.twa-divider > * + * {
+  border-top: 1px solid var(--twa-border);
+}
+
+/* Tap feedback on any interactive row/card. */
+.twa-press {
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease;
+}
+.twa-press:active {
+  transform: scale(0.98);
+  opacity: 0.85;
+}
+
+.twa-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 14px;
+  background: var(--twa-brand);
+  color: var(--twa-on-brand);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 13px 20px;
+}
+.twa-btn:disabled {
+  opacity: 0.55;
+}
+.twa-btn--ghost {
+  background: var(--twa-brand-soft);
+  color: var(--twa-brand-ink);
+}
+
+.twa-input {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--twa-border);
+  background: var(--twa-card);
+  color: var(--twa-text);
+  padding: 12px 14px;
+  font-size: 15px;
+  outline: none;
+}
+.twa-input:focus {
+  border-color: var(--twa-brand-ink);
+}
+.twa-input::placeholder {
+  color: var(--twa-hint);
+}
+
+/* --- Status language --------------------------------------------------- */
+
+.twa-pill {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.twa-pill--CREATED {
+  background: var(--twa-border);
+  color: var(--twa-hint);
+}
+.twa-pill--CHINA_WAREHOUSE {
+  background: var(--twa-info-soft);
+  color: var(--twa-info);
+}
+.twa-pill--IN_TRANSIT {
+  background: var(--twa-copper-soft);
+  color: var(--twa-copper);
+}
+.twa-pill--TASHKENT_WAREHOUSE {
+  background: var(--twa-brand-soft);
+  color: var(--twa-brand-ink);
+}
+.twa-pill--READY_FOR_PICKUP {
+  background: var(--twa-success-soft);
+  color: var(--twa-success);
+}
+.twa-pill--DELIVERED {
+  background: transparent;
+  border: 1px solid var(--twa-border);
+  color: var(--twa-hint);
+}
+.twa-pill--LOST,
+.twa-pill--RETURNED {
+  background: var(--twa-error-soft);
+  color: var(--twa-error);
+}
+
+/* --- Pipeline (the signature element) ---------------------------------- */
+
+.twa-pipe {
+  display: flex;
+  align-items: center;
+}
+.twa-pipe__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--twa-border);
+  flex: none;
+}
+.twa-pipe__dot--done {
+  background: var(--twa-brand-ink);
+}
+.twa-pipe__dot--now {
+  background: var(--twa-copper);
+  box-shadow: 0 0 0 4px var(--twa-copper-soft);
+  animation: twa-pulse 2.2s ease-in-out infinite;
+}
+.twa-pipe__line {
+  height: 2px;
+  flex: 1;
+  background: var(--twa-border);
+}
+.twa-pipe__line--done {
+  background: var(--twa-brand-ink);
+}
+
+.twa-pipe--mini .twa-pipe__dot {
+  width: 5px;
+  height: 5px;
+}
+.twa-pipe--mini .twa-pipe__dot--now {
+  box-shadow: 0 0 0 2px var(--twa-copper-soft);
+  animation: none;
+}
+.twa-pipe--mini .twa-pipe__line {
+  height: 1.5px;
+  min-width: 8px;
+}
+
+@keyframes twa-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px var(--twa-copper-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+/* --- Entrance motion ---------------------------------------------------- */
+
+@keyframes twa-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.twa-rise {
+  animation: twa-rise 0.32s ease-out both;
+  /* Stagger via inline `--twa-i` (list index). */
+  animation-delay: calc(var(--twa-i, 0) * 45ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twa-rise,
+  .twa-pipe__dot--now {
+    animation: none;
+  }
+}

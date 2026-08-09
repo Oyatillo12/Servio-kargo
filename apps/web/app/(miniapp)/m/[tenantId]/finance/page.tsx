@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
 import { formatDate, formatSom, t as strings } from '@kargotrack/shared';
 
+import { Screen } from '@/features/twa/components/screen';
 import { getTwaContext } from '@/lib/twa/auth';
 import { getTwaFinance } from '@/lib/twa/queries';
 
@@ -32,75 +32,76 @@ export default async function TwaFinancePage({
     debtTiyin > 0
       ? {
           label: t('financeDebt'),
-          value: `${formatSom(debtTiyin)} ${tCommon('som')}`,
-          className: 'text-[#b91c1c]',
+          value: formatSom(debtTiyin),
+          color: 'var(--twa-error)',
         }
       : debtTiyin < 0
         ? {
             label: t('financeAdvance'),
-            value: `${formatSom(-debtTiyin)} ${tCommon('som')}`,
-            className: 'text-[#177338]',
+            value: formatSom(-debtTiyin),
+            color: 'var(--twa-success)',
           }
         : {
             label: t('financeSettled'),
-            value: `0 ${tCommon('som')}`,
-            className: 'text-foreground',
+            value: '0',
+            color: 'var(--twa-text)',
           };
 
   return (
-    <div className="space-y-3">
-      <header className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-foreground">{t('navFinance')}</h1>
-        <Link
-          href={`/m/${tenant.id}`}
-          className="text-sm text-muted-foreground"
-        >
-          {t('backHome')}
-        </Link>
-      </header>
-
-      <div className="rounded-xl border border-[#eef0f4] bg-white px-4 py-4 text-center">
-        <p className="text-[12.5px] text-muted-foreground">{balance.label}</p>
+    <Screen
+      title={t('navFinance')}
+      backHref={`/m/${tenant.id}`}
+      backLabel={t('backHome')}
+    >
+      <div className="twa-card twa-rise px-4 py-5 text-center">
+        <p className="twa-hint text-[12.5px]">{balance.label}</p>
         <p
-          className={`mt-1 font-mono text-2xl font-bold tabular-nums ${balance.className}`}
+          className="mt-1 font-mono text-[30px] font-bold tabular-nums leading-none"
+          style={{ color: balance.color }}
         >
           {balance.value}
+          <span className="twa-hint ml-1.5 text-base font-semibold">
+            {tCommon('som')}
+          </span>
         </p>
-        {/* C2 (Click) puts the pay button right here. */}
+        {/* C2 (onlayn to'lov) puts the pay button right here. */}
       </div>
 
-      <div className="rounded-xl border border-[#eef0f4] bg-white px-4 py-3.5">
-        <p className="text-[13px] font-semibold text-foreground">
-          {t('paymentsHistory')}
-        </p>
+      <div
+        className="twa-card twa-rise px-4 py-3.5"
+        style={{ '--twa-i': 1 } as React.CSSProperties}
+      >
+        <p className="text-[13px] font-bold">{t('paymentsHistory')}</p>
         {payments.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t('noPayments')}
-          </p>
+          <p className="twa-hint mt-2 text-sm">{t('noPayments')}</p>
         ) : (
-          <ul className="mt-1">
+          <ul className="twa-divider mt-1">
             {payments.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-3 border-t border-[#eef0f4] py-2.5 first:border-0"
+                className="flex items-center justify-between gap-3 py-2.5"
+                style={{ borderColor: 'var(--twa-border)' }}
               >
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-foreground">
+                  <p className="text-[13px] font-semibold">
                     {methodLabel[p.method]}
                   </p>
-                  <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
+                  <p className="twa-hint mt-0.5 font-mono text-[11.5px]">
                     {formatDate(p.createdAt)}
                     {p.note ? ` · ${p.note}` : ''}
                   </p>
                 </div>
-                <span className="flex-none font-mono text-[13.5px] font-semibold text-[#177338]">
-                  {formatSom(p.amountTiyin)} {tCommon('som')}
+                <span
+                  className="flex-none font-mono text-[13.5px] font-semibold tabular-nums"
+                  style={{ color: 'var(--twa-success)' }}
+                >
+                  +{formatSom(p.amountTiyin)}
                 </span>
               </li>
             ))}
           </ul>
         )}
       </div>
-    </div>
+    </Screen>
   );
 }

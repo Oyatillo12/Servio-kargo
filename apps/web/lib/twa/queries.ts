@@ -24,6 +24,7 @@ import {
 } from '@kargotrack/db/schema';
 import {
   computeDebtTiyin,
+  isTerminalStatus,
   statusSortIndex,
   type TenantPlan,
 } from '@kargotrack/shared';
@@ -39,6 +40,11 @@ export interface TwaTenant {
   usdRateTiyin: number | null;
   /** `settings.china_address_template`, `{client_code}` placeholder inside. */
   chinaAddressTemplate: string | null;
+  pickupAddress: string | null;
+  workingHours: string | null;
+  contactPhone: string | null;
+  /** Free-text info the tenant shows customers (`settings.info_text`). */
+  infoText: string | null;
 }
 
 export async function getTwaTenant(
@@ -54,6 +60,9 @@ export async function getTwaTenant(
       botUsername: tenants.botUsername,
       currency: tenants.currency,
       usdRateTiyin: tenants.usdRateTiyin,
+      pickupAddress: tenants.pickupAddress,
+      workingHours: tenants.workingHours,
+      contactPhone: tenants.contactPhone,
       settings: tenants.settings,
     })
     .from(tenants)
@@ -64,7 +73,45 @@ export async function getTwaTenant(
   return {
     ...rest,
     chinaAddressTemplate: settings?.china_address_template ?? null,
+    infoText: settings?.info_text ?? null,
   };
+}
+
+export interface TwaHomeSummary {
+  /** Parcels still moving (pre-DELIVERED pipeline statuses). */
+  activeCount: number;
+  /** Of those, waiting at the pickup point right now. */
+  readyCount: number;
+  debtTiyin: number;
+}
+
+/** The three numbers the home screen leads with. */
+export async function getTwaHomeSummary(
+  tenantId: string,
+  customerId: string,
+): Promise<TwaHomeSummary> {
+  const db = getDb();
+  const [rows, { debtTiyin }] = await Promise.all([
+    db
+      .select({ currentStatus: tracks.currentStatus })
+      .from(tracks)
+      .where(
+        and(
+          eq(tracks.tenantId, tenantId),
+          eq(tracks.customerId, customerId),
+          isNull(tracks.deletedAt),
+        ),
+      ),
+    getTwaFinance(tenantId, customerId),
+  ]);
+
+  let activeCount = 0;
+  let readyCount = 0;
+  for (const r of rows) {
+    if (r.currentStatus === 'READY_FOR_PICKUP') readyCount += 1;
+    if (!isTerminalStatus(r.currentStatus)) activeCount += 1;
+  }
+  return { activeCount, readyCount, debtTiyin };
 }
 
 export interface TwaTariff {
