@@ -68,6 +68,24 @@ export const paymentMethod = pgEnum('payment_method', [
 
 export const lang = pgEnum('lang', ['uz', 'ru']);
 
+/** What kind of outbound bot message a `message_log` row records. */
+export const messageKind = pgEnum('message_kind', [
+  'notify',
+  'reminder',
+  'broadcast',
+]);
+
+/**
+ * Delivery outcome. `sent` = Telegram accepted it; `dropped` = permanently
+ * unreachable (blocked the bot, deleted the chat); `failed` = gave up after
+ * every retry on a transient error.
+ */
+export const messageDeliveryStatus = pgEnum('message_delivery_status', [
+  'sent',
+  'dropped',
+  'failed',
+]);
+
 /** Tenant billing currency (SPEC §5.9 / §7.4). */
 export const currency = pgEnum('currency', ['UZS', 'USD']);
 
@@ -566,6 +584,44 @@ export const botSessions = pgTable(
   (t) => [primaryKey({ columns: [t.tenantId, t.key] })],
 );
 
+/**
+ * Outcome log for every outbound bot message (AUDIT.md T13). Before this, a
+ * customer who blocked the bot was silently dropped in the worker and the
+ * tenant had no way to see that "notified" never happened. One row per
+ * delivery attempt's FINAL outcome (not per retry), written by the worker.
+ */
+export const messageLog = pgTable(
+  'message_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    kind: messageKind('kind').notNull(),
+    status: messageDeliveryStatus('status').notNull(),
+    /** The track a `notify` was about; null for reminders/broadcasts. */
+    trackId: uuid('track_id').references(() => tracks.id, {
+      onDelete: 'set null',
+    }),
+    /** The campaign a `broadcast` delivery belongs to. */
+    broadcastId: uuid('broadcast_id').references(() => broadcasts.id, {
+      onDelete: 'cascade',
+    }),
+    /** Short technical reason (Telegram error description), for diagnosis. */
+    error: text('error'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // The customer page reads "last N messages to this person".
+    index('message_log_customer_idx').on(t.tenantId, t.customerId, t.createdAt),
+  ],
+);
+
 // --- Relations (for typed relational queries) ------------------------------
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
@@ -666,6 +722,11 @@ export type NewLead = typeof leads.$inferInsert;
 export type AuthThrottleRow = typeof authThrottle.$inferSelect;
 export type BotSession = typeof botSessions.$inferSelect;
 export type NewBotSession = typeof botSessions.$inferInsert;
+export type MessageLogRow = typeof messageLog.$inferSelect;
+export type NewMessageLogRow = typeof messageLog.$inferInsert;
+export type MessageKind = (typeof messageKind.enumValues)[number];
+export type MessageDeliveryStatus =
+  (typeof messageDeliveryStatus.enumValues)[number];
 
 export type TrackStatus = (typeof trackStatus.enumValues)[number];
 export type Currency = (typeof currency.enumValues)[number];

@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import {
   can,
   formatDate,
+  formatDateTime,
   formatSom,
   t as strings,
   type Lang,
@@ -17,7 +18,7 @@ import { ReminderButton } from '@/components/shared/reminder-button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { SectionCard } from '@/components/ui/section-card';
 import { requireCapability } from '@/lib/auth';
-import { getCustomerDetail } from '@/lib/queries';
+import { getCustomerDetail, listCustomerMessages } from '@/lib/queries';
 import { sendReminderAction } from '@/features/debtors/actions';
 import { PaymentForm } from '@/features/customers/components/payment-form';
 
@@ -62,6 +63,9 @@ export default async function CustomerDetailPage({
   if (!detail) notFound();
 
   const { customer, tracks, payments, debtTiyin } = detail;
+
+  // Delivery outcomes (AUDIT.md T13): "did they actually get the message?"
+  const messages = await listCustomerMessages(tenant.id, customer.id);
 
   const deliveredCount = tracks.filter(
     (tr) => tr.currentStatus === 'DELIVERED',
@@ -207,6 +211,56 @@ export default async function CustomerDetailPage({
                     <StatusBadge status={tr.currentStatus} />
                   </span>
                 </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </SectionCard>
+
+      {/* Outbound message outcomes (AUDIT.md T13). A blocked bot used to be
+          invisible: the worker dropped the send and the panel still looked
+          like the customer was notified. */}
+      <SectionCard title={t('messagesTitle')}>
+        {messages.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('noMessages')}</p>
+        ) : (
+          <ul>
+            {messages.map((m) => (
+              <li
+                key={m.id}
+                className="flex items-center justify-between gap-3 border-t border-[#eef0f4] py-2.5 first:border-0"
+              >
+                <div className="min-w-0">
+                  <p className="text-[13.5px] font-semibold text-foreground">
+                    {t(
+                      m.kind === 'notify'
+                        ? 'msgKindNotify'
+                        : m.kind === 'reminder'
+                          ? 'msgKindReminder'
+                          : 'msgKindBroadcast',
+                    )}
+                  </p>
+                  <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
+                    {formatDateTime(m.createdAt)}
+                  </p>
+                </div>
+                <span
+                  className={`flex-none rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                    m.status === 'sent'
+                      ? 'bg-[#e7f5ec] text-[#177338]'
+                      : m.status === 'dropped'
+                        ? 'bg-[#fef3c7] text-[#92400e]'
+                        : 'bg-[#fee2e2] text-[#b91c1c]'
+                  }`}
+                >
+                  {t(
+                    m.status === 'sent'
+                      ? 'msgStatusSent'
+                      : m.status === 'dropped'
+                        ? 'msgStatusDropped'
+                        : 'msgStatusFailed',
+                  )}
+                </span>
               </li>
             ))}
           </ul>

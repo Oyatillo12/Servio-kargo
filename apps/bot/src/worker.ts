@@ -42,12 +42,14 @@ import {
   getNotifyContext,
   getSendContext,
   incrementBroadcastSent,
+  insertMessageOutcome,
   listCustomerPayments,
   listCustomerTracks,
   listTenantDebtorIds,
   listTenants,
   pruneStaleSessions,
   SESSION_MAX_AGE_DAYS,
+  type MessageOutcome,
 } from './queries';
 import { TelegramRateLimiter } from './rateLimiter';
 
@@ -73,6 +75,23 @@ function isPermanentSendError(err: unknown): boolean {
   return false;
 }
 
+/** Short technical reason for a `message_log` row. */
+function sendErrorText(err: unknown): string {
+  return err instanceof GrammyError ? err.description : String(err);
+}
+
+/**
+ * Record a delivery outcome (AUDIT.md T13) — best-effort by design: the log is
+ * observability, and a failed INSERT must never fail or re-run a send.
+ */
+async function logOutcome(o: MessageOutcome): Promise<void> {
+  try {
+    await insertMessageOutcome(o);
+  } catch (err) {
+    logger.error({ err, outcome: o }, 'message_log write failed');
+  }
+}
+
 async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
   // One round trip for tenant + track + customer + batch (AUDIT.md T3).
   const ctx = await getNotifyContext(job.tenantId, job.trackId, job.customerId);
@@ -90,6 +109,14 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
 
   if (!customer?.tgUserId) {
     logger.warn({ customerId: job.customerId }, 'notify: no telegram id, dropping');
+    await logOutcome({
+      tenantId: job.tenantId,
+      customerId: job.customerId,
+      kind: 'notify',
+      status: 'dropped',
+      trackId: job.trackId,
+      error: 'no telegram id',
+    });
     return;
   }
 
@@ -130,6 +157,13 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
     } else {
       await api.sendMessage(chatId, message);
     }
+    await logOutcome({
+      tenantId: job.tenantId,
+      customerId: customer.id,
+      kind: 'notify',
+      status: 'sent',
+      trackId: track.id,
+    });
   } catch (err) {
     if (isPermanentSendError(err)) {
       // Don't burn retries on an unreachable chat — complete the job.
@@ -137,10 +171,26 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
         { err: err instanceof GrammyError ? err.description : err, chatId },
         'notify: permanent send error, dropping',
       );
+      await logOutcome({
+        tenantId: job.tenantId,
+        customerId: customer.id,
+        kind: 'notify',
+        status: 'dropped',
+        trackId: track.id,
+        error: sendErrorText(err),
+      });
       return;
     }
     if (meta.retryCount >= meta.retryLimit) {
       logger.error({ jobId: meta.id, chatId, err }, 'notify: failed after retries');
+      await logOutcome({
+        tenantId: job.tenantId,
+        customerId: customer.id,
+        kind: 'notify',
+        status: 'failed',
+        trackId: track.id,
+        error: sendErrorText(err),
+      });
       // A notification that never arrives is the product failing at its one job.
       captureError(err, {
         queue: 'notify',
@@ -180,6 +230,13 @@ async function handleReminderJob(
 
   if (!customer?.tgUserId) {
     logger.warn({ customerId: job.customerId }, 'reminder: no telegram id, dropping');
+    await logOutcome({
+      tenantId: job.tenantId,
+      customerId: job.customerId,
+      kind: 'reminder',
+      status: 'dropped',
+      error: 'no telegram id',
+    });
     return;
   }
 
@@ -213,16 +270,36 @@ async function handleReminderJob(
   await limiter.acquire(tenant.botToken, chatId);
   try {
     await api.sendMessage(chatId, message);
+    await logOutcome({
+      tenantId: job.tenantId,
+      customerId: customer.id,
+      kind: 'reminder',
+      status: 'sent',
+    });
   } catch (err) {
     if (isPermanentSendError(err)) {
       logger.warn(
         { err: err instanceof GrammyError ? err.description : err, chatId },
         'reminder: permanent send error, dropping',
       );
+      await logOutcome({
+        tenantId: job.tenantId,
+        customerId: customer.id,
+        kind: 'reminder',
+        status: 'dropped',
+        error: sendErrorText(err),
+      });
       return;
     }
     if (meta.retryCount >= meta.retryLimit) {
       logger.error({ jobId: meta.id, chatId, err }, 'reminder: failed after retries');
+      await logOutcome({
+        tenantId: job.tenantId,
+        customerId: customer.id,
+        kind: 'reminder',
+        status: 'failed',
+        error: sendErrorText(err),
+      });
       captureError(err, {
         queue: 'reminder',
         jobId: meta.id,
@@ -300,6 +377,14 @@ async function handleBroadcastJob(
       { customerId: job.customerId },
       'broadcast: no telegram id, dropping',
     );
+    await logOutcome({
+      tenantId: job.tenantId,
+      customerId: job.customerId,
+      kind: 'broadcast',
+      status: 'dropped',
+      broadcastId: job.broadcastId,
+      error: 'no telegram id',
+    });
     return;
   }
 
@@ -310,16 +395,39 @@ async function handleBroadcastJob(
   try {
     await api.sendMessage(chatId, job.text);
     await incrementBroadcastSent(job.tenantId, job.broadcastId);
+    await logOutcome({
+      tenantId: job.tenantId,
+      customerId: customer.id,
+      kind: 'broadcast',
+      status: 'sent',
+      broadcastId: job.broadcastId,
+    });
   } catch (err) {
     if (isPermanentSendError(err)) {
       logger.warn(
         { err: err instanceof GrammyError ? err.description : err, chatId },
         'broadcast: permanent send error, dropping',
       );
+      await logOutcome({
+        tenantId: job.tenantId,
+        customerId: customer.id,
+        kind: 'broadcast',
+        status: 'dropped',
+        broadcastId: job.broadcastId,
+        error: sendErrorText(err),
+      });
       return;
     }
     if (meta.retryCount >= meta.retryLimit) {
       logger.error({ jobId: meta.id, chatId, err }, 'broadcast: failed after retries');
+      await logOutcome({
+        tenantId: job.tenantId,
+        customerId: customer.id,
+        kind: 'broadcast',
+        status: 'failed',
+        broadcastId: job.broadcastId,
+        error: sendErrorText(err),
+      });
       captureError(err, {
         queue: 'broadcast',
         jobId: meta.id,
