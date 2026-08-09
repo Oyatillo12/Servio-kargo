@@ -41,7 +41,14 @@ export const SA_LOGIN_THROTTLE: ThrottleRule = {
   maxAttempts: 5,
 };
 
-export type ThrottleScope = 'login' | 'invite' | 'sa' | 'ip';
+/** Per-IP ceiling on the Mini App's public track lookup (tasks.md B6) —
+ * generous for a human re-checking a parcel, hostile to enumeration. */
+export const PUBLIC_LOOKUP_THROTTLE: ThrottleRule = {
+  windowSeconds: 15 * 60,
+  maxAttempts: 30,
+};
+
+export type ThrottleScope = 'login' | 'invite' | 'sa' | 'ip' | 'lookup';
 
 /**
  * Canonical `auth_throttle.key`. The identifier is trimmed and lowercased so

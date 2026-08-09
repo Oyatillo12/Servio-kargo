@@ -92,18 +92,21 @@ bloklamaydi, lekin A1–A3 pilotgacha yopilishi shart.
       root-layout'i (til `customers.lang`dan), `/api/twa/auth` endpoint,
       ro'yxatdan o'tmaganlar botga yo'naltiriladi — registratsiya BITTA
       joyda qoladi (botda).
-- [ ] **B3 · Treklar ro'yxati** — status bo'yicha guruhlangan, foto-miniatura,
-      kg/narx, pagination; trek detali: timeline, foto, reys ETA.
-- [ ] **B4 · Moliya ekrani** — qarz/avans (`computeDebtTiyin` — o'sha bitta
-      servis), to'lovlar tarixi, "to'lash" tugmasi joyi (C-bosqichga stub).
-- [ ] **B5 · Kalkulyator + Xitoy manzili** — mavjud tarif/kurs mantig'i,
-      manzil `{client_code}` bilan, bir bosishda nusxalash.
-- [ ] **B6 · Ochiq trek-qidiruv** — `/m/[tenantId]/lookup`: registratsiyasiz,
-      faqat holat + sana (narx/egasi YO'Q), throttle bilan (mavjud
-      `auth_throttle` naqshi, `lookup:` scope).
-- [ ] **B7 · Bot tomonи** — har tenant botiga `setChatMenuButton` (web_app
-      URL) — /sa onboarding + mavjud tenantlar uchun /sa tugmasi;
-      bot menyusida "📱 Kabinet" tugmasi (premium tenantlarda), uz/ru.
+- [x] **B3 · Treklar ro'yxati** — pipeline tartibida, kg/narx/ETA, trek
+      detali: holatlar timeline'i, ombor fotosi (egalik bilan himoyalangan
+      `/api/twa/photo` route).
+- [x] **B4 · Moliya ekrani** — qarz/avans (`computeDebtTiyin` — o'sha bitta
+      servis), to'lovlar tarixi; "to'lash" tugmasi joyi C2 ga qoldirilgan.
+- [x] **B5 · Kalkulyator + Xitoy manzili** — bot bilan bir xil shared
+      hisob (`parseKgToGrams`+`computeTrackPrice`), manzil `{client_code}`
+      bilan, bir bosishda nusxalash.
+- [x] **B6 · Ochiq trek-qidiruv** — `/m/[tenantId]/lookup`: registratsiyasiz,
+      faqat holat + oxirgi yangilanish (narx/egasi YO'Q), `lookup:` scope
+      IP-throttle.
+- [~] **B7 · Bot tomonи** — `setChatMenuButton` bajarildi: premium
+      onboarding'da o'rnatiladi, /sa reja-toggle'ida sinxronlanadi (basic →
+      default qaytadi). QOLDI: bot reply-klaviaturasida "📱 Kabinet"
+      tugmasi (premium tenantlarda), uz/ru.
 - [ ] **B8 · Storage abstraksiyasi** — `apps/web/lib/storage.ts` +
       `apps/bot/src/storage.ts` o'rniga BITTA modul `packages/db`ga emas,
       yangi `packages/storage` (local-disk driver hozir, S3 driver

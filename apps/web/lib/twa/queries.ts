@@ -309,6 +309,52 @@ export async function getTwaFinance(
   };
 }
 
+export interface TwaPublicTrack {
+  currentStatus: TrackStatus;
+  /** When the status last changed — the only date the public view shows. */
+  lastEventAt: Date;
+}
+
+/**
+ * Public lookup (tasks.md B6): status + last-change date and NOTHING else —
+ * no price, no owner, no weight. Anyone with the code can see where the
+ * parcel is; everything money-shaped stays behind registration.
+ */
+export async function getTwaPublicTrack(
+  tenantId: string,
+  codeNormalized: string,
+): Promise<TwaPublicTrack | null> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      id: tracks.id,
+      currentStatus: tracks.currentStatus,
+      createdAt: tracks.createdAt,
+    })
+    .from(tracks)
+    .where(
+      and(
+        eq(tracks.tenantId, tenantId),
+        eq(tracks.codeNormalized, codeNormalized),
+        isNull(tracks.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+
+  const [lastEvent] = await db
+    .select({ createdAt: trackEvents.createdAt })
+    .from(trackEvents)
+    .where(eq(trackEvents.trackId, row.id))
+    .orderBy(desc(trackEvents.createdAt))
+    .limit(1);
+
+  return {
+    currentStatus: row.currentStatus,
+    lastEventAt: lastEvent?.createdAt ?? row.createdAt,
+  };
+}
+
 export async function getTwaCustomerById(
   tenantId: string,
   customerId: string,

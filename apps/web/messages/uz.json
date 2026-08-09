@@ -90,7 +90,13 @@
     "calcKg": "Og'irlik (kg)",
     "calcResult": "Taxminiy narx",
     "calcInvalid": "Og'irlikni raqamda kiriting (masalan 2.5).",
-    "calcNoTariffs": "Tariflar hali sozlanmagan."
+    "calcNoTariffs": "Tariflar hali sozlanmagan.",
+    "lookupPlaceholder": "Trek kodi",
+    "lookupButton": "Qidirish",
+    "lookupInvalid": "Trek kodi 8–20 ta harf/raqamdan iborat bo'ladi.",
+    "lookupThrottled": "Urinishlar juda ko'p. Birozdan so'ng qayta urining.",
+    "lookupNotFound": "Bunday trek topilmadi. Kod hali tizimga kiritilmagan bo'lishi mumkin.",
+    "lookupLastUpdate": "Oxirgi yangilanish:"
   },
   "auth": {
     "pageTitle": "Kirish",

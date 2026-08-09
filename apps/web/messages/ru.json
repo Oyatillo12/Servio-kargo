@@ -90,7 +90,13 @@
     "calcKg": "Вес (кг)",
     "calcResult": "Примерная стоимость",
     "calcInvalid": "Введите вес числом (например 2.5).",
-    "calcNoTariffs": "Тарифы ещё не настроены."
+    "calcNoTariffs": "Тарифы ещё не настроены.",
+    "lookupPlaceholder": "Трек-код",
+    "lookupButton": "Найти",
+    "lookupInvalid": "Трек-код состоит из 8–20 букв/цифр.",
+    "lookupThrottled": "Слишком много попыток. Повторите чуть позже.",
+    "lookupNotFound": "Такой трек не найден. Возможно, код ещё не внесён в систему.",
+    "lookupLastUpdate": "Последнее обновление:"
   },
   "auth": {
     "pageTitle": "Вход",

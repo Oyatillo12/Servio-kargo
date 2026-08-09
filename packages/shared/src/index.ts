@@ -269,6 +269,7 @@ export {
   LOGIN_IP_THROTTLE,
   INVITE_IP_THROTTLE,
   SA_LOGIN_THROTTLE,
+  PUBLIC_LOOKUP_THROTTLE,
   type ThrottleRule,
   type ThrottleScope,
 } from './services/throttle';

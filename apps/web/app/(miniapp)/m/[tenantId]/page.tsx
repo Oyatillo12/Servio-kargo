@@ -44,7 +44,7 @@ export default async function TwaHomePage({
     { key: 'navFinance' as const, href: `/m/${tenant.id}/finance` },
     { key: 'navCalc' as const, href: `/m/${tenant.id}/calc` },
     { key: 'navAddress' as const, href: `/m/${tenant.id}/address` },
-    { key: 'navLookup' as const, href: null },
+    { key: 'navLookup' as const, href: `/m/${tenant.id}/lookup` },
   ];
 
   return (
