@@ -70,17 +70,18 @@ Har task uchun majburiy DoD (CLAUDE.md):
 [ ] Xatti-harakat o'zgargan bo'lsa — SPEC.md yangilangan (u kontrakt)
 ```
 
-### ☐ T9 · Login rate limit 🟡
+### ☑ T9 · Login rate limit 🟡 — BAJARILDI (2026-08-10)
 
 `apps/web/app/login/actions.ts` — hech qanday chegara yo'q. Telefon global
 unique emas, shuning uchun har urinishda mos qatorlar soniga teng argon2
 chaqiriladi (qimmat) → arzon DoS vektori. T8 dan keyin xodimlar ko'paydi,
 login yuzasi ham kengaydi.
 
-- [ ] IP + telefon bo'yicha oyna (masalan 10 urinish / 15 daqiqa)
-- [ ] Postgresda saqlash (`login_attempts`) — konteyner restartdan omon qolsin
-- [ ] Bir xil `LOGIN_ERROR` matni (user enumeration bo'lmasin)
-- [ ] `/sa/login` uchun ham
+- [x] IP + telefon bo'yicha oyna (10/15min telefon, 30/15min IP) —
+      `packages/shared/src/services/throttle.ts`
+- [x] Postgresda saqlash (`auth_throttle`, atomik upsert) — restartdan omon
+- [x] Yagona "urinishlar juda ko'p" matni (enumeration yo'q)
+- [x] `/sa/login` (5/15min) va invite-kod qabul qilish (15/15min IP) uchun ham
 
 ### ☐ T10 · "Filtrga mos hammasini tanlash" 🟡
 
@@ -97,8 +98,13 @@ Xabar yuborilganini panelda ko'rish imkoni yo'q. Mijoz botni bloklagan bo'lsa
 (`worker.ts:136` — `isPermanentSendError` → jim tashlab ketiladi) admin
 bilmaydi. Bu **asosiy qiymat da'vongizni isbotlaydi** (§ 6 ga qarang).
 
-- [ ] `notifications` jadvali: track_id, customer_id, status, sent_at, error
-- [ ] Worker natijani yozadi (muvaffaqiyat ham, permanent error ham)
+Yadro 2026-08-10 da bajarildi; qolgani ochiq:
+
+- [x] `message_log` jadvali: kind, status (sent/dropped/failed), track_id,
+      broadcast_id, error
+- [x] Worker YAKUNIY natijani yozadi (sent / permanent-drop / retry tugadi),
+      best-effort — log yozilmasa ham xabar qayta ketmaydi
+- [x] Mijoz sahifasida "Yuborilgan xabarlar" bo'limi (oxirgi 10 ta)
 - [ ] Trek detalida "Xabarlar" bo'limi
 - [ ] Mijoz kartasida "🚫 Botni bloklagan" belgisi
 - [ ] Dashboardda "Yetmagan xabarlar: N"
@@ -115,13 +121,17 @@ orqaga yo'l yo'q. Soft-deleted treklar uchun ko'rinish ham yo'q.
       navbatdan o'chirish (pg-boss `cancel`)
 - [ ] `/tracks?deleted=1` savat ko'rinishi + tiklash
 
-### ☐ T16 · Bot sessiyasini Postgresga o'tkazish 🟢
+### ☑ T16 · Bot sessiyasini Postgresga o'tkazish 🟢 — BAJARILDI (2026-08-10)
 
 `apps/bot/src/bot.ts:20` — `session({ initial: ... })`, xotirada. Har deploy
 flow o'rtasidagi foydalanuvchi holatini yo'qotadi va >1 replikani bloklaydi.
 
-- [ ] `@grammyjs/storage-*` yoki oddiy `bot_sessions` jadvali
-- [ ] TTL (masalan 1 soat) — eski yozuvlar tozalanadi
+- [x] Oddiy `bot_sessions` jadvali + o'z adapteri
+      (`apps/bot/src/sessionStorage.ts`) — o'zgarmagan/bo'sh sessiya yozuvini
+      o'tkazib yuboradi, shuning uchun har update DB-write emas
+- [x] TTL: 30 kun (soatlik sweep tozalaydi) — flow holati arzon, shuning
+      uchun 1 soat emas; til tanlovi kabi qiymatlar customers jadvalida
+      baribir saqlanadi
 
 ### ☐ T18 · Paneldan rasm yuklash 🟢
 

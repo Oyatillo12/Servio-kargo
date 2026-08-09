@@ -74,6 +74,8 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
 ## Data Model (core tables)
 - `tenants` — id, name, bot_token (unique), bot_username, currency ('UZS'|'USD'),
   usd_rate_tiyin (som per 1 USD, in tiyin; used when currency=USD),
+  plan ('basic'|'premium' — which features it unlocks is answered ONLY by
+  `planIncludes` in packages/shared/services/plans.ts),
   pickup_address, settings jsonb (reminder toggles, china_address_template,
   info_text, working_hours, contact_phone), created_at
   - `settings.staff_tg_ids` is RETIRED — employees live in `admin_users` with a
@@ -106,6 +108,15 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
 - `payments` — id, tenant_id, customer_id, amount_tiyin, method
   ('cash'|'click'|'payme'|'other'), note, created_by (admin_users), created_at
 - `broadcasts` — id, tenant_id, text, sent_count, created_at
+- `message_log` — id, tenant_id, customer_id, kind ('notify'|'reminder'|
+  'broadcast'), status ('sent'|'dropped'|'failed'), track_id?, broadcast_id?,
+  error, created_at. The worker records every outbound message's FINAL outcome;
+  the customer page shows it. Best-effort — a failed log write never re-sends.
+- `bot_sessions` — (tenant_id, key) PK, data jsonb, updated_at. grammY session
+  state so deploys don't wipe multi-step flows; hourly sweep prunes >30 days.
+- `auth_throttle` — key PK, window_start, count. Platform-level (pre-auth, no
+  tenant_id) fixed-window login throttling; rules live in
+  packages/shared/services/throttle.ts.
 - Debt per customer = SUM(price_tiyin of tracks in READY_FOR_PICKUP or DELIVERED,
   excluding soft-deleted) − SUM(payments). Always in som. Implement as a service
   function with tests, not scattered SQL. Full pricing rules live in SPEC.md 7.4.
