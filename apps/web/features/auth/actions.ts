@@ -13,13 +13,24 @@ import { adminUsers, type AdminUser } from '@kargotrack/db/schema';
 import {
   canSignIn,
   checkInvite,
+  INVITE_IP_THROTTLE,
+  isThrottled,
   isValidPassword,
+  LOGIN_IP_THROTTLE,
+  LOGIN_PHONE_THROTTLE,
   normalizeInviteCode,
+  throttleKey,
 } from '@kargotrack/shared';
 
 import { canonicalAdminPhone } from '@/lib/admin-phone';
+import { clientIp } from '@/lib/client-ip';
 import { setLocaleCookie } from '@/lib/locale';
-import { acceptInvite, findInviteByCodeAndPhone } from '@/lib/queries';
+import {
+  acceptInvite,
+  bumpThrottle,
+  clearThrottle,
+  findInviteByCodeAndPhone,
+} from '@/lib/queries';
 import { COOKIE_NAME, MAX_AGE_SECONDS, createSessionToken } from '@/lib/session';
 
 const schema = z.object({
@@ -46,6 +57,23 @@ export async function loginAction(
   if (!parsed.success) return { error: loginError };
   const { phone, password } = parsed.data;
 
+  const canonical = canonicalAdminPhone(phone);
+
+  // Throttle BEFORE argon2 runs: the whole point is to cap guessing, and a
+  // rejected attempt must cost the caller a slot too (AUDIT.md T9). Two keys —
+  // this phone, and this IP across all phones.
+  const phoneKey = throttleKey('login', canonical ?? phone);
+  const [phoneCount, ipCount] = await Promise.all([
+    bumpThrottle(phoneKey, LOGIN_PHONE_THROTTLE.windowSeconds),
+    bumpThrottle(throttleKey('ip', clientIp()), LOGIN_IP_THROTTLE.windowSeconds),
+  ]);
+  if (
+    isThrottled(phoneCount, LOGIN_PHONE_THROTTLE) ||
+    isThrottled(ipCount, LOGIN_IP_THROTTLE)
+  ) {
+    return { error: t('tooManyAttempts') };
+  }
+
   const db = getDb();
   // Phone is not globally unique across tenants, so verify against each match.
   //
@@ -54,7 +82,6 @@ export async function loginAction(
   // platform owner typed at onboarding, so exact match has to keep working;
   // everything issued since is canonical, and nobody types a number the same way
   // twice. Both are equality tests, so both use `admin_users_phone_idx`.
-  const canonical = canonicalAdminPhone(phone);
   const candidates = await db
     .select()
     .from(adminUsers)
@@ -79,6 +106,10 @@ export async function loginAction(
     }
   }
   if (!matched) return { error: loginError };
+
+  // A real owner who fumbled their password twice shouldn't inherit those
+  // misses into next week's window.
+  await clearThrottle(phoneKey);
 
   await db
     .update(adminUsers)
@@ -136,6 +167,16 @@ export async function acceptInviteAction(
   const code = normalizeInviteCode(parsed.data.code);
   const phone = canonicalAdminPhone(parsed.data.phone);
   if (!code || !phone) return { error: t('inviteInvalid') };
+
+  // The 6-char code is the whole secret — cap guessing per IP (AUDIT.md T9).
+  const tAuth = await getTranslations('auth');
+  const inviteCount = await bumpThrottle(
+    throttleKey('invite', clientIp()),
+    INVITE_IP_THROTTLE.windowSeconds,
+  );
+  if (isThrottled(inviteCount, INVITE_IP_THROTTLE)) {
+    return { error: tAuth('tooManyAttempts') };
+  }
 
   if (!isValidPassword(parsed.data.password)) {
     return { error: t('passwordTooShort') };

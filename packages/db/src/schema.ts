@@ -527,6 +527,21 @@ export const leads = pgTable('leads', {
     .defaultNow(),
 });
 
+/**
+ * Fixed-window login throttling (AUDIT.md T9). Platform-level and pre-auth, so
+ * deliberately no tenant_id: at the moment of a login attempt there is no
+ * session to scope by. Keys look like `login:+99890…` / `ip:1.2.3.4`; rows are
+ * upserted atomically (see `bumpThrottle` in apps/web) and deleted on success,
+ * so the table stays a handful of hot rows, not a log.
+ */
+export const authThrottle = pgTable('auth_throttle', {
+  key: text('key').primaryKey(),
+  windowStart: timestamp('window_start', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  count: integer('count').notNull().default(1),
+});
+
 // --- Relations (for typed relational queries) ------------------------------
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({

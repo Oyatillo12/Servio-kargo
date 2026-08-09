@@ -252,6 +252,18 @@ export {
   type PaymentExportRow,
 } from './services/export';
 
+// Login throttling rules (AUDIT.md T9)
+export {
+  throttleKey,
+  isThrottled,
+  LOGIN_PHONE_THROTTLE,
+  LOGIN_IP_THROTTLE,
+  INVITE_IP_THROTTLE,
+  SA_LOGIN_THROTTLE,
+  type ThrottleRule,
+  type ThrottleScope,
+} from './services/throttle';
+
 // Observability — PII scrubbing for outbound error reports (AUDIT.md T5)
 export { scrubText, scrubValue, REDACTED } from './observability/scrub';
 

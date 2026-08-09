@@ -63,6 +63,7 @@
     "signIn": "Kirish",
     "signingIn": "Kirilmoqda…",
     "invalidCredentials": "Telefon yoki parol noto'g'ri",
+    "tooManyAttempts": "Urinishlar juda ko'p. 15 daqiqadan keyin qayta urinib ko'ring.",
     "forbidden": "Buning uchun ruxsatingiz yo'q. Administratoringizga murojaat qiling."
   },
   "dashboard": {
