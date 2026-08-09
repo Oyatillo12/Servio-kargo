@@ -80,7 +80,17 @@
     "financeAdvance": "Avans (ortiqcha to'lov)",
     "financeSettled": "Qarz yo'q",
     "paymentsHistory": "To'lovlar tarixi",
-    "noPayments": "To'lovlar hali yo'q."
+    "noPayments": "To'lovlar hali yo'q.",
+    "navAddress": "Xitoy manzili",
+    "addressHint": "Xitoydagi do'kon/sotuvchiga shu manzilni bering — kodingiz ichida.",
+    "addressCopy": "Manzilni nusxalash",
+    "addressCopied": "Nusxalandi ✓",
+    "addressMissing": "Manzil hali sozlanmagan. Kargo kompaniyangizga murojaat qiling.",
+    "calcTariff": "Tarif",
+    "calcKg": "Og'irlik (kg)",
+    "calcResult": "Taxminiy narx",
+    "calcInvalid": "Og'irlikni raqamda kiriting (masalan 2.5).",
+    "calcNoTariffs": "Tariflar hali sozlanmagan."
   },
   "auth": {
     "pageTitle": "Kirish",

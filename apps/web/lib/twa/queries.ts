@@ -14,6 +14,7 @@ import {
   batches,
   customers,
   payments,
+  tariffs,
   tenants,
   trackEvents,
   tracks,
@@ -34,6 +35,10 @@ export interface TwaTenant {
   /** Needed server-side to validate initData; NEVER sent to the client. */
   botToken: string;
   botUsername: string | null;
+  currency: 'UZS' | 'USD';
+  usdRateTiyin: number | null;
+  /** `settings.china_address_template`, `{client_code}` placeholder inside. */
+  chinaAddressTemplate: string | null;
 }
 
 export async function getTwaTenant(
@@ -47,11 +52,41 @@ export async function getTwaTenant(
       plan: tenants.plan,
       botToken: tenants.botToken,
       botUsername: tenants.botUsername,
+      currency: tenants.currency,
+      usdRateTiyin: tenants.usdRateTiyin,
+      settings: tenants.settings,
     })
     .from(tenants)
     .where(eq(tenants.id, tenantId))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  const { settings, ...rest } = row;
+  return {
+    ...rest,
+    chinaAddressTemplate: settings?.china_address_template ?? null,
+  };
+}
+
+export interface TwaTariff {
+  id: string;
+  name: string;
+  pricePerKgMinor: number;
+  isDefault: boolean;
+}
+
+/** Active tariffs, default first — the same order the bot's /calc shows. */
+export async function listTwaTariffs(tenantId: string): Promise<TwaTariff[]> {
+  const db = getDb();
+  return db
+    .select({
+      id: tariffs.id,
+      name: tariffs.name,
+      pricePerKgMinor: tariffs.pricePerKgMinor,
+      isDefault: tariffs.isDefault,
+    })
+    .from(tariffs)
+    .where(and(eq(tariffs.tenantId, tenantId), eq(tariffs.active, true)))
+    .orderBy(desc(tariffs.isDefault), asc(tariffs.sort), asc(tariffs.name));
 }
 
 export async function getTwaCustomerByTg(

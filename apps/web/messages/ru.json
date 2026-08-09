@@ -80,7 +80,17 @@
     "financeAdvance": "Аванс (переплата)",
     "financeSettled": "Долга нет",
     "paymentsHistory": "История платежей",
-    "noPayments": "Платежей пока нет."
+    "noPayments": "Платежей пока нет.",
+    "navAddress": "Адрес в Китае",
+    "addressHint": "Дайте этот адрес продавцу в Китае — ваш код уже внутри.",
+    "addressCopy": "Скопировать адрес",
+    "addressCopied": "Скопировано ✓",
+    "addressMissing": "Адрес ещё не настроен. Обратитесь в вашу карго-компанию.",
+    "calcTariff": "Тариф",
+    "calcKg": "Вес (кг)",
+    "calcResult": "Примерная стоимость",
+    "calcInvalid": "Введите вес числом (например 2.5).",
+    "calcNoTariffs": "Тарифы ещё не настроены."
   },
   "auth": {
     "pageTitle": "Вход",
