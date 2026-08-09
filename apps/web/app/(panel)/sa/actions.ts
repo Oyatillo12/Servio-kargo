@@ -9,6 +9,7 @@ import { parseSomToTiyin, parseUsdToCents } from '@kargotrack/shared';
 import {
   createTenantWithOwner,
   getTenantToken,
+  setTenantPlan,
   tenantTokenExists,
 } from '@/lib/sa-queries';
 import { requireSuperadmin } from '@/lib/superadmin';
@@ -33,6 +34,7 @@ const onboardSchema = z.object({
     .trim()
     .regex(/^[A-Za-z]{2,4}$/, 'prefix'),
   currency: z.enum(['UZS', 'USD']).default('UZS'),
+  plan: z.enum(['basic', 'premium']).default('basic'),
   usdRate: z.string().trim().optional(),
   pricePerKg: z.string().trim().min(1, 'narx'),
   pickupAddress: z.string().trim().max(300).optional(),
@@ -73,6 +75,7 @@ export async function onboardTenantAction(
     botToken: formData.get('botToken'),
     codePrefix: formData.get('codePrefix'),
     currency: formData.get('currency') ?? 'UZS',
+    plan: formData.get('plan') ?? 'basic',
     usdRate: formData.get('usdRate') ?? undefined,
     pricePerKg: formData.get('pricePerKg'),
     pickupAddress: formData.get('pickupAddress') ?? undefined,
@@ -146,6 +149,7 @@ export async function onboardTenantAction(
       botToken,
       botUsername,
       currency: input.currency,
+      plan: input.plan,
       usdRateTiyin,
       defaultTariffMinor,
       pickupAddress: optional(input.pickupAddress),
@@ -168,6 +172,37 @@ export async function onboardTenantAction(
 export interface WebhookState {
   ok?: boolean;
   error?: string;
+}
+
+// --- Switch a tenant's plan (premium on/off row action) ---------------------
+
+export interface PlanState {
+  ok?: boolean;
+  error?: string;
+}
+
+const planSchema = z.object({
+  tenantId: z.string().uuid(),
+  plan: z.enum(['basic', 'premium']),
+});
+
+export async function setPlanAction(
+  _prev: PlanState,
+  formData: FormData,
+): Promise<PlanState> {
+  requireSuperadmin();
+
+  const parsed = planSchema.safeParse({
+    tenantId: formData.get('tenantId'),
+    plan: formData.get('plan'),
+  });
+  if (!parsed.success) return { error: 'Tenant topilmadi.' };
+
+  const changed = await setTenantPlan(parsed.data.tenantId, parsed.data.plan);
+  if (!changed) return { error: 'Tenant topilmadi.' };
+
+  revalidatePath('/sa');
+  return { ok: true };
 }
 
 export async function resetWebhookAction(

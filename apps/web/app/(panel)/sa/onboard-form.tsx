@@ -118,6 +118,15 @@ export function OnboardForm() {
             </select>
           </div>
         </div>
+        <div>
+          <label htmlFor="plan" className={labelClass}>
+            Tarif rejasi
+          </label>
+          <select id="plan" name="plan" defaultValue="basic" className={inputClass}>
+            <option value="basic">Basic — bot + panel</option>
+            <option value="premium">Premium — Mini App, to&apos;lov, bonus (tez orada)</option>
+          </select>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <Field
             name="pricePerKg"

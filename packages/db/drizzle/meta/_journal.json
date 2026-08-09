@@ -92,6 +92,13 @@
       "when": 1786302815010,
       "tag": "0012_message_log",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786303164824,
+      "tag": "0013_tenant_plan",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,7 @@ import {
   tenants,
   tracks,
   type Currency,
+  type TenantPlanValue,
   type TenantSettings,
 } from '@kargotrack/db/schema';
 
@@ -25,6 +26,7 @@ export interface SaTenantRow {
   name: string;
   botUsername: string | null;
   codePrefix: string;
+  plan: TenantPlanValue;
   trackCount: number;
   customerCount: number;
   createdAt: Date;
@@ -56,10 +58,25 @@ export async function listTenantsForSa(): Promise<SaTenantRow[]> {
     name: t.name,
     botUsername: t.botUsername,
     codePrefix: t.codePrefix,
+    plan: t.plan,
     trackCount: tMap.get(t.id) ?? 0,
     customerCount: cMap.get(t.id) ?? 0,
     createdAt: t.createdAt,
   }));
+}
+
+/** Switch a tenant's subscription tier (super-admin row action). */
+export async function setTenantPlan(
+  tenantId: string,
+  plan: TenantPlanValue,
+): Promise<boolean> {
+  const db = getDb();
+  const rows = await db
+    .update(tenants)
+    .set({ plan })
+    .where(eq(tenants.id, tenantId))
+    .returning({ id: tenants.id });
+  return rows.length > 0;
 }
 
 /** Pre-check so we can show a friendly message before hitting the unique index. */
@@ -92,6 +109,7 @@ export interface CreateTenantInput {
   botToken: string;
   botUsername: string | null;
   currency: Currency;
+  plan: TenantPlanValue;
   /** Som per 1 USD in tiyin; null when currency is UZS. */
   usdRateTiyin: number | null;
   /** Default tariff price per kg in minor units (tiyin if UZS, cents if USD). */
@@ -125,6 +143,7 @@ export async function createTenantWithOwner(
         botToken: input.botToken,
         botUsername: input.botUsername,
         currency: input.currency,
+        plan: input.plan,
         usdRateTiyin: input.usdRateTiyin,
         pickupAddress: input.pickupAddress,
         workingHours: input.workingHours,

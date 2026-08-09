@@ -252,6 +252,15 @@ export {
   type PaymentExportRow,
 } from './services/export';
 
+// Subscription tiers — the single "does this plan include that?" answer
+export {
+  planIncludes,
+  TENANT_PLANS,
+  PLAN_LABELS,
+  type TenantPlan,
+  type PlanFeature,
+} from './services/plans';
+
 // Login throttling rules (AUDIT.md T9)
 export {
   throttleKey,

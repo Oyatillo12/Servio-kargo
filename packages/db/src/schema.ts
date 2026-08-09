@@ -92,6 +92,13 @@ export const currency = pgEnum('currency', ['UZS', 'USD']);
 /** Batch transport mode (SPEC §5.7). */
 export const transport = pgEnum('transport', ['avia', 'avto', 'train']);
 
+/**
+ * Subscription tier. Which features each tier unlocks is answered ONLY by
+ * `planIncludes` in `@kargotrack/shared` (services/plans.ts) — the same
+ * single-source rule the permission matrix follows.
+ */
+export const tenantPlan = pgEnum('tenant_plan', ['basic', 'premium']);
+
 // --- Shared shapes ---------------------------------------------------------
 
 /** Tenant-level configuration stored in `tenants.settings`. */
@@ -143,6 +150,7 @@ export const tenants = pgTable('tenants', {
   // when currency = 'USD'.
   currency: currency('currency').notNull().default('UZS'),
   usdRateTiyin: bigint('usd_rate_tiyin', { mode: 'number' }),
+  plan: tenantPlan('plan').notNull().default('basic'),
   pickupAddress: text('pickup_address'),
   workingHours: text('working_hours'),
   contactPhone: text('contact_phone'),
@@ -727,6 +735,7 @@ export type NewMessageLogRow = typeof messageLog.$inferInsert;
 export type MessageKind = (typeof messageKind.enumValues)[number];
 export type MessageDeliveryStatus =
   (typeof messageDeliveryStatus.enumValues)[number];
+export type TenantPlanValue = (typeof tenantPlan.enumValues)[number];
 
 export type TrackStatus = (typeof trackStatus.enumValues)[number];
 export type Currency = (typeof currency.enumValues)[number];
