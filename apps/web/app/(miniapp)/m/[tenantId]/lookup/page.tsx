@@ -102,7 +102,7 @@ export default async function TwaLookupPage({
         <button
           type="submit"
           aria-label={t('lookupButton')}
-          className="twa-btn twa-press w-auto flex-none px-4"
+          className="twa-btn twa-press !w-auto !px-4"
         >
           <Search className="h-[18px] w-[18px]" aria-hidden />
         </button>

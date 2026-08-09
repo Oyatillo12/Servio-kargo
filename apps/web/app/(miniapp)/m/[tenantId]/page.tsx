@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import {
   Calculator,
-  ChevronRight,
   Info,
   MapPin,
   Package,
@@ -51,14 +50,7 @@ export default async function TwaHomePage({
   });
   const summary = await getTwaHomeSummary(tenant.id, customer.id);
 
-  const nav = [
-    { key: 'navTracks' as const, href: 'tracks', Icon: Package, i: 3 },
-    { key: 'navFinance' as const, href: 'finance', Icon: Wallet, i: 4 },
-    { key: 'navCalc' as const, href: 'calc', Icon: Calculator, i: 5 },
-    { key: 'navAddress' as const, href: 'address', Icon: MapPin, i: 6 },
-    { key: 'navLookup' as const, href: 'lookup', Icon: Search, i: 7 },
-    { key: 'navInfo' as const, href: 'info', Icon: Info, i: 8 },
-  ];
+  const debtShown = summary.debtTiyin > 0;
 
   return (
     <div className="space-y-3">
@@ -79,91 +71,144 @@ export default async function TwaHomePage({
         </div>
       </header>
 
-      {/* The three numbers that answer "how are my parcels?" at a glance */}
-      <div
-        className="twa-card twa-rise twa-divider grid grid-cols-3 divide-x [&>*+*]:border-t-0"
-        style={{ '--twa-i': 1 } as React.CSSProperties}
-      >
-        <div className="px-2 py-3 text-center" style={{ borderColor: 'var(--twa-border)' }}>
-          <p className="font-mono text-lg font-bold tabular-nums">
-            {summary.activeCount}
-          </p>
-          <p className="twa-hint text-[11px]">{t('statActive')}</p>
-        </div>
-        <div
-          className="px-2 py-3 text-center"
-          style={{ borderColor: 'var(--twa-border)' }}
-        >
-          <p
-            className="font-mono text-lg font-bold tabular-nums"
-            style={
-              summary.readyCount > 0 ? { color: 'var(--twa-success)' } : undefined
-            }
-          >
-            {summary.readyCount}
-          </p>
-          <p className="twa-hint text-[11px]">{t('statReady')}</p>
-        </div>
-        <div
-          className="px-2 py-3 text-center"
-          style={{ borderColor: 'var(--twa-border)' }}
-        >
-          <p
-            className="truncate px-1 font-mono text-lg font-bold tabular-nums"
-            style={
-              summary.debtTiyin > 0 ? { color: 'var(--twa-error)' } : undefined
-            }
-          >
-            {formatSom(Math.max(summary.debtTiyin, 0))}
-          </p>
-          <p className="twa-hint text-[11px]">
-            {t('statDebt')} · {tCommon('som')}
-          </p>
-        </div>
-      </div>
-
-      {/* Primary action */}
-      <Link
-        href={`/m/${tenant.id}/add`}
-        className="twa-btn twa-press twa-rise"
-        style={{ '--twa-i': 2 } as React.CSSProperties}
-      >
-        <PlusCircle className="h-[18px] w-[18px]" aria-hidden />
-        {t('navAdd')}
-      </Link>
-
-      {/* Sections */}
+      {/* Bento launcher — size and color follow the JOB, live numbers live
+          inside their tiles (a status strip would just repeat them). */}
       <nav>
-        <ul className="space-y-2">
-          {nav.map(({ key, href, Icon, i }) => (
-            <li key={key} className="twa-rise" style={{ '--twa-i': i } as React.CSSProperties}>
-              <Link
-                href={`/m/${tenant.id}/${href}`}
-                className="twa-card twa-press flex items-center gap-3 px-4 py-3.5"
-              >
-                <span
-                  className="flex h-9 w-9 flex-none items-center justify-center rounded-xl"
-                  style={{
-                    background: 'var(--twa-brand-soft)',
-                    color: 'var(--twa-brand-ink)',
-                  }}
+        <ul className="grid grid-cols-2 gap-2">
+          {/* Hero: where the parcels are — the reason the app exists */}
+          <li className="twa-rise row-span-2" style={{ '--twa-i': 1 } as React.CSSProperties}>
+            <Link
+              href={`/m/${tenant.id}/tracks`}
+              className="twa-press flex h-full min-h-[152px] flex-col justify-between rounded-2xl p-4"
+              style={{ background: 'var(--twa-brand)', color: 'var(--twa-on-brand)' }}
+            >
+              <Package className="h-6 w-6" aria-hidden />
+              <div>
+                <p className="font-mono text-[30px] font-bold leading-none tabular-nums">
+                  {summary.activeCount}
+                </p>
+                <p className="mt-1 text-[12.5px] opacity-80">{t('statActive')}</p>
+                {summary.readyCount > 0 ? (
+                  <p
+                    className="mt-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold"
+                    style={{ background: 'rgba(255,255,255,.18)' }}
+                  >
+                    {summary.readyCount} · {t('statReady')}
+                  </p>
+                ) : null}
+                <p className="mt-2.5 text-[14px] font-semibold">
+                  {t('navTracks')} ›
+                </p>
+              </div>
+            </Link>
+          </li>
+
+          {/* Money: the number that decides the pickup visit */}
+          <li className="twa-rise" style={{ '--twa-i': 2 } as React.CSSProperties}>
+            <Link
+              href={`/m/${tenant.id}/finance`}
+              className="twa-press flex h-full flex-col justify-between rounded-2xl p-3.5"
+              style={{ background: 'var(--twa-copper-soft)' }}
+            >
+              <Wallet
+                className="h-5 w-5"
+                style={{ color: 'var(--twa-copper)' }}
+                aria-hidden
+              />
+              <div>
+                <p
+                  className="truncate font-mono text-[17px] font-bold tabular-nums leading-tight"
+                  style={debtShown ? { color: 'var(--twa-error)' } : undefined}
                 >
-                  <Icon className="h-[18px] w-[18px]" aria-hidden />
+                  {debtShown
+                    ? `${formatSom(summary.debtTiyin)} ${tCommon('som')}`
+                    : t('financeSettled')}
+                </p>
+                <p className="twa-hint mt-0.5 text-[12px] font-medium">
+                  {t('navFinance')}
+                </p>
+              </div>
+            </Link>
+          </li>
+
+          {/* Add: the daily habit — paste the code the seller just sent */}
+          <li className="twa-rise" style={{ '--twa-i': 3 } as React.CSSProperties}>
+            <Link
+              href={`/m/${tenant.id}/add`}
+              className="twa-press flex h-full flex-col justify-between rounded-2xl p-3.5"
+              style={{ background: 'var(--twa-success-soft)' }}
+            >
+              <PlusCircle
+                className="h-5 w-5"
+                style={{ color: 'var(--twa-success)' }}
+                aria-hidden
+              />
+              <p className="text-[13.5px] font-bold leading-tight">
+                {t('navAdd')}
+              </p>
+            </Link>
+          </li>
+
+          {/* Second row: prepare-a-shipment tools */}
+          <li className="twa-rise" style={{ '--twa-i': 4 } as React.CSSProperties}>
+            <Link
+              href={`/m/${tenant.id}/address`}
+              className="twa-press flex h-full flex-col justify-between gap-3 rounded-2xl p-3.5"
+              style={{ background: 'var(--twa-info-soft)' }}
+            >
+              <MapPin
+                className="h-5 w-5"
+                style={{ color: 'var(--twa-info)' }}
+                aria-hidden
+              />
+              <p className="text-[13.5px] font-bold leading-tight">
+                {t('navAddress')}
+              </p>
+            </Link>
+          </li>
+          <li className="twa-rise" style={{ '--twa-i': 5 } as React.CSSProperties}>
+            <Link
+              href={`/m/${tenant.id}/calc`}
+              className="twa-card twa-press flex h-full flex-col justify-between gap-3 rounded-2xl p-3.5"
+            >
+              <Calculator
+                className="h-5 w-5"
+                style={{ color: 'var(--twa-brand-ink)' }}
+                aria-hidden
+              />
+              <p className="text-[13.5px] font-bold leading-tight">
+                {t('navCalc')}
+              </p>
+            </Link>
+          </li>
+
+          {/* Utility strip: rare jobs, one slim row */}
+          <li className="twa-rise col-span-2" style={{ '--twa-i': 6 } as React.CSSProperties}>
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href={`/m/${tenant.id}/lookup`}
+                className="twa-card twa-press flex items-center gap-2.5 rounded-2xl px-3.5 py-3"
+              >
+                <Search className="twa-hint h-[18px] w-[18px] flex-none" aria-hidden />
+                <span className="truncate text-[13px] font-semibold">
+                  {t('navLookup')}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold">
-                  {t(key)}
-                </span>
-                <ChevronRight
-                  className="twa-hint h-4 w-4 flex-none"
-                  aria-hidden
-                />
               </Link>
-            </li>
-          ))}
+              <Link
+                href={`/m/${tenant.id}/info`}
+                className="twa-card twa-press flex items-center gap-2.5 rounded-2xl px-3.5 py-3"
+              >
+                <Info className="twa-hint h-[18px] w-[18px] flex-none" aria-hidden />
+                <span className="truncate text-[13px] font-semibold">
+                  {t('navInfo')}
+                </span>
+              </Link>
+            </div>
+          </li>
         </ul>
       </nav>
 
-      <div className="twa-rise pt-1" style={{ '--twa-i': 9 } as React.CSSProperties}>
+      <div className="twa-rise pt-1" style={{ '--twa-i': 7 } as React.CSSProperties}>
         <LangSwitch tenantId={tenant.id} current={customer.lang} />
       </div>
     </div>
