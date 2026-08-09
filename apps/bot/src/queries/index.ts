@@ -9,6 +9,7 @@
 
 export { isUniqueViolation } from './internal';
 
+export * from './sessions';
 export * from './tenants';
 export * from './customers';
 export * from './contexts';

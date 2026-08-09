@@ -22,6 +22,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -542,6 +543,29 @@ export const authThrottle = pgTable('auth_throttle', {
   count: integer('count').notNull().default(1),
 });
 
+/**
+ * grammY session state, persisted so a deploy doesn't wipe half-finished
+ * multi-step flows (AUDIT.md T16) — a customer mid-"send your track codes"
+ * used to land back at square one whenever the bot restarted. `key` is the
+ * grammY session key (the chat id as a string); `data` is the serialized
+ * `SessionData` owned by apps/bot. Rows are tiny and short-lived: the hourly
+ * sweep deletes anything untouched for 30 days.
+ */
+export const botSessions = pgTable(
+  'bot_sessions',
+  {
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    data: jsonb('data').$type<Record<string, unknown>>().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tenantId, t.key] })],
+);
+
 // --- Relations (for typed relational queries) ------------------------------
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
@@ -639,6 +663,9 @@ export type Broadcast = typeof broadcasts.$inferSelect;
 export type NewBroadcast = typeof broadcasts.$inferInsert;
 export type Lead = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
+export type AuthThrottleRow = typeof authThrottle.$inferSelect;
+export type BotSession = typeof botSessions.$inferSelect;
+export type NewBotSession = typeof botSessions.$inferInsert;
 
 export type TrackStatus = (typeof trackStatus.enumValues)[number];
 export type Currency = (typeof currency.enumValues)[number];

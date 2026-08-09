@@ -46,6 +46,8 @@ import {
   listCustomerTracks,
   listTenantDebtorIds,
   listTenants,
+  pruneStaleSessions,
+  SESSION_MAX_AGE_DAYS,
 } from './queries';
 import { TelegramRateLimiter } from './rateLimiter';
 
@@ -257,6 +259,12 @@ async function handleSweepJob(): Promise<void> {
       { tenant: tenant.name, count: debtorIds.length },
       'reminder sweep: enqueued weekly reminders',
     );
+  }
+
+  // Housekeeping on the same hourly tick: forget month-old flow state.
+  const pruned = await pruneStaleSessions(SESSION_MAX_AGE_DAYS);
+  if (pruned > 0) {
+    logger.info({ pruned }, 'reminder sweep: pruned stale bot sessions');
   }
 }
 

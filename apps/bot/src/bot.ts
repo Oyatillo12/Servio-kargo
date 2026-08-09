@@ -13,12 +13,19 @@ import { registerHandlers } from './handlers';
 import { logger } from './logger';
 import { getCustomerByTg, getStaffByTg, getTenantById } from './queries';
 import { captureError } from './sentry';
+import { createSessionStorage } from './sessionStorage';
 
 export function createBot(tenantId: string, token: string): Bot<KargoContext> {
   const bot = new Bot<KargoContext>(token);
 
-  // In-memory session (transient two-step state); fine for the MVP.
-  bot.use(session({ initial: (): SessionData => ({}) }));
+  // Session state lives in Postgres (AUDIT.md T16) so a deploy doesn't kick
+  // customers out of half-finished flows mid-conversation.
+  bot.use(
+    session({
+      initial: (): SessionData => ({}),
+      storage: createSessionStorage(tenantId),
+    }),
+  );
 
   // Load the tenant fresh each update (so price/address changes take effect),
   // resolve the customer + effective language, and attach the string catalogue.
