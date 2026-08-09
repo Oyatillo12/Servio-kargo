@@ -67,7 +67,15 @@
     "navTracks": "Мои треки",
     "navFinance": "Баланс и платежи",
     "navCalc": "Калькулятор",
-    "navLookup": "Поиск трека"
+    "navLookup": "Поиск трека",
+    "backHome": "Главная",
+    "noTracks": "Треков пока нет. Отправьте трек-код боту.",
+    "etaShort": "ETA:",
+    "etaLabel": "Прибытие (ориентировочно)",
+    "trackWeight": "Вес",
+    "trackPrice": "Стоимость",
+    "photoAlt": "Фото на складе",
+    "statusHistory": "История статусов"
   },
   "auth": {
     "pageTitle": "Вход",

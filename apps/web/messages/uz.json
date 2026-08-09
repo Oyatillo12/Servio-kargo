@@ -67,7 +67,15 @@
     "navTracks": "Treklarim",
     "navFinance": "Balans va to'lovlar",
     "navCalc": "Kalkulyator",
-    "navLookup": "Trek qidirish"
+    "navLookup": "Trek qidirish",
+    "backHome": "Bosh sahifa",
+    "noTracks": "Hozircha trek yo'q. Botga trek kodini yuboring.",
+    "etaShort": "ETA:",
+    "etaLabel": "Yetib kelishi (taxminiy)",
+    "trackWeight": "Og'irligi",
+    "trackPrice": "Narxi",
+    "photoAlt": "Ombordagi rasm",
+    "statusHistory": "Holatlar tarixi"
   },
   "auth": {
     "pageTitle": "Kirish",

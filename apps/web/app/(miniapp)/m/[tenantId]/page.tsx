@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
@@ -39,10 +40,10 @@ export default async function TwaHomePage({
   const t = await twaT(customer.lang);
 
   const sections = [
-    { key: 'navTracks' as const },
-    { key: 'navFinance' as const },
-    { key: 'navCalc' as const },
-    { key: 'navLookup' as const },
+    { key: 'navTracks' as const, href: `/m/${tenant.id}/tracks` },
+    { key: 'navFinance' as const, href: null },
+    { key: 'navCalc' as const, href: null },
+    { key: 'navLookup' as const, href: null },
   ];
 
   return (
@@ -62,19 +63,35 @@ export default async function TwaHomePage({
       {/* B3–B6 fill these in; until then the home is an honest map of what
           is coming, gated behind premium and shown to pilot tenants only. */}
       <ul className="space-y-2">
-        {sections.map((s) => (
-          <li
-            key={s.key}
-            className="flex items-center justify-between rounded-xl border border-[#eef0f4] bg-white px-4 py-3.5"
-          >
-            <span className="text-[14px] font-semibold text-foreground">
-              {t(s.key)}
-            </span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-              {t('comingSoon')}
-            </span>
-          </li>
-        ))}
+        {sections.map((s) =>
+          s.href ? (
+            <li key={s.key}>
+              <Link
+                href={s.href}
+                className="flex items-center justify-between rounded-xl border border-[#eef0f4] bg-white px-4 py-3.5"
+              >
+                <span className="text-[14px] font-semibold text-foreground">
+                  {t(s.key)}
+                </span>
+                <span aria-hidden className="text-muted-foreground">
+                  ›
+                </span>
+              </Link>
+            </li>
+          ) : (
+            <li
+              key={s.key}
+              className="flex items-center justify-between rounded-xl border border-[#eef0f4] bg-white px-4 py-3.5 opacity-70"
+            >
+              <span className="text-[14px] font-semibold text-foreground">
+                {t(s.key)}
+              </span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                {t('comingSoon')}
+              </span>
+            </li>
+          ),
+        )}
       </ul>
     </div>
   );

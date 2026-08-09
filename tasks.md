@@ -85,12 +85,12 @@ bloklamaydi, lekin A1–A3 pilotgacha yopilishi shart.
 
 ### Tasklar
 
-- [ ] **B1 · TWA auth poydevori** — `twa-auth.ts` (HMAC + test-vektorlar),
-      TWA cookie sessiya, `requireTwaCustomer(tenantId)` guard,
-      premium-gate ekrani.
-- [ ] **B2 · Skeleton + kirish** — `/m/[tenantId]` layout (theme, til),
-      ro'yxatdan o'tmagan tg-user uchun: telefon so'rash o'rniga botga
-      yo'naltirish ("botda /start bosing") — registratsiya oqimi BITTA
+- [x] **B1 · TWA auth poydevori** — `lib/twa/init-data.ts` (HMAC +
+      o'z-imzo test-vektorlari), `lib/twa/session.ts` (domain-ajratilgan
+      cookie), `getTwaContext` guard (request-cached), premium-gate ekrani.
+- [x] **B2 · Skeleton + kirish** — `(miniapp)/m/[tenantId]` o'z
+      root-layout'i (til `customers.lang`dan), `/api/twa/auth` endpoint,
+      ro'yxatdan o'tmaganlar botga yo'naltiriladi — registratsiya BITTA
       joyda qoladi (botda).
 - [ ] **B3 · Treklar ro'yxati** — status bo'yicha guruhlangan, foto-miniatura,
       kg/narx, pagination; trek detali: timeline, foto, reys ETA.

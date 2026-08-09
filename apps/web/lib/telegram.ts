@@ -101,6 +101,43 @@ export async function setWebhook(
 }
 
 /**
+ * Set the bot's chat menu button to open the tenant's Mini App (tasks.md B7).
+ * Applied to the bot's DEFAULT menu button, so it covers every private chat.
+ */
+export async function setMenuButtonWebApp(
+  token: string,
+  url: string,
+  text: string,
+): Promise<TgResult<true>> {
+  const res = await tgCall<boolean>(token, 'setChatMenuButton', {
+    menu_button: { type: 'web_app', text, web_app: { url } },
+  });
+  if (!res.ok) return res;
+  return { ok: true, data: true };
+}
+
+/** Restore the standard command-list menu button (tenant left premium). */
+export async function resetMenuButton(token: string): Promise<TgResult<true>> {
+  const res = await tgCall<boolean>(token, 'setChatMenuButton', {
+    menu_button: { type: 'default' },
+  });
+  if (!res.ok) return res;
+  return { ok: true, data: true };
+}
+
+/**
+ * Public HTTPS origin of the WEB app (panel + Mini App) — the Mini App lives
+ * on the web domain, not the bot's. `APP_URL` wins; otherwise built from
+ * `DOMAIN` (always present in the production .env).
+ */
+export function miniAppUrl(tenantId: string): string | null {
+  const explicit = process.env.APP_URL?.trim().replace(/\/+$/, '');
+  const domain = process.env.DOMAIN?.trim();
+  const origin = explicit || (domain ? `https://${domain}` : null);
+  return origin ? `${origin}/m/${tenantId}` : null;
+}
+
+/**
  * The public HTTPS origin of the bot server, where Telegram will POST updates.
  * Required for the onboarding flow to auto-set webhooks.
  */

@@ -13,7 +13,32 @@ import {
   tenantTokenExists,
 } from '@/lib/sa-queries';
 import { requireSuperadmin } from '@/lib/superadmin';
-import { getMe, setWebhook, webhookBaseUrl } from '@/lib/telegram';
+import {
+  getMe,
+  miniAppUrl,
+  resetMenuButton,
+  setMenuButtonWebApp,
+  setWebhook,
+  webhookBaseUrl,
+} from '@/lib/telegram';
+
+/**
+ * Point (or clear) the bot's menu button at the tenant's Mini App (tasks.md
+ * B7). Best-effort by design: the plan/tenant write has already succeeded,
+ * and the /sa "Reja" toggle can simply be pressed again if Telegram hiccups.
+ */
+async function syncMenuButton(
+  botToken: string,
+  tenantId: string,
+  plan: 'basic' | 'premium',
+): Promise<void> {
+  const url = miniAppUrl(tenantId);
+  if (plan === 'premium' && url) {
+    await setMenuButtonWebApp(botToken, url, 'Kabinet');
+  } else {
+    await resetMenuButton(botToken);
+  }
+}
 
 // --- Onboard a new tenant (SPEC §6 create form) ----------------------------
 
@@ -142,8 +167,9 @@ export async function onboardTenantAction(
 
   // 3) Persist tenant + first owner admin.
   const adminPasswordHash = await hash(input.adminPassword);
+  let tenantId: string;
   try {
-    await createTenantWithOwner({
+    tenantId = await createTenantWithOwner({
       name: input.name,
       codePrefix: input.codePrefix.toUpperCase(),
       botToken,
@@ -161,6 +187,11 @@ export async function onboardTenantAction(
   } catch {
     // Unique index race (token registered between our check and insert).
     return { error: 'Bu bot token allaqachon ro‘yxatga olingan.' };
+  }
+
+  // A premium tenant's bot opens the Mini App from the menu button (B7).
+  if (input.plan === 'premium') {
+    await syncMenuButton(botToken, tenantId, input.plan);
   }
 
   revalidatePath('/sa');
@@ -200,6 +231,15 @@ export async function setPlanAction(
 
   const changed = await setTenantPlan(parsed.data.tenantId, parsed.data.plan);
   if (!changed) return { error: 'Tenant topilmadi.' };
+
+  const tenant = await getTenantToken(parsed.data.tenantId);
+  if (tenant) {
+    await syncMenuButton(
+      tenant.botToken,
+      parsed.data.tenantId,
+      parsed.data.plan,
+    );
+  }
 
   revalidatePath('/sa');
   return { ok: true };
