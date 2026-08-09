@@ -53,6 +53,22 @@
     "team": "Xodimlar",
     "changePassword": "Parolni o'zgartirish"
   },
+  "twa": {
+    "loading": "Yuklanmoqda…",
+    "outsideTelegram": "Bu sahifa faqat Telegram ilovasi ichida ochiladi.",
+    "authFailed": "Kirish amalga oshmadi. Botdan qaytadan oching.",
+    "notRegisteredTitle": "Avval botda ro'yxatdan o'ting",
+    "notRegisteredBody": "Kabinetdan foydalanish uchun botga /start yuboring va telefon raqamingizni ulashing.",
+    "openBot": "Botni ochish",
+    "notEnabledTitle": "Kabinet ulanmagan",
+    "notEnabledBody": "Bu imkoniyat hozircha faol emas. Kargo kompaniyangizga murojaat qiling.",
+    "homeGreeting": "Salom, {name}!",
+    "comingSoon": "Tez orada",
+    "navTracks": "Treklarim",
+    "navFinance": "Balans va to'lovlar",
+    "navCalc": "Kalkulyator",
+    "navLookup": "Trek qidirish"
+  },
   "auth": {
     "pageTitle": "Kirish",
     "tagline": "Xitoy → O'zbekiston kargo boshqaruvi",
