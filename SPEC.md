@@ -636,9 +636,54 @@ default tariff + owner.
 ## 9. Out of scope for MVP (do NOT build yet)
 
 Auto volumetric pricing from dimensions (L×W×H input and per-m³ tariffs —
-manual override covers this for now), regional delivery module (BTS/pochta
-to viloyatlar), courier module, camera-based QR scanning (USB scanners
-already work via search input), photo/media broadcasts, online payment
-collection (Click/Payme merchant), SMS channel, full China-warehouse web
-mini-panel (bot staff mode 3.8 covers weighing + photos for now),
-multi-branch tenants, English locale.
+manual override covers this for now), courier module, camera-based QR
+scanning (USB scanners already work via search input), photo/media
+broadcasts, SMS channel, full China-warehouse web mini-panel (bot staff
+mode 3.8 covers weighing + photos for now), multi-branch tenants, English
+locale.
+
+v2 note (2026-08): three items graduated out of this list into the v2 plan
+(`tasks.md`): the Telegram Mini App (now §10), online payment collection
+(Click first — tasks.md C), and the regional delivery module (minimal flow —
+tasks.md E). Everything else above stays out of scope.
+
+## 10. Telegram Mini App — customer cabinet (premium plan)
+
+One Next.js route group (`/m/{tenantId}`) serves every tenant's Mini App;
+which tenant is in the URL, and EVERY screen is gated by
+`planIncludes(tenant.plan, 'miniapp')` — basic tenants see a bilingual
+"not enabled" screen. UI language is the CUSTOMER's `customers.lang`
+(never the panel's cookie locale).
+
+**10.1 Entry & auth.** The bot's chat menu button ("Kabinet",
+`setChatMenuButton`) opens the app; it is set when a premium tenant is
+onboarded and kept in sync when /sa toggles the plan (downgrade restores the
+default button). On open, the client exchanges `window.Telegram.WebApp.
+initData` for a session at `POST /api/twa/auth`; the server validates the
+HMAC against THAT tenant's bot token (payloads older than 1 h rejected) and
+issues a 7-day httpOnly cookie pinning (tenant, customer). A valid Telegram
+user with no customer row is sent to the bot — registration lives ONLY in
+the bot (3.1); the Mini App never asks for a phone.
+
+**10.2 Screens.**
+- Home: greeting, client code, navigation cards.
+- My tracks: non-deleted tracks in pipeline order (active first), kg /
+  price / batch ETA (ETA shown only while the batch is en route); detail
+  shows the `track_events` timeline and the warehouse photo via an
+  ownership-gated route (`/api/twa/photo/{trackId}` — a customer only ever
+  sees their own parcels).
+- Finance: debt/advance from the ONE debt service (7.5) + last 20 payments
+  with the same method labels the bot uses. The online "pay" button lands
+  here (tasks.md C2).
+- Calculator: same shared `parseKgToGrams` + `computeTrackPrice` as the bot
+  and weighing — three surfaces, one price. Never writes.
+- China address: tenant template with `{client_code}` substituted (3.7),
+  one-tap copy.
+- Public lookup (`/m/{tenantId}/lookup`): works WITHOUT registration —
+  status + last-change date only, never price/owner/weight; per-IP
+  fixed-window throttle (`lookup:` scope in `auth_throttle`).
+
+**10.3 Non-functional.** No Telegram SDK dependency — the official
+`telegram-web-app.js` script plus a thin typed wrapper. TWA cookies are
+domain-separated from admin session cookies (same secret, disjoint HMAC
+context): one token family can never verify as the other.
