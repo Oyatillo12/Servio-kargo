@@ -24,6 +24,7 @@ import {
 
 import { canonicalAdminPhone } from '@/lib/admin-phone';
 import { clientIp } from '@/lib/client-ip';
+import { homeRouteFor } from '@/lib/home-route';
 import { setLocaleCookie } from '@/lib/locale';
 import {
   acceptInvite,
@@ -128,7 +129,8 @@ export async function loginAction(
   // Russian gets Russian on a brand-new phone or after clearing cookies.
   setLocaleCookie(matched.lang);
 
-  redirect('/dashboard');
+  // A warehouse hand lands on the scale, not the dashboard (lib/home-route.ts).
+  redirect(homeRouteFor(matched.role));
 }
 
 export async function logoutAction(): Promise<void> {
@@ -210,5 +212,5 @@ export async function acceptInviteAction(
   });
   setLocaleCookie(invite.lang);
 
-  redirect('/dashboard');
+  redirect(homeRouteFor(invite.role));
 }

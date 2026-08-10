@@ -244,6 +244,34 @@ export async function setTracksCustomer(args: {
   return result;
 }
 
+/**
+ * Link a stored warehouse photo to a track (SPEC §3.8, §5.14). Tenant-scoped;
+ * the path is relative to the uploads root and written by the caller, which is
+ * what decides the filename — this only records it.
+ *
+ * Returns whether a row was actually updated, so an upload for a track that
+ * belongs to another tenant (or has been deleted) fails loudly rather than
+ * leaving an orphan file on disk claiming to be linked.
+ */
+export async function setTrackPhoto(args: {
+  tenantId: string;
+  trackId: string;
+  photoPath: string;
+}): Promise<boolean> {
+  const rows = await getDb()
+    .update(tracks)
+    .set({ photoPath: args.photoPath })
+    .where(
+      and(
+        eq(tracks.tenantId, args.tenantId),
+        eq(tracks.id, args.trackId),
+        isNull(tracks.deletedAt),
+      ),
+    )
+    .returning({ id: tracks.id });
+  return rows.length > 0;
+}
+
 /** Soft-delete a track (SPEC §5.3 `O'chirish`). Tenant-scoped, idempotent. */
 export async function softDeleteTrack(args: {
   tenantId: string;

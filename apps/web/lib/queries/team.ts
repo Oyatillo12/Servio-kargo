@@ -335,6 +335,8 @@ export interface PendingInvite {
   expiresAt: Date;
   acceptedAt: Date | null;
   lang: 'uz' | 'ru';
+  /** Raw `admin_users.role` — the caller lands them on the right home screen. */
+  role: string;
 }
 
 /**
@@ -357,6 +359,7 @@ export async function findInviteByCodeAndPhone(
       expiresAt: adminInvites.expiresAt,
       acceptedAt: adminInvites.acceptedAt,
       lang: adminUsers.lang,
+      role: adminUsers.role,
     })
     .from(adminInvites)
     .innerJoin(adminUsers, eq(adminUsers.id, adminInvites.adminUserId))

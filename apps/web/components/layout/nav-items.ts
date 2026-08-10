@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Megaphone,
   Package,
+  Scale,
   Settings,
   Truck,
   UserCog,
@@ -11,7 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { can, type Capability } from '@kargotrack/shared';
+import { can, toAdminRole, type Capability } from '@kargotrack/shared';
 
 /**
  * The panel's navigation map — one place, consumed by the desktop sidebar, the
@@ -40,6 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
     capability: 'tracks.view',
   },
+  { href: '/weigh', key: 'weigh', icon: Scale, capability: 'tracks.weigh' },
   { href: '/tracks', key: 'tracks', icon: Package, capability: 'tracks.view' },
   {
     href: '/customers',
@@ -81,15 +83,23 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * Mobile split (design decision): four daily-primary tabs live in the bar, the
- * rest move into the "more" bottom-sheet so labels stay readable and tappable.
+ * Mobile split (design decision): a handful of daily-primary tabs live in the
+ * bar, the rest move into the "more" bottom-sheet so labels stay readable and
+ * tappable.
  *
- * The four are the same for every role. A warehouse hand loses Import from the
- * bar, leaving three — the bar re-flows rather than back-filling, because a tab
- * that moves position between two accounts on the same phone is worse than a
- * gap.
+ * Office roles get the same four. A warehouse hand gets a different set, not a
+ * filtered one: their day is the weighing console, and burying it behind "more"
+ * would cost a tap several hundred times a shift. Dashboard moves into the
+ * sheet for them in exchange — a screen they open occasionally, if ever.
  */
 const PRIMARY_HREFS = ['/dashboard', '/tracks', '/customers', '/import'];
+const WAREHOUSE_PRIMARY_HREFS = ['/weigh', '/tracks', '/customers'];
+
+function primaryHrefs(role: string | null | undefined): string[] {
+  return toAdminRole(role) === 'warehouse'
+    ? WAREHOUSE_PRIMARY_HREFS
+    : PRIMARY_HREFS;
+}
 
 /** The entries `role` may actually reach, in display order. */
 export function navFor(role: string | null | undefined): NavItem[] {
@@ -97,9 +107,11 @@ export function navFor(role: string | null | undefined): NavItem[] {
 }
 
 export function primaryNavFor(role: string | null | undefined): NavItem[] {
-  return navFor(role).filter((i) => PRIMARY_HREFS.includes(i.href));
+  const primary = primaryHrefs(role);
+  return navFor(role).filter((i) => primary.includes(i.href));
 }
 
 export function secondaryNavFor(role: string | null | undefined): NavItem[] {
-  return navFor(role).filter((i) => !PRIMARY_HREFS.includes(i.href));
+  const primary = primaryHrefs(role);
+  return navFor(role).filter((i) => !primary.includes(i.href));
 }

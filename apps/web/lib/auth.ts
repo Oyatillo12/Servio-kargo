@@ -27,6 +27,7 @@ import {
 } from '@kargotrack/db/schema';
 import { can, toAdminRole, type AdminRole, type Capability } from '@kargotrack/shared';
 
+import { homeRouteFor } from './home-route';
 import { COOKIE_NAME, verifySessionToken } from './session';
 
 export interface AdminContext {
@@ -78,14 +79,14 @@ export async function requireAdmin(): Promise<AdminContext> {
 /**
  * Page guard: the admin context, or a redirect away when they lack `capability`.
  *
- * Sends them to the dashboard rather than showing a 403, because every role can
- * open it — the alternative is a dead end with no way back on a phone.
+ * Sends them to their own home screen rather than showing a 403 — the
+ * alternative is a dead end with no way back on a phone.
  */
 export async function requireCapability(
   capability: Capability,
 ): Promise<AdminContext> {
   const ctx = await requireAdmin();
-  if (!can(ctx.role, capability)) redirect('/dashboard');
+  if (!can(ctx.role, capability)) redirect(homeRouteFor(ctx.role));
   return ctx;
 }
 

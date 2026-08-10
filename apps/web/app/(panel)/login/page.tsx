@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
 import { getSessionAdmin } from '@/lib/auth';
+import { homeRouteFor } from '@/lib/home-route';
 import { RouteDots, Wordmark } from '@/components/layout/brand';
 import { LoginForm } from '@/features/auth/components/login-form';
 
@@ -11,8 +12,9 @@ export async function generateMetadata() {
 }
 
 export default async function LoginPage() {
-  // Already signed in → straight to the panel.
-  if (await getSessionAdmin()) redirect('/dashboard');
+  // Already signed in → straight to wherever this role works.
+  const session = await getSessionAdmin();
+  if (session) redirect(homeRouteFor(session.role));
 
   const t = await getTranslations('auth');
 

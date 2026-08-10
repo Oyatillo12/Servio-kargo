@@ -18,6 +18,7 @@ export * from './throttle';
 export * from './tracks';
 export * from './track-pricing';
 export * from './track-mutations';
+export * from './weighing';
 export * from './exports';
 export * from './customers';
 export * from './customer-refs';
