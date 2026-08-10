@@ -55,7 +55,10 @@ ular hamma koddan muhimroq.
 
 ---
 
-## W — Ombor "Tarozi rejimi" (panel ichida, alohida ilova EMAS)
+## W — Ombor "Tarozi rejimi" ✅ (2026-08-10, W1–W5 bajarildi)
+
+Qolgan yagona ochiq nuqta: **P7 dagi VPNsiz tekshiruv** va W3 ni real
+Android telefonda sinash — ikkalasi ham pilotda, qurilmada bajariladi.
 
 Qaror (2026-08-10, egasi bilan kelishildi): staff ishi uchun ALOHIDA
 panel/ilova qurilmaydi — mavjud panelda `warehouse` roli uchun to'liq
@@ -66,26 +69,45 @@ hammasi tayyor infratuzilmada. Bot staff-rejimi zaxira kanal bo'lib
 qoladi. Asosiy foydalanuvchi: Xitoy ombori; til: uz/ru (xitoycha —
 faqat pilot so'rasa); kirish: mavjud telefon+parol, 30 kunlik cookie.
 
-- [ ] **W1 · `/weigh` ekrani** — panel ichida, app-shell minimal (to'liq
-      ekran, katta touch-maydonlar, telefonga mo'ljallangan). Oqim:
-      kod-maydon (avtofokus, USB-skaner klaviatura kabi yozadi) → vazn →
-      ixtiyoriy marka (client_code) → Enter → keyingisi. Yonida bugungi
-      kiritilganlar ro'yxati (kod, kg, narx, ega belgisi) — xato darhol
-      ko'rinadi.
-- [ ] **W2 · Server tomoni** — bot'dagi `applyStaffWeighing` bilan BITTA
-      shared qoidalar: vazn+narx, CREATED→CHINA_WAREHOUSE event + notify,
-      noma'lum kod → egasiz trek. YANGI: marka berilsa va client_code
-      topilsa — darhol biriktirish (topilmasa egasiz, xato EMAS).
-- [ ] **W3 · Kamera-skan** — Android Chrome'dagi native `BarcodeDetector`
-      API bilan (dependensiyasiz); qurilma qo'llamasa tugma ko'rinmaydi,
-      qo'lda/USB ishlashda davom etadi. Tashqi kutubxona — faqat pilot
-      telefonlari qo'llamasa (trigger).
-- [ ] **W4 · Foto** — shu ekrandan kamera bilan (`capture` input, JPEG,
-      10 MB — bot bilan bir xil qoida). Bu A5/T18'ning asosiy qismini
-      yopadi; trek detalidagi foto boshqaruvi A5'da qoladi.
-- [ ] **W5 · Bot paritet** — bot staff-rejimi parseri `KOD VAZN MARKA`
-      formatini ham qabul qiladi (zaxira kanal ham biriktira olsin);
-      W2 bilan bitta shared parser.
+- [x] **W1 · `/weigh` ekrani** ✅ (2026-08-10) — `app/(panel)/weigh` — `(app)`
+      guruhidan TASHQARIDA, shuning uchun sidebar/tab-bar yo'q, faqat bitta
+      chiqish havolasi. Oqim: kod (avtofokus; USB-skaner Enter bosadi → vazn
+      maydoniga o'tadi, saqlamaydi) → vazn → ixtiyoriy marka → Enter. Marka
+      "qulf" tugmasi (bitta mijozning qutilari ketma-ket kelganda) — ushlab
+      turilganda maydon ajratib ko'rsatiladi. Yonida bugungi ro'yxat +
+      jami (N ta · kg · so'm). `warehouse` roli kirgach shu ekranga tushadi;
+      nav'da "Tarozi" (`tracks.weigh` bo'lganlarda), telefon tab-bar'ida
+      warehouse uchun birinchi tab. Ro'yxat reload'dan keyin audit log'dan
+      tiklanadi (CHINA_WAREHOUSE event'i borlar).
+- [x] **W2 · Server tomoni** ✅ (2026-08-10) — `shared/services/weigh.ts`
+      `planWeighEntry` — bot ham, panel ham SHU bitta rejalashtiruvchini
+      chaqiradi (`apps/bot/src/queries/weighing.ts` refaktor qilindi).
+      Marka topilsa va trek EGASIZ bo'lsa — darhol biriktirish + kelish
+      xabari; topilmasa xato EMAS; BOSHQA mijozniki bo'lsa — vazn/narx
+      yoziladi, ega o'zgartirilmaydi, operator ogohlantiriladi.
+      Tarif yo'q / USD kursi yo'q → 0 narx EMAS, aniq rad javob (bot ham).
+      **Qo'shimcha:** `warehouse` roliga `tracks.assign` berildi — marka
+      qutini ushlab turgan odam o'qiydi (permissions matritsasi + testlar).
+- [x] **W3 · Kamera-skan** ✅ (2026-08-10) — `features/weigh/barcode.ts` +
+      `scan-sheet.tsx`, native `BarcodeDetector`, kutubxonasiz. Qurilma
+      qo'llamasa (yoki HTTPS bo'lmasa) tugma UMUMAN chizilmaydi — USB/qo'lda
+      kiritish o'zgarmaydi. Faqat qurilma qo'llaydigan formatlar so'raladi
+      (aks holda har kadrda xato), sekundiga ~4 marta dekod (batareya),
+      yopilganda kamera treklari to'xtatiladi. **Sinov: Android telefon
+      kerak** — Windows Chrome'da API yo'q, shuning uchun bu yerda faqat
+      "tugma yo'q" yo'li va format-muzokara testlari tekshirildi.
+- [x] **W4 · Foto** ✅ (2026-08-10) — kunlik ro'yxatning har qatorida kamera
+      tugmasi (`capture="environment"`, JPEG, 10 MB — bot bilan bir xil
+      qoida va bir xil fayl yo'li `{tenantId}/{trackId}.jpg`, ya'ni bitta
+      posilkada bitta rasm). `POST /api/tracks/[id]/photo` — Server Action
+      EMAS, chunki uning tanasi 1 MB bilan cheklangan. A5/T18 ning asosiy
+      qismi shu bilan yopildi.
+- [x] **W5 · Bot paritet** ✅ (2026-08-10) — `parseStaffWeighing` endi
+      `KOD VAZN MARKA` ni ham o'qiydi (bitta shared parser), bot W2 dagi
+      o'sha `planWeighEntry` ni chaqiradi va javobda marka natijasini
+      aytadi. `3.2 kg` kabi yozuv marka deb o'qilmaydi: client_code'da
+      doim raqam bor — shu bitta qoida har tildagi o'lchov so'zini
+      "mijoz" deb tushunishdan saqlaydi.
 
 ---
 

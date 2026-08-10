@@ -126,13 +126,21 @@ revokes it by deactivating them or unlinking their Telegram, and both take
 effect on the next update.
 1. **Photo**: a photo with caption = track code → download to
    `/data/uploads/{tenantId}/{trackId}.jpg`, link to track, confirm.
-2. **Weighing**: caption or plain text of the form `CODE 3.2` (weight in kg,
-   dot or comma) → set weight_grams, compute price per 7.4, and link the
-   photo when present. If the track was in CREATED → move it to
-   CHINA_WAREHOUSE (event + customer notification). Unknown code → CREATE
-   the track unattached (customer_id NULL) with the given weight and status
-   CHINA_WAREHOUSE so the client can claim it later; tell staff it is new.
+2. **Weighing**: caption or plain text of the form `CODE 3.2 [MARKA]` (weight
+   in kg, dot or comma; the marka optional) → set weight_grams, compute price
+   per 7.4, and link the photo when present. If the track was in CREATED →
+   move it to CHINA_WAREHOUSE (event + customer notification). Unknown code →
+   CREATE the track unattached (customer_id NULL) with the given weight and
+   status CHINA_WAREHOUSE so the client can claim it later; tell staff it is
+   new. A marka attributes the parcel exactly as on the /weigh console
+   (5.14) — same shared planner, same refusal to move a parcel that already
+   belongs to somebody else. A third token only counts as a marka if it
+   carries a digit, so `CODE 3.2 kg` still means 3.2 kg.
    Replies per 4.5 staff strings.
+
+   This is the FALLBACK channel: Telegram is blocked in China, so 5.14 is the
+   primary weighing surface and this one is what still works when someone is
+   away from the desk or on their own phone.
 
 ### 3.9 Calculator
 `🧮` → `calc_step_tariff` with inline buttons of ACTIVE tariffs (name only) +
@@ -485,6 +493,53 @@ two copies would drift the moment one side is edited.
   payments export both carry the cashier's name; the dashboard shows the
   period's cash split by employee (owner only), which is how a cash business
   closes its day.
+
+- **5.14 /weigh (Tarozi rejimi)** — the warehouse weighing console, for anyone
+  with `tracks.weigh`. Deliberately outside the panel shell: full screen, no
+  sidebar, no tab bar, one exit link. **Telegram is blocked in China**, which
+  is exactly where parcels are weighed, so the bot's staff mode (3.8) needs a
+  VPN at the receiving post while an ordinary web page opens; the console is
+  the primary surface and the bot stays the fallback channel.
+
+  Flow: `kod` (autofocus — a USB scanner types and presses Enter, which moves
+  to the weight rather than saving an entry with no weight) → `og'irlik` →
+  optional `marka` (the customer's client_code, written on the box) → Enter →
+  next parcel. Signing in as `warehouse` lands here instead of /dashboard.
+
+  What one entry does is 3.8 plus attribution, decided by one shared planner
+  the bot calls too: weight → auto price (7.4), a CREATED parcel advances to
+  CHINA_WAREHOUSE with an event and an owner notification, an unknown code is
+  created unattached, and a marka naming a customer attaches an **unowned**
+  parcel right there — the newly attached owner gets the arrival message,
+  because they are its owner at the instant the event is written. A marka
+  matching nobody is not an error (the parcel is real either way), and a marka
+  naming somebody else NEVER moves the parcel: weight and price are written,
+  the owner is left alone, the operator is warned. A mistyped marka must not
+  move a parcel, and its debt, onto the wrong person.
+
+  Beside the form, today's entries (code, kg, price, owner, warnings), so a
+  wrong weight is seen in a second rather than at the end of the shift. The
+  list is rebuilt from the audit log on reload, which means re-weighing a
+  parcel already past CHINA_WAREHOUSE (no event) shows live but not after a
+  refresh. A `marka` lock keeps the field between parcels for a customer whose
+  boxes arrive together; it is highlighted while held, because a forgotten
+  marka is the one way this screen could mis-attribute silently.
+
+  **Camera scan** — a button beside the code field opens a full-screen scanner
+  built on the browser's own `BarcodeDetector` (Android Chrome), no library.
+  Where the API, a camera or a secure context is missing there is no button at
+  all rather than one that does nothing; USB-scanner and manual entry are the
+  baseline and never depend on it. Only formats the device reports supporting
+  are requested — a detector built with an unsupported one throws on every
+  frame — and closing the sheet stops the camera tracks.
+
+  **Photo** — each entry in the day list carries a camera button: JPEG, max
+  10 MB, stored at `{uploadsDir}/{tenantId}/{trackId}.jpg`, exactly where and
+  how the bot's staff-photo flow (3.8) stores it, so a parcel has ONE photo
+  whichever surface took it and re-shooting overwrites. Uploaded to
+  `POST /api/tracks/:id/photo` rather than a Server Action, whose request body
+  is capped at 1 MB — a phone camera clears that on the first shot. The upload
+  is guarded by `tracks.weigh`, and the DB write doubles as the tenant check.
 
 ## 6. Super-admin (`/sa`, guarded by SUPERADMIN_TOKEN env)
 
