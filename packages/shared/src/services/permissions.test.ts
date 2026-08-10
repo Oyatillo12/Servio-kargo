@@ -101,6 +101,12 @@ describe('can — the boundaries that motivated T8', () => {
     expect(can('warehouse', 'tracks.view')).toBe(true);
   });
 
+  it('lets a warehouse hand attribute a parcel at intake', () => {
+    // The marka is read off the box by the person holding it (tasks.md W2);
+    // weighing without being able to say whose it is leaves the job half done.
+    expect(can('warehouse', 'tracks.assign')).toBe(true);
+  });
+
   it('lets a manager run the daily operation', () => {
     expect(can('manager', 'import.run')).toBe(true);
     expect(can('manager', 'payments.record')).toBe(true);

@@ -194,6 +194,22 @@ export interface Strings {
   staffSaved(code: string, kg: string, som: string): string;
   /** Weighing an unknown code created a new, unattached track. */
   staffSavedNew(code: string, kg: string, som: string): string;
+  /** …and the marka named a customer, so it was attached on creation (W5). */
+  staffSavedNewOwned(
+    code: string,
+    kg: string,
+    som: string,
+    clientCode: string,
+  ): string;
+  /** Appended line: the marka attached a parcel that had no owner. */
+  staffMarkaAttached(clientCode: string): string;
+  /**
+   * Appended line: the parcel already belongs to somebody else. The weight was
+   * still written; the owner was NOT changed.
+   */
+  staffMarkaConflict(clientCode: string): string;
+  /** Appended line: nobody answers to that marka. Not an error — a warning. */
+  staffMarkaNotFound(marka: string): string;
   staffPhotoOk(code: string): string;
   staffNotFound(code: string): string;
   staffPhotoTooLarge(maxMb: number): string;

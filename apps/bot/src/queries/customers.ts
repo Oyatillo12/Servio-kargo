@@ -1,6 +1,6 @@
 /** Customer registration/linking (SPEC §7.12), their tracks, payments and debt. */
 
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import {
@@ -13,6 +13,7 @@ import {
   type Track,
 } from '@kargotrack/db/schema';
 import {
+  clientCodeKey,
   computeDebtTiyin,
   nextClientCode,
   normalizePhone,
@@ -22,6 +23,49 @@ import {
 
 import { logger } from '../logger';
 import { isUniqueViolation } from './internal';
+
+/** How a customer is named on a parcel: their client_code, however written. */
+export interface CustomerRef {
+  id: string;
+  clientCode: string;
+}
+
+/** `DK-1042` and `dk1042` are the same marka — compare both sides stripped. */
+const clientCodeExpr = sql<string>`upper(regexp_replace(${customers.clientCode}, '[^A-Za-z0-9]', '', 'g'))`;
+
+/**
+ * Resolve a marka — the client_code written on the box — to a customer of this
+ * tenant, or null when nobody answers to it (SPEC §5.14; tasks.md W5). Mirrors
+ * the panel console's lookup, normalizing both sides with the shared
+ * `clientCodeKey` so case and punctuation never decide who a parcel belongs to.
+ */
+export async function findCustomerByMarka(
+  tenantId: string,
+  raw: string,
+): Promise<CustomerRef | null> {
+  const key = clientCodeKey(raw);
+  if (key === '') return null;
+
+  const [row] = await getDb()
+    .select({ id: customers.id, clientCode: customers.clientCode })
+    .from(customers)
+    .where(and(eq(customers.tenantId, tenantId), eq(clientCodeExpr, key)))
+    .limit(1);
+  return row ?? null;
+}
+
+/** The client_code of one customer, for naming them back to staff. */
+export async function getClientCode(
+  tenantId: string,
+  customerId: string,
+): Promise<string | null> {
+  const [row] = await getDb()
+    .select({ clientCode: customers.clientCode })
+    .from(customers)
+    .where(and(eq(customers.tenantId, tenantId), eq(customers.id, customerId)))
+    .limit(1);
+  return row?.clientCode ?? null;
+}
 
 export async function getCustomerByTg(
   tenantId: string,

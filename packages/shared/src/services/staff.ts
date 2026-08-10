@@ -2,15 +2,25 @@
  * Staff weighing mode (SPEC §3.8).
  *
  * A staff message — a photo caption or plain text — of the form `CODE 3.2`
- * (weight in kg, dot or comma decimal) sets a track's weight and price. These
- * two pure helpers keep the parsing and the CREATED→CHINA_WAREHOUSE transition
- * rule framework-free and testable; the DB work lives in the bot's queries.
+ * (weight in kg, dot or comma decimal), optionally followed by the marka the
+ * customer's boxes are labelled with (`CODE 3.2 DK-1042`), sets a track's
+ * weight and price and attributes it. These pure helpers keep the parsing and
+ * the CREATED→CHINA_WAREHOUSE transition rule framework-free and testable; the
+ * DB work lives in the bot's queries, and what a weighing DOES is decided by
+ * `planWeighEntry` — the same planner the panel's /weigh console calls.
  */
 
 import { isValidTrackCode, normalizeCode } from '../normalize';
 import type { TrackStatus } from '../status';
 import { parseKgToGrams } from './calc';
 import { shouldEnqueueNotification } from './notify';
+
+/**
+ * Longest marka we accept. A client_code is `DK-1042`-shaped; anything past
+ * this is a sentence, and treating it as a customer reference wastes a lookup.
+ * Shared with the panel console's input validation so both surfaces agree.
+ */
+export const MARKA_MAX_LENGTH = 32;
 
 export interface StaffWeighing {
   /** Normalized code for matching/insert (SPEC §7.1). */
@@ -19,19 +29,33 @@ export interface StaffWeighing {
   codeOriginal: string;
   /** Weight in integer grams (CLAUDE.md rule 6). */
   weightGrams: number;
+  /** The marka as typed, or `null` when the message carried only a weight. */
+  marka: string | null;
 }
 
 /**
- * Parse a staff weighing command `CODE <kg>` into its code + grams, or `null`
+ * Parse a staff weighing command `CODE <kg> [MARKA]` into its parts, or `null`
  * when the message isn't a weighing command (so the caller falls through to the
- * normal photo/lookup handling). Requires exactly a code token followed by a
- * single valid kg number — a bare lookup code (one token) or trailing units
- * (`… 3kg`) yield `null`.
+ * normal photo/lookup handling).
+ *
+ * Requires a code token, a single valid kg number, and at most one more token.
+ * A bare lookup code (one token) or a fourth token yield `null`: past three
+ * tokens this is prose, not a command.
+ *
+ * A third token only counts as a marka if it is marka-SHAPED — a client_code is
+ * `<prefix>-<sequence>`, so it always carries a digit. That one rule is what
+ * keeps `ABC12345 3.2 kg` meaning "3.2 kg" rather than "3.2 kg for customer
+ * 'kg'", without a deny-list of unit words in every language.
+ *
+ * Whether a customer actually answers to the marka is NOT decided here: that is
+ * a database question, and "no such marka" is not an error — the parcel is real
+ * either way (tasks.md W2).
  */
 export function parseStaffWeighing(input: string): StaffWeighing | null {
-  const match = input.trim().match(/^(\S+)\s+(.+)$/);
-  const codeToken = match?.[1];
-  const weightToken = match?.[2];
+  const tokens = input.trim().split(/\s+/);
+  if (tokens.length < 2 || tokens.length > 3) return null;
+
+  const [codeToken, weightToken, markaToken] = tokens;
   if (codeToken == null || weightToken == null) return null;
 
   const codeNormalized = normalizeCode(codeToken);
@@ -40,7 +64,19 @@ export function parseStaffWeighing(input: string): StaffWeighing | null {
   const weightGrams = parseKgToGrams(weightToken);
   if (weightGrams == null) return null;
 
-  return { codeNormalized, codeOriginal: codeToken, weightGrams };
+  if (markaToken != null && !isMarkaShaped(markaToken)) return null;
+
+  return {
+    codeNormalized,
+    codeOriginal: codeToken,
+    weightGrams,
+    marka: markaToken ?? null,
+  };
+}
+
+/** Could this token be a client_code? Length-bounded and carrying a digit. */
+export function isMarkaShaped(token: string): boolean {
+  return token.length <= MARKA_MAX_LENGTH && /\d/.test(token);
 }
 
 export interface StaffWeighingPlan {

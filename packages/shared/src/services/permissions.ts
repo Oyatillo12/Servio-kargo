@@ -102,11 +102,18 @@ export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
    * Warehouse hands, in China and in Tashkent. They weigh, photograph and move
    * parcels, look up who a parcel belongs to, and see that one customer's
    * balance at handover. No cash, no customer records, no company figures.
+   *
+   * `tracks.assign` is theirs because attribution happens at intake, not in the
+   * office: the person holding the box is the one reading the marka off it, and
+   * the /weigh console's marka field is the daily path from "unowned parcel" to
+   * "this customer's parcel" (tasks.md W2). Withholding it would leave the China
+   * warehouse — which IS this role — able to weigh but not to say whose it is.
    */
   warehouse: [
     'tracks.view',
     'tracks.status',
     'tracks.weigh',
+    'tracks.assign',
     'customers.view',
     'money.customerDebt',
   ],

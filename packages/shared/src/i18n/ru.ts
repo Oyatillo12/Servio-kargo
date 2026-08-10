@@ -177,6 +177,13 @@ export const ru: Strings = {
   staffSaved: (code, kg, som) => `✅ ${code}: ${kg} кг → ${som} сум`,
   staffSavedNew: (code, kg, som) =>
     `🆕 ${code}: создан новый трек (${kg} кг → ${som} сум). Клиент пока не привязан.`,
+  staffSavedNewOwned: (code, kg, som, clientCode) =>
+    `🆕 ${code}: создан новый трек (${kg} кг → ${som} сум) и привязан к ${clientCode}.`,
+  staffMarkaAttached: (clientCode) => `👤 Привязано к ${clientCode}.`,
+  staffMarkaConflict: (clientCode) =>
+    `⚠️ Посылка принадлежит ${clientCode} — владелец не изменён. Вес сохранён.`,
+  staffMarkaNotFound: (marka) =>
+    `⚠️ Марка «${marka}» не найдена — посылка осталась без владельца.`,
   staffPhotoOk: (code) => `📷 ${code}: фото прикреплено.`,
   staffNotFound: (code) =>
     `❓ ${code} не найден. Отправьте вместе с весом — создам новый трек, например: ${code} 3.2`,
@@ -186,7 +193,7 @@ export const ru: Strings = {
 
   // --- §5.12 привязка сотрудника к Telegram ---
   staffLinked: (name) =>
-    `✅ ${name}, вы подключены как сотрудник. Теперь можно отправлять код трека и вес, например: SF1234567890 3.2`,
+    `✅ ${name}, вы подключены как сотрудник. Теперь можно отправлять код трека и вес, например: SF1234567890 3.2\nЕсли на коробке есть марка, укажите её третьей: SF1234567890 3.2 DK-1042`,
   staffLinkNotFound:
     '❓ Такой код не найден. Попросите у администратора новый код.',
   staffLinkExpired:

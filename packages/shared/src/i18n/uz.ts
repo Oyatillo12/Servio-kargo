@@ -177,6 +177,13 @@ export const uz: Strings = {
   staffSaved: (code, kg, som) => `✅ ${code}: ${kg} kg → ${som} so'm`,
   staffSavedNew: (code, kg, som) =>
     `🆕 ${code}: yangi trek yaratildi (${kg} kg → ${som} so'm). Mijoz hali biriktirilmagan.`,
+  staffSavedNewOwned: (code, kg, som, clientCode) =>
+    `🆕 ${code}: yangi trek yaratildi (${kg} kg → ${som} so'm) va ${clientCode} ga biriktirildi.`,
+  staffMarkaAttached: (clientCode) => `👤 ${clientCode} ga biriktirildi.`,
+  staffMarkaConflict: (clientCode) =>
+    `⚠️ Bu posilka ${clientCode} ga tegishli — egasi o'zgartirilmadi. Vazn saqlandi.`,
+  staffMarkaNotFound: (marka) =>
+    `⚠️ "${marka}" markasi topilmadi — posilka egasiz qoldi.`,
   staffPhotoOk: (code) => `📷 ${code}: rasm biriktirildi.`,
   staffNotFound: (code) =>
     `❓ ${code} topilmadi. Vazn bilan yuborsangiz, yangi trek sifatida yarataman, masalan: ${code} 3.2`,
@@ -186,7 +193,7 @@ export const uz: Strings = {
 
   // --- §5.12 xodimni Telegramga ulash ---
   staffLinked: (name) =>
-    `✅ ${name}, siz xodim sifatida ulandingiz. Endi trek kodi va vaznni yuborishingiz mumkin, masalan: SF1234567890 3.2`,
+    `✅ ${name}, siz xodim sifatida ulandingiz. Endi trek kodi va vaznni yuborishingiz mumkin, masalan: SF1234567890 3.2\nQutida marka bo'lsa, uchinchi bo'lib yozing: SF1234567890 3.2 DK-1042`,
   staffLinkNotFound:
     "❓ Bunday kod topilmadi. Kodni administratoringizdan qayta so'rang.",
   staffLinkExpired:

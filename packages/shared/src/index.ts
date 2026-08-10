@@ -198,11 +198,25 @@ export {
   type AssignEventMeta,
 } from './services/assignCustomer';
 export {
+  isMarkaShaped,
   parseStaffWeighing,
   planStaffWeighing,
+  MARKA_MAX_LENGTH,
   type StaffWeighing,
   type StaffWeighingPlan,
 } from './services/staff';
+// Weighing a parcel — one rule set for the /weigh console and the bot (W2)
+export {
+  planWeighEntry,
+  type MarkaOutcome,
+  type MarkaOutcomeKind,
+  type WeighEffects,
+  type WeighInput,
+  type WeighPlan,
+  type WeighPricing,
+  type WeighRejection,
+  type WeighTrackState,
+} from './services/weigh';
 
 // Roles + panel invitations (SPEC §1 / §5.12, AUDIT.md T8)
 export {
