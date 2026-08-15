@@ -106,7 +106,9 @@ data rule as the public Mini App lookup, 10.2):
   **active staff** (3.8): full card — code, current status (emoji + label),
   last event date, batch line `🚚 Reys: {batch_name} · Taxminan:
   {eta DD.MM.YYYY}` when the track belongs to a batch that is not yet in
-  TASHKENT_WAREHOUSE or later, weight/price if set, photo if exists.
+  TASHKENT_WAREHOUSE or later, weight/price if set, photo if exists. When
+  volume set the price, the weight line names both numbers and why
+  (`Hisob vazni: 8.0 kg (hajmiy) · haqiqiy 5.2 kg`, 7.16).
 - **Anyone else** (another customer, an unregistered user, an unclaimed
   track): status + last event date + batch line ONLY — never weight, price,
   photo or owner. A registered customer also gets the hint that sending the
@@ -159,10 +161,18 @@ effect on the next update.
 ### 3.9 Calculator
 `🧮` → `calc_step_tariff` with inline buttons of ACTIVE tariffs (name only) +
 `❌` cancel → `calc_step_kg` asking for a weight (accept `3.2`, `3,2`, `3`),
-also with `❌` → reply `calc_result` (4.5) + a `🧮 recalc` button.
+also with `❌` → `calc_step_dims` asking for `U×K×B` in cm, with
+`⏭ O'tkazib yuborish` → reply `calc_result` (4.5) + a `🧮 recalc` button.
 Never writes anything to the DB. Invalid number → re-ask once with hint.
 
-Both steps are numbered `1/2` and `2/2` and both are cancellable: the flow
+The third step is **optional and skippable** (D-007): skipping it prices pure
+kg, exactly as the two-step flow always did. Dimensions are accepted as
+`50x40x30`, `50 40 30` or `50*40*30` — three integers however the customer
+separates them — and the answer then quotes the chargeable weight and says
+volumetric when volume won (7.16). A tariff whose parcel would not be affected
+never mentions volume at all.
+
+All three steps are numbered `1/3` … `3/3` and all are cancellable: the flow
 hijacks the customer's next plain message, so without a visible exit a mistyped
 trek code is silently read as a weight.
 
@@ -307,11 +317,15 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
 ### 4.5 Calculator, address & broadcast strings
 - calc_choose_tariff — uz: `Tarifni tanlang:`
 - calc_ask_kg — uz: `Og'irlikni kiriting (kg), masalan: 3.2`
-- calc_step_tariff — uz: `🧮 1/2 · Tarifni tanlang`
-- calc_step_kg — uz: `🧮 2/2 · Og'irlikni kiriting (kg), masalan: 3.2`
+- calc_step_tariff — uz: `🧮 1/3 · Tarifni tanlang`
+- calc_step_kg — uz: `🧮 2/3 · Og'irlikni kiriting (kg), masalan: 3.2`
+- calc_step_dims — uz: `🧮 3/3 · O'lchamlarni kiriting (sm): uzunlik×kenglik×balandlik, masalan: 50x40x30`
 - calc_result — uz: `🧮 {tariff_name}\n{kg} kg ≈ {price} so'm{usd_part}\n\nAniq summa yuk tortilganda hisoblanadi.`
   where `{usd_part}` = ` ({usd}$)` in USD mode, else empty.
+- calc_result_volumetric — uz: `🧮 {tariff_name}\nHisob vazni: {kg} kg (hajmiy) · haqiqiy {actual_kg} kg\n≈ {price} so'm{usd_part}\n\nAniq summa yuk tortilganda hisoblanadi.` — used only when volume won (7.16)
 - calc_invalid — uz: `Raqam kiriting, masalan: 2.5`
+- calc_dims_invalid — uz: `O'lchamlarni shunday kiriting: 50x40x30 (sm)`
+- calc_dims_skip — uz: `⏭ O'tkazib yuborish`
 - china_addr_header — uz: `🇨🇳 Xitoy ombori manzili — sotuvchiga (постовщик) shuni yuboring:`
 - china_addr_footer — uz: `❗️ Har bir qutiga shu kodni yozdirishni unutmang: {client_code}`
 - china_addr_missing — uz: `Manzil hali kiritilmagan. Administrator bilan bog'laning: {contact_phone}`
@@ -375,8 +389,10 @@ two copies would drift the moment one side is edited.
   not decide whose they are (9).
 - **5.3 /tracks/[id]** — status select, tariff select (defaults to tenant's
   default tariff), weight input (kg, up to 2 decimals → stored grams, auto
-  price per 7.4), price field with `Qo'lda kiritish` toggle (manual override,
-  7.4), batch display, photo gallery (7.14: every photo with its kind badge
+  price per 7.4), an optional `U × K × B (sm)` row of three integer fields
+  (7.16) with the resulting `Hajmiy: {kg} kg` and, when it wins, the
+  `Hisob vazni` the price was built on, price field with `Qo'lda kiritish`
+  toggle (manual override, 7.4), batch display, photo gallery (7.14: every photo with its kind badge
   and date; upload with a kind choice, per-photo delete — both behind
   `tracks.weigh`), event timeline (status, date, who),
   customer card, and a metadata card: marka, tavsif, izoh (7.13) shown when
@@ -445,6 +461,10 @@ two copies would drift the moment one side is edited.
 - **5.9 /settings** — grouped form:
   - **Tariflar**: CRUD list (nomi, narx per kg, `asosiy` radio = default,
     faol/nofaol). At least one active default tariff must always exist.
+    The edit dialog also holds `Hajmiy koeffitsiyent (kg/m³)` — default 167,
+    the air standard; a road tariff usually wants 200–333 (7.16). It is a
+    plain required number there, with a hint saying it only applies to
+    parcels whose dimensions were entered.
   - **Valyuta**: `UZS` / `USD` radio; if USD → `Kurs (1$ = ? so'm)` input.
   - **Panel tili**: `O'zbekcha` / `Русский` — the signed-in admin's own UI
     language (§5 preamble). Labels are written in their own language, never
@@ -574,6 +594,15 @@ two copies would drift the moment one side is edited.
   to the weight rather than saving an entry with no weight) → `og'irlik` →
   optional `marka` (the customer's client_code, written on the box) → Enter →
   next parcel. Signing in as `warehouse` lands here instead of /dashboard.
+
+  **Dimensions (7.16)** hang off that flow without entering it: a
+  `+ O'lcham` toggle under the form reveals three `sm` fields, and while it is
+  closed the tab order and the Enter-saves rule are exactly as before — the
+  overwhelming case is a box that gets weighed and moves on, and the scanner
+  operator must never pay for a field they do not use. Left blank on a track
+  that already has dimensions, they are kept, not cleared (7.16). The day list
+  shows a `hajmiy` marker on the rows where volume set the price, so the
+  operator sees the one number a customer will ask about.
 
   What one entry does is 3.8 plus attribution, decided by one shared planner
   the bot calls too: weight → auto price (7.4), a CREATED parcel advances to
@@ -757,6 +786,8 @@ working until the code is redeemed.
 - **7.4 Pricing:**
   - Each track has a `tariff_id` (set to the tenant's default tariff when
     weight is first entered, changeable on track detail).
+  - Everything below multiplies the **chargeable** weight, which equals
+    `weight_grams` unless the parcel has dimensions — see 7.16.
   - UZS mode: `price_tiyin = round(weight_grams × tariff.price_per_kg_tiyin / 1000)`.
   - USD mode: `price_usd_cents = round(weight_grams × tariff.price_per_kg_cents / 1000)`;
     `price_tiyin = round(price_usd_cents × usd_rate_tiyin / 100)`.
@@ -875,6 +906,50 @@ working until the code is redeemed.
   - Ticket text ≤ 2000 chars per message (a Telegram message fits ~4096;
     staff replies get the same cap). Longer input is truncated on intake.
 
+- **7.16 Volumetric pricing (tasks.md I — D-005, D-007):** a metre of pillows
+  and a metre of phone cases cost the carrier the same space and cannot cost
+  the customer the same money. A parcel is therefore priced by the LARGER of
+  what it weighs and what it occupies.
+  - **Dimensions** live on the track: `length_cm`, `width_cm`, `height_cm`,
+    integers in centimetres, all three nullable and only meaningful together
+    (one or two of them describes nothing). Entered on the /weigh console and
+    the track page (5.3, 5.14) — never in the bot's staff line (D-007: three
+    numbers typed into a Telegram message is an error waiting to happen).
+  - **Coefficient** lives on the tariff: `volumetric_coef`, kg per m³, NOT
+    NULL, default **167** (the 1:6000 air-freight standard). Every tariff has
+    one; a road tariff usually wants 200–333 and the owner edits it there
+    (5.9). D-007 chose this over an opt-in nullable column.
+  - `volumetric_grams = round(length_cm × width_cm × height_cm × coef / 1000)`
+    — cm³ → m³ (÷ 1 000 000) → kg (× coef) → grams (× 1000) collapses to a
+    single integer division, so no float ever touches the money path
+    (CLAUDE.md rule 6).
+  - `chargeable = max(weight_grams, volumetric_grams)`. Ties count as
+    **actual** — a volumetric label is a claim about why the price is higher,
+    and it must not appear where it changed nothing. **No dimensions → the
+    chargeable weight IS the actual weight**, which is why every existing
+    track and every tenant that never enters a dimension prices exactly as
+    before (D-005: no regression).
+  - `weight_grams` keeps meaning **what the scale said**, always. Chargeable
+    weight is derived, never stored in its place — the scale reading is
+    evidence in a dispute (7.13's logic) and must survive the pricing rule.
+  - The computed `volumetric_grams` is **frozen onto the track** when the
+    price is written, exactly as `usd_rate_used` freezes the kurs (7.4):
+    editing a tariff's coefficient later must never make an old track's
+    displayed weight contradict the price it was charged. Neither changes any
+    existing track — a re-save on the track page is what recomputes.
+  - Dimensions on their own never re-price anything: price is written by the
+    same three paths as before (weighing, track page, import). A weighing that
+    types no dimensions **keeps the stored ones** (and prices with them) —
+    an empty field never clears evidence, the 7.13 rule. The track page edits
+    dimensions freely, blank included.
+  - `price_manual = true` still wins over everything (7.4). Dimensions are
+    still stored and shown — a manual price on a bulky parcel is exactly the
+    case where somebody will later ask what the box measured.
+  - **The customer sees it, with the reason** (D-007): bot card and Mini App
+    show `Hisob vazni: 8.0 kg (hajmiy) · haqiqiy 5.2 kg` whenever volumetric
+    won, and the plain weight otherwise. Weight and price stay owner-only
+    (F1, 3.6) — this changes what an owner sees, not who sees it.
+
 ## 8. Non-functional requirements
 
 - Outbound sending ≤ 25 msg/sec global per bot, ≤ 1 msg/sec per chat;
@@ -942,7 +1017,9 @@ the bot (3.1); the Mini App never asks for a phone.
 **10.2 Screens.**
 - Home: greeting, client code, navigation cards.
 - My tracks: non-deleted tracks in pipeline order (active first), kg /
-  price / batch ETA (ETA shown only while the batch is en route); detail
+  price / batch ETA (ETA shown only while the batch is en route); the detail's
+  weight line names the chargeable weight and the actual one when volume set
+  the price (7.16). Detail also
   shows the `track_events` timeline and the warehouse photo via an
   ownership-gated route (`/api/twa/photo/{trackId}` — a customer only ever
   sees their own parcels).
@@ -950,7 +1027,9 @@ the bot (3.1); the Mini App never asks for a phone.
   with the same method labels the bot uses. The online "pay" button lands
   here (tasks.md C2).
 - Calculator: same shared `parseKgToGrams` + `computeTrackPrice` as the bot
-  and weighing — three surfaces, one price. Never writes.
+  and weighing — three surfaces, one price. Never writes. Dimensions are an
+  optional block under the weight (7.16, D-007): closed by default, and when
+  filled the result names the chargeable weight and why it rose.
 - China address: tenant template with `{client_code}` substituted (3.7),
   one-tap copy.
 - Public lookup (`/m/{tenantId}/lookup`): works WITHOUT registration —

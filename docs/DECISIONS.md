@@ -125,3 +125,38 @@ savoli ochiq qolgan edi. H3 boshlanishidan oldin egasi bilan hal qilindi.
 **Oqibatlar.** Bot tomonida bitta oddiy oqim qoladi (murojaat yozish /
 davom ettirish); xodim oqimi butunlay panelda. Mijoz-tomonlama yopish va
 bot-staff javoblari keyinroq alohida qaror bilan qo'shilishi mumkin.
+
+---
+
+## D-007 · Hajmiy narxlash xulq-atvori (D-005 davomi) — 2026-08-16 (egasi)
+
+**Kontekst.** D-005 formulani tanladi — `max(haqiqiy kg, m³ × koeff) × tarif`.
+I-epic boshlanishida uchta xulq-atvor savoli ochiq qolgan edi: koeffitsiyent
+qaysi tariflarda yoqiladi, mijoz kalkulyatorida o'lcham qanday so'raladi va
+mijoz hajmiy vaznning O'ZINI ko'radimi.
+
+**Qaror (egasi).**
+1. **Koeffitsiyent har tarifda** — `tariffs.volumetric_coef`, NOT NULL,
+   DEFAULT 167 (D-005 harfma-harf). Migratsiya mavjud barcha tariflarga 167
+   yozadi. Muqobil variant ("tarifga qarab yoqiladi", ustun nullable) rad
+   etildi. 167 — avia standarti; avto kargoda odatdagi 200–333 dan PAST,
+   ya'ni kam hisoblaydi, va egasi tarif kartasidan tuzatadi. Regressiya
+   xavfi yo'q: koeffitsiyent faqat o'lchami kiritilgan trekka tegadi.
+2. **Kalkulyatorda ixtiyoriy 3-qadam** — bot ham, Mini App ham: vazndan keyin
+   "o'lchamlar (ixtiyoriy)" qadami `⏭ O'tkazib yuborish` tugmasi bilan.
+   Qadamlar `1/3 · 2/3 · 3/3` bo'ladi; o'lchamsiz oqim aynan hozirgidek
+   ishlaydi. Bitta qatorda format (`3.2 50x40x30`) rad etildi — ko'rinmas
+   imkoniyat bo'lib qolardi.
+3. **Mijoz hajmiy vaznni sababi bilan ko'radi** — bot trek kartasi va TWA:
+   `Hisob vazni: 8.0 kg (hajmiy) · haqiqiy 5.2 kg`. Tushuntirilmagan raqam —
+   ertangi murojaat; H-epic butun mantig'i shu.
+
+**Oqibatlar.**
+- Hajmiy vazn trekka **muzlatiladi** (`tracks.volumetric_grams`): koeffitsiyent
+  keyin o'zgarsa, eski trekning ko'rsatuvi o'z narxiga zid bo'lmaydi —
+  `usd_rate_used` bilan bir xil mantiq (SPEC 7.4).
+- Bot ombor-rejimi (`KOD VAZN MARKA`) o'lcham QABUL QILMAYDI — uchta raqam
+  Telegram xabarida xatoga ochiq, o'lcham panel oqimlariga qoladi. Bot orqali
+  qayta tortilgan trek saqlangan o'lchamini ishlatadi, ya'ni ikki surfeys
+  narxda kelishmovchilikka tushmaydi.
+- Zichlik-DIAPAZONLI tariflar hamon rejadan tashqarida (D-005).

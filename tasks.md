@@ -254,16 +254,30 @@ boshlanishida SPEC.md tegishli bo'limi YOZILADI, keyin kod.
       qoidalar testlangan. Qo'lda: murojaat ochish → panelda javob → botda
       olish → yopish → yopiqga yozib qayta ochilishini tekshirish.
 
-### I · Hajmiy narxlash (D-005)
+### I · Hajmiy narxlash (D-005, xulq-atvor — D-007; SPEC 7.16)
 
-- [ ] **I1 · Model** — `tracks`ga o'lchamlar (sm, ixtiyoriy); `tariffs`ga
-      hajmiy koeffitsiyent (kg/m³, default 167, tahrirlanadi); shared
-      narx xizmati: narx = max(haqiqiy kg, m³ × koeff) × tarif.
-      O'lchamsiz trek — sof kg (regressiya yo'q). Testlar.
-- [ ] **I2 · Kiritish** — /weigh konsoli va WeightForm'ga U×K×B maydonlari
-      (ixtiyoriy, skaner oqimini sekinlashtirmaydi).
-- [ ] **I3 · Ko'rsatish** — kalkulyator (bot+TWA) hajmiy hisobni biladi;
-      trek detalida hajmiy vazn ko'rinadi.
+- [ ] **I1 · Model** — `tracks`ga `length_cm/width_cm/height_cm` (ixtiyoriy,
+      faqat uchtasi birga ma'noli) + `volumetric_grams` (narx yozilganda
+      MUZLATILADI, `usd_rate_used` mantig'i); `tariffs.volumetric_coef`
+      NOT NULL default 167 (D-007: hamma tarifda). Shared
+      `services/volumetric.ts`: hajmiy = round(U×K×B×koeff/1000),
+      hisob vazni = max(haqiqiy, hajmiy), tenglikda "haqiqiy". O'lchamsiz
+      trek — sof kg (regressiya yo'q). Narx yoziladigan uch yo'l ham shu
+      xizmatdan o'tadi: tortish (panel+bot), trek detali, import.
+      `weight_grams` MA'NOSI o'zgarmaydi — tarozi nima deganini saqlaydi.
+      Testlar: regressiya (o'lchamsiz = bugungi narx), hajmiy g'olib,
+      tenglik, qo'lda narx ustunligi, USD yo'li.
+- [ ] **I2 · Kiritish** — /weigh konsolida `+ O'lcham` toggle'i ostida
+      U×K×B (yopiq holatda tab-tartib va Enter-saqlash o'zgarmaydi —
+      skaner oqimi muqaddas); trek detalidagi WeightForm'da uchta maydon.
+      Tortishda bo'sh o'lcham saqlanganini TOZALAMAYDI (7.13 qoidasi),
+      trek detalida esa erkin tahrirlanadi. Tarif dialogida koeffitsiyent
+      maydoni (5.9). Bot ombor-rejimi o'lcham qabul qilmaydi (D-007).
+- [ ] **I3 · Ko'rsatish** — kalkulyatorda ixtiyoriy 3-qadam (bot: `50x40x30`
+      / `50 40 30`, `⏭ O'tkazib yuborish`; TWA: yig'ilgan blok), natijada
+      hisob vazni + sababi; trek detali va /weigh kunlik ro'yxatida hajmiy
+      belgisi; mijozga (bot kartasi + TWA) `Hisob vazni: 8.0 kg (hajmiy) ·
+      haqiqiy 5.2 kg` (D-007). Yangi matnlar uz + ru.
 
 ### K · Broadcast xavfsizligi
 

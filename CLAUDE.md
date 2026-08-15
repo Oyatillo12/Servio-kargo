@@ -88,7 +88,8 @@ entry, and update SPEC.md BEFORE writing the code (workflow: D-001).
   - `settings.staff_tg_ids` is RETIRED — employees live in `admin_users` with a
     role that both surfaces read (migration 0009 copied it across).
 - `tariffs` — id, tenant_id, name, price_per_kg_minor (tiyin if tenant is UZS,
-  cents if USD), is_default, active, sort. Every tenant always has exactly one
+  cents if USD), volumetric_coef (kg per m³, NOT NULL default 167 — SPEC 7.16),
+  is_default, active, sort. Every tenant always has exactly one
   active default tariff.
 - `batches` — id, tenant_id, name, transport ('avia'|'avto'|'train'),
   eta_date (nullable), status (CHINA_WAREHOUSE|IN_TRANSIT|TASHKENT_WAREHOUSE),
@@ -110,6 +111,8 @@ entry, and update SPEC.md BEFORE writing the code (workflow: D-001).
   code_original, current_status, weight_grams (nullable), price_tiyin (nullable),
   price_usd_cents (nullable), usd_rate_used (nullable), price_manual (bool,
   default false), marka/description/note (nullable, SPEC 7.13),
+  length_cm/width_cm/height_cm (nullable, only meaningful together) +
+  volumetric_grams (nullable, FROZEN at pricing time — SPEC 7.16),
   deleted_at (nullable), created_at
   - UNIQUE index on (tenant_id, code_normalized)
 - `track_photos` — id, tenant_id, track_id, kind ('intake'|'damage'|
