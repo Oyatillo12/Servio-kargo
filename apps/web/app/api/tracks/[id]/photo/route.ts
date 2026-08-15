@@ -1,11 +1,11 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { can } from '@kargotrack/shared';
 
 import { getSessionAdmin } from '@/lib/auth';
 import { captureError } from '@/lib/observability';
-import { getTrackPhotoPath, setTrackPhoto } from '@/lib/queries';
+import { clearTrackPhoto, getTrackPhotoPath, setTrackPhoto } from '@/lib/queries';
 
 // Warehouse photo storage root (SPEC §3.9 / §7.9 local disk in MVP).
 const UPLOADS_DIR = process.env.UPLOADS_DIR ?? '/data/uploads';
@@ -116,6 +116,50 @@ export async function POST(
     // on disk and still correct.
     captureError(err, { route: 'tracks.photo.POST', trackId: params.id });
     return jsonError('WRITE_FAILED', 500);
+  }
+
+  return Response.json({ ok: true });
+}
+
+/**
+ * Remove a track's warehouse photo (tasks.md A5 — the office-side fix-up).
+ *
+ * Same `tracks.weigh` gate as the upload: whoever may put a photo on a parcel
+ * may take a wrong one off. The DB link is cleared FIRST, then the file is
+ * unlinked best-effort — an orphaned file is harmless (the path is derived from
+ * the track id, so the next shot overwrites it), while a dangling DB pointer
+ * would render as a broken frame. Idempotent: no linked photo is still `ok`.
+ */
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { id: string } },
+) {
+  const ctx = await getSessionAdmin();
+  if (!ctx) return new Response('Unauthorized', { status: 401 });
+  if (!can(ctx.role, 'tracks.weigh')) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  const photoPath = await clearTrackPhoto({
+    tenantId: ctx.tenant.id,
+    trackId: params.id,
+  });
+  if (!photoPath) return Response.json({ ok: true });
+
+  const root = path.resolve(UPLOADS_DIR);
+  const resolved = path.resolve(root, photoPath);
+  // Path-traversal guard, same as GET: only ever delete under the uploads root.
+  if (resolved !== root && resolved.startsWith(root + path.sep)) {
+    try {
+      await unlink(resolved);
+    } catch (err) {
+      // The link is already gone, which is what the admin asked for; a
+      // leftover file just waits for the next shot at the same path. A file
+      // that was never written (ENOENT) isn't worth an alert.
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        captureError(err, { route: 'tracks.photo.DELETE', trackId: params.id });
+      }
+    }
   }
 
   return Response.json({ ok: true });

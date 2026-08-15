@@ -5,7 +5,7 @@
 
 import 'server-only';
 
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, ne, or, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import { enqueueReminder } from '@kargotrack/db/queue';
@@ -23,6 +23,7 @@ import {
   computeDebtTiyin,
   nextClientCode,
   normalizePhone,
+  planPaymentReversal,
   type Lang,
 } from '@kargotrack/shared';
 
@@ -166,6 +167,79 @@ export async function createCustomer(args: {
     }
   }
   throw new Error('createCustomer: exhausted client_code retries');
+}
+
+export type UpdateCustomerResult =
+  | { ok: true }
+  | { ok: false; error: 'NOT_FOUND' }
+  | { ok: false; error: 'DUPLICATE_PHONE'; existing: CustomerOption };
+
+/**
+ * Edit a customer's name/phone from the panel (tasks.md A6). `phone` and
+ * `phone_normalized` are always written together (the schema's invariant), so
+ * the bot's "link my hand-entered record" lookup keeps matching after an admin
+ * fixes a typo. A phone that already belongs to ANOTHER customer of the tenant
+ * is refused with that customer — same rule as {@link createCustomer}, minus
+ * the row being edited.
+ */
+export async function updateCustomer(args: {
+  tenantId: string;
+  customerId: string;
+  phone: string;
+  fullName: string | null;
+}): Promise<UpdateCustomerResult> {
+  const db = getDb();
+  const phoneNormalized = normalizePhone(args.phone);
+
+  if (phoneNormalized) {
+    const [dupe] = await db
+      .select({
+        id: customers.id,
+        clientCode: customers.clientCode,
+        fullName: customers.fullName,
+        phone: customers.phone,
+        tgUserId: customers.tgUserId,
+      })
+      .from(customers)
+      .where(
+        and(
+          eq(customers.tenantId, args.tenantId),
+          eq(customers.phoneNormalized, phoneNormalized),
+          ne(customers.id, args.customerId),
+        ),
+      )
+      .limit(1);
+    if (dupe) {
+      return {
+        ok: false,
+        error: 'DUPLICATE_PHONE',
+        existing: {
+          id: dupe.id,
+          clientCode: dupe.clientCode,
+          fullName: dupe.fullName,
+          phone: dupe.phone,
+          hasTelegram: dupe.tgUserId != null,
+        },
+      };
+    }
+  }
+
+  const rows = await db
+    .update(customers)
+    .set({
+      phone: args.phone,
+      phoneNormalized,
+      fullName: args.fullName,
+    })
+    .where(
+      and(
+        eq(customers.tenantId, args.tenantId),
+        eq(customers.id, args.customerId),
+      ),
+    )
+    .returning({ id: customers.id });
+  if (rows.length === 0) return { ok: false, error: 'NOT_FOUND' };
+  return { ok: true };
 }
 
 export interface CustomerRow {
@@ -426,6 +500,75 @@ export async function createPayment(args: {
     note: args.note,
     createdBy: args.createdBy,
   });
+}
+
+export type ReversePaymentResult =
+  | { ok: true; customerId: string }
+  | { ok: false; error: 'NOT_FOUND' | 'IS_REVERSAL' | 'ALREADY_REVERSED' };
+
+/**
+ * Reverse a payment with a storno row (tasks.md A7): a NEW payment with the
+ * negated amount pointing back via `reversal_of` — the ledger stays
+ * append-only, debt/tushum net the pair out arithmetically. Business rules
+ * live in the shared, tested `planPaymentReversal`; the partial unique index
+ * on `reversal_of` closes the race two concurrent cancels would open.
+ */
+export async function reversePayment(args: {
+  tenantId: string;
+  paymentId: string;
+  reason: string;
+  createdBy: string;
+}): Promise<ReversePaymentResult> {
+  const db = getDb();
+
+  const [original] = await db
+    .select()
+    .from(payments)
+    .where(
+      and(eq(payments.tenantId, args.tenantId), eq(payments.id, args.paymentId)),
+    )
+    .limit(1);
+  if (!original) return { ok: false, error: 'NOT_FOUND' };
+
+  const [existing] = await db
+    .select({ id: payments.id })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.tenantId, args.tenantId),
+        eq(payments.reversalOf, args.paymentId),
+      ),
+    )
+    .limit(1);
+
+  const plan = planPaymentReversal(
+    {
+      id: original.id,
+      amountTiyin: original.amountTiyin,
+      method: original.method,
+      reversalOf: original.reversalOf,
+    },
+    existing != null,
+  );
+  if (!plan.ok) return { ok: false, error: plan.error };
+
+  try {
+    await db.insert(payments).values({
+      tenantId: args.tenantId,
+      customerId: original.customerId,
+      amountTiyin: plan.insert.amountTiyin,
+      method: plan.insert.method,
+      note: args.reason,
+      createdBy: args.createdBy,
+      reversalOf: plan.insert.reversalOf,
+    });
+  } catch (err) {
+    // Two admins cancelling the same payment at once: the check above passed
+    // for both, the index let only one insert through.
+    if (isUniqueViolation(err)) return { ok: false, error: 'ALREADY_REVERSED' };
+    throw err;
+  }
+  return { ok: true, customerId: original.customerId };
 }
 
 // --- Debtors (SPEC §5.6) ----------------------------------------------------

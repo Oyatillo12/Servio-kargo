@@ -105,9 +105,9 @@ Yadro 2026-08-10 da bajarildi; qolgani ochiq:
 - [x] Worker YAKUNIY natijani yozadi (sent / permanent-drop / retry tugadi),
       best-effort — log yozilmasa ham xabar qayta ketmaydi
 - [x] Mijoz sahifasida "Yuborilgan xabarlar" bo'limi (oxirgi 10 ta)
-- [ ] Trek detalida "Xabarlar" bo'limi
-- [ ] Mijoz kartasida "🚫 Botni bloklagan" belgisi
-- [ ] Dashboardda "Yetmagan xabarlar: N"
+- [x] Trek detalida "Xabarlar" bo'limi (2026-08-15, tasks.md A3)
+- [x] Mijoz kartasida "🚫 Botni bloklagan" belgisi (2026-08-15)
+- [x] Dashboardda "Yetmagan xabarlar: N" (2026-08-15)
 - [ ] Shu bilan birga: `@sentry/nextjs` (T5 ning ochiq quyrug'i, § 4)
 
 ### ☐ T14 · Undo va savat 🟡
@@ -133,11 +133,12 @@ flow o'rtasidagi foydalanuvchi holatini yo'qotadi va >1 replikani bloklaydi.
       uchun 1 soat emas; til tanlovi kabi qiymatlar customers jadvalida
       baribir saqlanadi
 
-### ☐ T18 · Paneldan rasm yuklash 🟢
+### ☑ T18 · Paneldan rasm yuklash 🟢 — BAJARILDI (2026-08-15)
 
 Hozir faqat bot staff mode; ofisdan tuzatish imkoni yo'q.
 
-- [ ] Trek detalida rasm yuklash/o'chirish (JPEG, 10 MB — bot bilan bir xil qoida)
+- [x] Trek detalida rasm yuklash/o'chirish (JPEG, 10 MB — bot bilan bir xil
+      qoida; W4 endpoint'i + DELETE, tasks.md A5)
 
 ### ☐ T20 · Telegram Mini App (raqobat uchun)
 

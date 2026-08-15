@@ -48,6 +48,13 @@ export const CAPABILITIES = [
   'money.reports',
   /** Take a payment. */
   'payments.record',
+  /**
+   * Reverse a payment with a storno row (tasks.md A7). Separate from
+   * `payments.record` even though both roles that record may currently cancel:
+   * voiding money is the capability an owner is most likely to want to tighten
+   * later, and a named entry in this matrix is what makes that a one-line change.
+   */
+  'payments.cancel',
   /** Create/edit batches and move a whole batch's status. */
   'batches.manage',
   /** Run an Excel/text import. */
@@ -92,6 +99,7 @@ export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
     'money.customerDebt',
     'money.reports',
     'payments.record',
+    'payments.cancel',
     'batches.manage',
     'import.run',
     'reminders.send',

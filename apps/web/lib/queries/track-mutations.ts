@@ -272,6 +272,46 @@ export async function setTrackPhoto(args: {
   return rows.length > 0;
 }
 
+/**
+ * Unlink a track's warehouse photo (tasks.md A5 — the office-side fix-up).
+ * Tenant-scoped. Returns the path that was stored, so the caller can remove the
+ * file after the DB no longer points at it; null when there was nothing linked
+ * (or the track isn't this tenant's), which callers treat as already done.
+ */
+export async function clearTrackPhoto(args: {
+  tenantId: string;
+  trackId: string;
+}): Promise<string | null> {
+  const db = getDb();
+  // RETURNING hands back the post-update row (null), so read the path first.
+  // A racing re-upload between the two statements loses its link and simply
+  // re-takes the shot — the same stance the upload handler documents.
+  const [row] = await db
+    .select({ photoPath: tracks.photoPath })
+    .from(tracks)
+    .where(
+      and(
+        eq(tracks.tenantId, args.tenantId),
+        eq(tracks.id, args.trackId),
+        isNull(tracks.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!row?.photoPath) return null;
+
+  await db
+    .update(tracks)
+    .set({ photoPath: null })
+    .where(
+      and(
+        eq(tracks.tenantId, args.tenantId),
+        eq(tracks.id, args.trackId),
+        isNull(tracks.deletedAt),
+      ),
+    );
+  return row.photoPath;
+}
+
 /** Soft-delete a track (SPEC §5.3 `O'chirish`). Tenant-scoped, idempotent. */
 export async function softDeleteTrack(args: {
   tenantId: string;

@@ -83,6 +83,7 @@ describe('can — the boundaries that motivated T8', () => {
   it('keeps a warehouse hand away from money and customer records', () => {
     expect(can('warehouse', 'money.reports')).toBe(false);
     expect(can('warehouse', 'payments.record')).toBe(false);
+    expect(can('warehouse', 'payments.cancel')).toBe(false);
     expect(can('warehouse', 'customers.manage')).toBe(false);
     expect(can('warehouse', 'export.data')).toBe(false);
     expect(can('warehouse', 'import.run')).toBe(false);
@@ -110,6 +111,9 @@ describe('can — the boundaries that motivated T8', () => {
   it('lets a manager run the daily operation', () => {
     expect(can('manager', 'import.run')).toBe(true);
     expect(can('manager', 'payments.record')).toBe(true);
+    // Storno stays with whoever records (2026-08-15, owner's call): the audit
+    // trail — reason, canceler, dashboard cash-by-staff — is the control.
+    expect(can('manager', 'payments.cancel')).toBe(true);
     expect(can('manager', 'tracks.assign')).toBe(true);
     expect(can('manager', 'batches.manage')).toBe(true);
     expect(can('manager', 'money.reports')).toBe(true);

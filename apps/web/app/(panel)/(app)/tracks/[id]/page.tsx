@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 
 import {
   PIPELINE_ORDER,
+  can,
   formatDateTime,
   formatKg,
   formatSom,
@@ -14,13 +15,20 @@ import {
   type TrackStatus,
 } from '@kargotrack/shared';
 
+import { MessageOutcomesCard } from '@/components/shared/message-outcomes';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { SectionCard } from '@/components/ui/section-card';
 import { requireCapability } from '@/lib/auth';
-import { getTrackDetail, listActiveTariffs, resolveActors } from '@/lib/queries';
+import {
+  getTrackDetail,
+  listActiveTariffs,
+  listTrackMessages,
+  resolveActors,
+} from '@/lib/queries';
 import { statusView } from '@/lib/status-ui';
 import { cn } from '@/lib/utils';
 import { CustomerCard } from '@/features/tracks/components/customer-card';
+import { PhotoCard } from '@/features/tracks/components/photo-card';
 import {
   WeightForm,
   type TariffOption,
@@ -122,6 +130,10 @@ export default async function TrackDetailPage({
 
   const { track, customer, batch, events } = detail;
   const isUsd = tenant.currency === 'USD';
+
+  // Outbound notifications about THIS parcel (tasks.md A3): "did the customer
+  // actually hear that it arrived?" is asked per-track at the counter.
+  const messages = await listTrackMessages(tenant.id, track.id);
 
   // Who did what, resolved once for the whole timeline (two queries, not one
   // per row). Before this the column printed the raw uuid.
@@ -243,21 +255,14 @@ export default async function TrackDetailPage({
         />
       </SectionCard>
 
-      {/* Photo */}
-      <SectionCard title={t('photo')}>
-        {track.photoPath ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`/api/tracks/${track.id}/photo`}
-            alt={t('photoAlt', { code: track.codeOriginal })}
-            className="max-h-80 w-auto rounded-lg border border-border"
-          />
-        ) : (
-          <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-input text-sm text-muted-foreground">
-            {t('noPhoto')}
-          </div>
-        )}
-      </SectionCard>
+      {/* Photo: view for everyone, upload/replace/delete behind tracks.weigh
+          (tasks.md A5 — the office-side fix-up; the endpoint re-checks). */}
+      <PhotoCard
+        trackId={track.id}
+        code={track.codeOriginal}
+        hasPhoto={track.photoPath != null}
+        canEdit={can(role, 'tracks.weigh')}
+      />
 
       {/* Timeline */}
       <SectionCard title={t('history')}>
@@ -307,6 +312,8 @@ export default async function TrackDetailPage({
           </ol>
         )}
       </SectionCard>
+
+      <MessageOutcomesCard messages={messages} />
 
       {/* Customer card + attach/detach (SPEC §5.3, §7.3) */}
       <CustomerCard

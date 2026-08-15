@@ -99,6 +99,13 @@
       "when": 1786303164824,
       "tag": "0013_tenant_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786799757741,
+      "tag": "0014_white_iron_fist",
+      "breakpoints": true
     }
   ]
 }

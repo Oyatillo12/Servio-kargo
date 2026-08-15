@@ -6,7 +6,6 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import {
   can,
   formatDate,
-  formatDateTime,
   formatSom,
   t as strings,
   type Lang,
@@ -14,12 +13,19 @@ import {
 
 import { DebtCell } from '@/components/shared/debt-cell';
 import { ExportButton } from '@/components/shared/export-button';
+import { MessageOutcomesCard } from '@/components/shared/message-outcomes';
 import { ReminderButton } from '@/components/shared/reminder-button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { SectionCard } from '@/components/ui/section-card';
 import { requireCapability } from '@/lib/auth';
-import { getCustomerDetail, listCustomerMessages } from '@/lib/queries';
+import {
+  getCustomerDetail,
+  isCustomerBotBlocked,
+  listCustomerMessages,
+} from '@/lib/queries';
 import { sendReminderAction } from '@/features/debtors/actions';
+import { CancelPaymentButton } from '@/features/customers/components/cancel-payment-button';
+import { EditCustomerButton } from '@/features/customers/components/edit-customer-button';
 import { PaymentForm } from '@/features/customers/components/payment-form';
 
 export async function generateMetadata() {
@@ -51,7 +57,9 @@ export default async function CustomerDetailPage({
   const locale = (await getLocale()) as Lang;
 
   const canSeeMoney = can(role, 'money.reports');
+  const canManage = can(role, 'customers.manage');
   const canRecordPayment = can(role, 'payments.record');
+  const canCancelPayment = can(role, 'payments.cancel');
   const canRemind = can(role, 'reminders.send');
   const canExport = can(role, 'export.data');
 
@@ -65,11 +73,20 @@ export default async function CustomerDetailPage({
   const { customer, tracks, payments, debtTiyin } = detail;
 
   // Delivery outcomes (AUDIT.md T13): "did they actually get the message?"
-  const messages = await listCustomerMessages(tenant.id, customer.id);
+  const [messages, botBlocked] = await Promise.all([
+    listCustomerMessages(tenant.id, customer.id),
+    isCustomerBotBlocked(tenant.id, customer.id),
+  ]);
 
   const deliveredCount = tracks.filter(
     (tr) => tr.currentStatus === 'DELIVERED',
   ).length;
+
+  // Originals that have been voided (tasks.md A7): a storno row points back at
+  // its original, so both render differently and neither can be voided again.
+  const reversedIds = new Set(
+    payments.filter((p) => p.reversalOf != null).map((p) => p.reversalOf),
+  );
 
   return (
     <div className="mx-auto max-w-md space-y-3">
@@ -91,11 +108,23 @@ export default async function CustomerDetailPage({
             <p className="text-base font-bold text-foreground">
               {customer.fullName ?? tCommon('noName')}
             </p>
+            {botBlocked ? (
+              <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#92400e]">
+                🚫 {t('botBlocked')}
+              </p>
+            ) : null}
             <p className="truncate font-mono text-[12.5px] text-muted-foreground">
               {customer.clientCode}
               {customer.phone ? ` · ${customer.phone}` : ''}
             </p>
           </div>
+          {canManage ? (
+            <EditCustomerButton
+              customerId={customer.id}
+              initialName={customer.fullName}
+              initialPhone={customer.phone}
+            />
+          ) : null}
         </div>
         <div className="mt-2.5 flex border-t border-[#eef0f4] pt-2.5 text-center">
           <div className="flex-1">
@@ -139,29 +168,57 @@ export default async function CustomerDetailPage({
             <p className="text-sm text-muted-foreground">{t('noPayments')}</p>
           ) : (
             <ul>
-              {payments.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-center justify-between border-t border-[#eef0f4] py-2.5 first:border-0"
-                >
-                  <div className="min-w-0">
-                    <p className="text-[13.5px] font-semibold text-foreground">
-                      {methodLabel[p.method]}
-                    </p>
-                    <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
-                      {formatDate(p.createdAt)}
-                      {/* Who took it. The whole reason payments.created_by
-                          exists: cash crosses a counter and the row has to say
-                          whose counter. Absent only on rows written before T8. */}
-                      {p.authorName ? ` · ${p.authorName}` : ''}
-                      {p.note ? ` · ${p.note}` : ''}
-                    </p>
-                  </div>
-                  <span className="font-mono text-[14px] font-semibold text-[#177338]">
-                    {formatSom(p.amountTiyin)} {tCommon('som')}
-                  </span>
-                </li>
-              ))}
+              {payments.map((p) => {
+                const isStorno = p.reversalOf != null;
+                const isReversed = reversedIds.has(p.id);
+                return (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between gap-2 border-t border-[#eef0f4] py-2.5 first:border-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] font-semibold text-foreground">
+                        {isStorno
+                          ? `${t('stornoLabel')} · ${methodLabel[p.method]}`
+                          : methodLabel[p.method]}
+                        {isReversed ? (
+                          <span className="ms-1.5 rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#92400e]">
+                            {t('stornoCanceledBadge')}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
+                        {formatDate(p.createdAt)}
+                        {/* Who took (or voided) it. The whole reason
+                            payments.created_by exists: cash crosses a counter
+                            and the row has to say whose counter. Absent only
+                            on rows written before T8. */}
+                        {p.authorName ? ` · ${p.authorName}` : ''}
+                        {p.note ? ` · ${p.note}` : ''}
+                      </p>
+                    </div>
+                    <span className="flex flex-none items-center gap-1">
+                      <span
+                        className={
+                          isStorno
+                            ? 'font-mono text-[14px] font-semibold text-[#b91c1c]'
+                            : isReversed
+                              ? 'font-mono text-[14px] font-semibold text-muted-foreground line-through'
+                              : 'font-mono text-[14px] font-semibold text-[#177338]'
+                        }
+                      >
+                        {formatSom(p.amountTiyin)} {tCommon('som')}
+                      </span>
+                      {canCancelPayment && !isStorno && !isReversed ? (
+                        <CancelPaymentButton
+                          paymentId={p.id}
+                          amountText={`${formatSom(p.amountTiyin)} ${tCommon('som')}`}
+                        />
+                      ) : null}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </SectionCard>
@@ -217,55 +274,7 @@ export default async function CustomerDetailPage({
         )}
       </SectionCard>
 
-      {/* Outbound message outcomes (AUDIT.md T13). A blocked bot used to be
-          invisible: the worker dropped the send and the panel still looked
-          like the customer was notified. */}
-      <SectionCard title={t('messagesTitle')}>
-        {messages.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('noMessages')}</p>
-        ) : (
-          <ul>
-            {messages.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center justify-between gap-3 border-t border-[#eef0f4] py-2.5 first:border-0"
-              >
-                <div className="min-w-0">
-                  <p className="text-[13.5px] font-semibold text-foreground">
-                    {t(
-                      m.kind === 'notify'
-                        ? 'msgKindNotify'
-                        : m.kind === 'reminder'
-                          ? 'msgKindReminder'
-                          : 'msgKindBroadcast',
-                    )}
-                  </p>
-                  <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
-                    {formatDateTime(m.createdAt)}
-                  </p>
-                </div>
-                <span
-                  className={`flex-none rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    m.status === 'sent'
-                      ? 'bg-[#e7f5ec] text-[#177338]'
-                      : m.status === 'dropped'
-                        ? 'bg-[#fef3c7] text-[#92400e]'
-                        : 'bg-[#fee2e2] text-[#b91c1c]'
-                  }`}
-                >
-                  {t(
-                    m.status === 'sent'
-                      ? 'msgStatusSent'
-                      : m.status === 'dropped'
-                        ? 'msgStatusDropped'
-                        : 'msgStatusFailed',
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
+      <MessageOutcomesCard messages={messages} />
     </div>
   );
 }

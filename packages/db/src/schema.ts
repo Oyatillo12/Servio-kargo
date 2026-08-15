@@ -14,6 +14,7 @@
 
 import { relations, sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   date,
@@ -498,6 +499,15 @@ export const payments = pgTable(
     createdBy: uuid('created_by').references(() => adminUsers.id, {
       onDelete: 'set null',
     }),
+    /**
+     * Storno (tasks.md A7): the payment this row reverses. A cancellation is a
+     * NEW row with the negated amount, never an update or delete — the ledger
+     * stays append-only and every debt/tushum read nets it out arithmetically.
+     * The reason lives in `note`; who cancelled, in `created_by`.
+     */
+    reversalOf: uuid('reversal_of').references((): AnyPgColumn => payments.id, {
+      onDelete: 'restrict',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -509,6 +519,11 @@ export const payments = pgTable(
       t.tenantId,
       t.customerId,
     ),
+    // A payment can be reversed at most ONCE — the double-storno guard lives
+    // in the database, not just in the app code.
+    reversalOfUq: uniqueIndex('payments_reversal_of_uq')
+      .on(t.reversalOf)
+      .where(sql`${t.reversalOf} IS NOT NULL`),
     // Dashboard tushum card + the 14-day chart: tenant + created_at range.
     tenantCreatedIdx: index('payments_tenant_created_idx').on(
       t.tenantId,

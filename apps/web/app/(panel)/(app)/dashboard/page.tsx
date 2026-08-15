@@ -107,32 +107,27 @@ export default async function DashboardPage({
           deliveredPriceTiyin={stats.delivered.priceTiyin}
         />
 
+        {/* Undelivered messages (tasks.md A3): the number that used to be
+            invisible — a blocked bot silently dropped the notify and the panel
+            still looked like the customer was told. Ops, not money, so every
+            role sees it. Amber only when non-zero: zero is the normal state. */}
+        <StatTile
+          label={t('undeliveredMessages')}
+          sublabel={periodLabel}
+          value={stats.undeliveredMessages}
+          alert={stats.undeliveredMessages > 0}
+          className="md:col-span-2"
+        />
+
         {/* Ahead of the chart on phones — one number is cheaper to read than a
             14-day bar chart, and the chart is the natural end of the screen.
             `md:order-last` puts it back on the chart's right on desktop. */}
-        <PanelSection
-          flush
+        <StatTile
+          label={t('newCustomers')}
+          sublabel={periodLabel}
+          value={stats.newCustomers}
           className="md:order-last md:col-span-2 md:self-stretch"
-        >
-          <div className="flex h-full items-center gap-3 px-4 py-3 md:py-4">
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px] font-medium text-foreground">
-                {t('newCustomers')}
-              </span>
-              <span className="block truncate text-[13px] text-faint">
-                {periodLabel}
-              </span>
-            </span>
-            <span
-              className={cn(
-                'flex-none text-[18px] font-semibold md:text-[24px]',
-                stats.newCustomers > 0 ? 'text-foreground' : 'text-faint',
-              )}
-            >
-              {stats.newCustomers}
-            </span>
-          </div>
-        </PanelSection>
+        />
 
         {showCashByStaff ? (
           <CashByStaff rows={cashByStaff} periodLabel={periodLabel} />
@@ -141,6 +136,44 @@ export default async function DashboardPage({
         {showMoney ? <TushumChart points={tushum} /> : null}
       </SectionStack>
     </>
+  );
+}
+
+/** One-number stat card (new customers, undelivered messages). */
+function StatTile({
+  label,
+  sublabel,
+  value,
+  alert,
+  className,
+}: {
+  label: string;
+  sublabel: string;
+  value: number;
+  alert?: boolean;
+  className?: string;
+}) {
+  return (
+    <PanelSection flush className={className}>
+      <div className="flex h-full items-center gap-3 px-4 py-3 md:py-4">
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-medium text-foreground">
+            {label}
+          </span>
+          <span className="block truncate text-[13px] text-faint">
+            {sublabel}
+          </span>
+        </span>
+        <span
+          className={cn(
+            'flex-none text-[18px] font-semibold md:text-[24px]',
+            value > 0 ? (alert ? 'text-[#92400e]' : 'text-foreground') : 'text-faint',
+          )}
+        >
+          {value}
+        </span>
+      </div>
+    </PanelSection>
   );
 }
 

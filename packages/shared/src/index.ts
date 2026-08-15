@@ -78,6 +78,11 @@ export {
   type DebtSummary,
 } from './services/debt';
 export { parseSomToTiyin, parseUsdToCents } from './services/payment';
+export {
+  planPaymentReversal,
+  type PlanReversalResult,
+  type ReversiblePayment,
+} from './services/paymentReversal';
 export { parseKgToGrams } from './services/calc';
 export {
   BROADCAST_QUEUE,

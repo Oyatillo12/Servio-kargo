@@ -309,7 +309,10 @@ export async function getTwaTrackPhotoPath(
 export interface TwaFinance {
   /** Positive = owes; negative = paid in advance (SPEC §7.5). */
   debtTiyin: number;
-  payments: Pick<Payment, 'id' | 'amountTiyin' | 'method' | 'note' | 'createdAt'>[];
+  payments: Pick<
+    Payment,
+    'id' | 'amountTiyin' | 'method' | 'note' | 'createdAt' | 'reversalOf'
+  >[];
 }
 
 /** Balance + recent payments, computed by the ONE debt service (CLAUDE.md). */
@@ -336,6 +339,7 @@ export async function getTwaFinance(
         method: payments.method,
         note: payments.note,
         createdAt: payments.createdAt,
+        reversalOf: payments.reversalOf,
       })
       .from(payments)
       .where(

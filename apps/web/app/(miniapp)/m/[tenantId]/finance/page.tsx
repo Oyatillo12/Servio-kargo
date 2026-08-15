@@ -76,29 +76,40 @@ export default async function TwaFinancePage({
           <p className="twa-hint mt-2 text-sm">{t('noPayments')}</p>
         ) : (
           <ul className="twa-divider mt-1">
-            {payments.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center justify-between gap-3 py-2.5"
-                style={{ borderColor: 'var(--twa-border)' }}
-              >
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold">
-                    {methodLabel[p.method]}
-                  </p>
-                  <p className="twa-hint mt-0.5 font-mono text-[11.5px]">
-                    {formatDate(p.createdAt)}
-                    {p.note ? ` · ${p.note}` : ''}
-                  </p>
-                </div>
-                <span
-                  className="flex-none font-mono text-[13.5px] font-semibold tabular-nums"
-                  style={{ color: 'var(--twa-success)' }}
+            {payments.map((p) => {
+              // A storno row (tasks.md A7): negative, labelled as a
+              // cancellation, note hidden — the reason is the admin's audit
+              // trail, not a message to the customer.
+              const isStorno = p.reversalOf != null;
+              return (
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between gap-3 py-2.5"
+                  style={{ borderColor: 'var(--twa-border)' }}
                 >
-                  +{formatSom(p.amountTiyin)}
-                </span>
-              </li>
-            ))}
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold">
+                      {isStorno ? t('paymentReversed') : methodLabel[p.method]}
+                    </p>
+                    <p className="twa-hint mt-0.5 font-mono text-[11.5px]">
+                      {formatDate(p.createdAt)}
+                      {!isStorno && p.note ? ` · ${p.note}` : ''}
+                    </p>
+                  </div>
+                  <span
+                    className="flex-none font-mono text-[13.5px] font-semibold tabular-nums"
+                    style={{
+                      color: isStorno
+                        ? 'var(--twa-error)'
+                        : 'var(--twa-success)',
+                    }}
+                  >
+                    {isStorno ? '' : '+'}
+                    {formatSom(p.amountTiyin)}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

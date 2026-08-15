@@ -4,12 +4,13 @@
 
 import 'server-only';
 
-import { and, count, eq, gte, isNull, lt, sql, sum } from 'drizzle-orm';
+import { and, count, eq, gte, inArray, isNull, lt, sql, sum } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import {
   adminUsers,
   customers,
+  messageLog,
   payments,
   trackEvents,
   tracks,
@@ -40,6 +41,12 @@ export interface DashboardStats {
   tushumTiyin: number;
   /** Customers who registered in the period. */
   newCustomers: number;
+  /**
+   * Outbound messages that did NOT reach the customer in the period —
+   * permanently dropped (bot blocked) plus retries-exhausted failures
+   * (tasks.md A3). The number that used to be invisible.
+   */
+  undeliveredMessages: number;
   /** Current net debt across all debtors (tiyin) — NOT period-based. */
   debtTiyin: number;
   /** Current number of customers with net debt > 0 — NOT period-based. */
@@ -79,8 +86,15 @@ export async function getDashboardStats(
     return row?.value ?? 0;
   };
 
-  const [chinaReceived, tashkentArrived, deliveredRow, tushumRow, custRow, debt] =
-    await Promise.all([
+  const [
+    chinaReceived,
+    tashkentArrived,
+    deliveredRow,
+    tushumRow,
+    custRow,
+    undeliveredRow,
+    debt,
+  ] = await Promise.all([
       eventCount('CHINA_WAREHOUSE'),
       eventCount('TASHKENT_WAREHOUSE'),
       db
@@ -123,6 +137,18 @@ export async function getDashboardStats(
           ),
         )
         .then((rows) => rows[0]),
+      db
+        .select({ value: count() })
+        .from(messageLog)
+        .where(
+          and(
+            eq(messageLog.tenantId, tenantId),
+            inArray(messageLog.status, ['dropped', 'failed']),
+            gte(messageLog.createdAt, startUtc),
+            lt(messageLog.createdAt, endUtc),
+          ),
+        )
+        .then((rows) => rows[0]),
       getDebtTotals(tenantId),
     ]);
 
@@ -136,6 +162,7 @@ export async function getDashboardStats(
     },
     tushumTiyin: Number(tushumRow?.value ?? 0),
     newCustomers: custRow?.value ?? 0,
+    undeliveredMessages: undeliveredRow?.value ?? 0,
     debtTiyin: debt.debtTiyin,
     debtorCount: debt.debtorCount,
   };
