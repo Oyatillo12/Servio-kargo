@@ -15,6 +15,10 @@ The full functional specification (exact flows, screens, message texts, business
 rules) lives in `SPEC.md` in the repo root. Read the relevant SPEC.md section
 BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask.
 
+Architectural and business decisions live in `docs/DECISIONS.md` (ADR-lite,
+append-only). Do not start a new epic from `tasks.md` without its DECISIONS
+entry, and update SPEC.md BEFORE writing the code (workflow: D-001).
+
 ## Tech Stack (do not deviate without asking)
 - **TypeScript everywhere**, strict mode
 - **Monorepo:** pnpm workspaces

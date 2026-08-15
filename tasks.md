@@ -11,19 +11,24 @@ Yo'nalish (2026-08, egasi bilan kelishilgan): SaaS asos + **premium tier**
 (`tenants.plan`, gating faqat `planIncludes`). Taobao buyout — rejadan
 tashqarida. **push = avtodeploy!**
 
-**Tartib prinsipi (2026-08-10 qayta ko'rib chiqildi):** mahsulot mijoz
-tomonidan bozor darajasiga chiqdi (bot + kabinet). Endi navbat KOD emas —
-**birinchi real pilot tenant va uning fikri**. Yangi quyi tizim (to'lov,
-bonus, yetkazish) faqat real tenant so'rovi tasdiqlagach quriladi; ungacha
-faqat operatsion og'riqlar va ma'lumot xavfsizligi yopiladi. Isbotlanmagan
-talabga kod yozish = eng qimmat overengineering.
+**Ish tartibi (2026-08-15, D-001):** har epic
+Research → Analysis → Decision (docs/DECISIONS.md) → SPEC.md (koddan
+OLDIN) → Tasks (shu fayl) → Implementation (DoD) → Validation
+bosqichlaridan o'tadi. Muhim qaror — egasi bilan. Spec'siz va
+DECISIONS yozuvisiz epic boshlanmaydi.
+
+**Tartib prinsipi (2026-08-15 qayta ko'rib chiqildi, D-002):** 2026-08-10
+dagi "birinchi pilot, keyin kod" prinsipi egasi qarori bilan almashdi:
+2026-08-15 audit topilmalari bo'yicha **F–M epiklari TO'LIQ quriladi,
+pilot (P1) shundan keyin boshlanadi**. Riski D-002 da ochiq yozilgan.
+Epic tartibi: F → G → H → I → K → L → M → J.
 
 ---
 
-## P — HOZIRGI USTUVORLIK: pilot va operatsion og'riqlar
+## P — Pilot va operatsion og'riqlar (F–M dan KEYIN boshlanadi, D-002)
 
-Tartib bo'yicha bajariladi. P1–P2 kod emas, lekin ro'yxatda turadi, chunki
-ular hamma koddan muhimroq.
+P1–P2 kod emas, lekin ro'yxatda turadi. P3/P4 F-epic ichiga ko'chdi
+(F4/F5). P6/P7 validatsiya savollari pilot boshlanishida beriladi.
 
 - [ ] **P1 · Pilot tenant** (egasi) — bitta real kargo kompaniyasini tizimga
       o'tkazish va 2 hafta kundalik ishlatish. Har shikoyat/so'rov shu faylga
@@ -111,18 +116,155 @@ faqat pilot so'rasa); kirish: mavjud telefon+parol, 30 kunlik cookie.
 
 ---
 
-## A — Texnik qarz (keyingi navbat, pilot fikri bilan tartiblanadi)
+## A — Texnik qarz ✅ (2026-08-15, A3/A5/A6/A7 bajarildi)
 
-- [ ] **A3 · T13 qoldig'i** — trek detalida "Xabarlar" bo'limi; mijoz
-      kartasida "🚫 botni bloklagan" belgisi (oxirgi notify dropped bo'lsa);
-      dashboardda "yetmagan xabarlar: N".
-- [ ] **A5 · T18** — trek detalidan foto yuklash/o'chirish (bot bilan bir
-      xil qoida: JPEG, 10 MB). Asosiy ehtiyojni W4 yopadi; bu faqat
-      ofisdan tuzatish uchun.
-- [ ] **A6 · Mijozni tahrirlash UI** — ism/telefon; `phone_normalized`
-      qayta hisoblanadi.
-- [ ] **A7 · To'lovni bekor qilish** — storno yozuv (append-only, o'chirish
-      emas), sabab bilan; audit izi saqlanadi.
+- [x] **A3 · T13 qoldig'i** ✅ (2026-08-15) — trek detalida "Xabarlar"
+      (`message_log.track_id` bo'yicha, mijoz sahifasi bilan BITTA
+      `MessageOutcomesCard` komponenti, yangi `messageLog` i18n ns);
+      mijoz kartasida "🚫 botni bloklagan" (oxirgi **notify** `dropped`
+      bo'lsa — `failed` emas, u tranzient); dashboardda "Yetmagan
+      xabarlar: N" (davr bo'yicha dropped+failed, hamma rollarga —
+      bu ops, pul emas).
+- [x] **A5 · T18** ✅ (2026-08-15) — trek detalida `PhotoCard`:
+      yuklash/almashtirish/o'chirish, o'sha `/api/tracks/[id]/photo`
+      (W4) + yangi DELETE handler (`tracks.weigh`, avval DB tozalanadi,
+      fayl best-effort o'chadi — teskari tartib singan ramka qoldirardi).
+- [x] **A6 · Mijozni tahrirlash UI** ✅ (2026-08-15) — mijoz sahifasida
+      qalam → dialog (ism/telefon, `customers.manage`); `phone_normalized`
+      qayta hisoblanadi, boshqa mijozning raqami createCustomer'dagi kabi
+      rad etiladi (o'zi bundan mustasno). Telefon majburiy — bot shu raqam
+      bo'yicha ulaydi (§7.12).
+- [x] **A7 · To'lovni bekor qilish** ✅ (2026-08-15) — storno = YANGI
+      manfiy `payments` qatori `reversal_of` bilan (migratsiya 0014:
+      ustun + partial unique index — ikki marta storno DB darajasida
+      taqiqlangan). Qoida `shared/services/paymentReversal.ts`da
+      (testlar bilan): storno'ni storno qilib bo'lmaydi, sabab `note`da,
+      bekor qilgan `created_by`da. Yangi `payments.cancel` capability —
+      owner+manager (egasi qarori 2026-08-15; keyin monitoring bilan
+      qattiqlashtirilishi mumkin). Qarz/tushum/kassa hech qanday maxsus
+      holatsiz o'zi netlanadi; TWA moliya ekrani storno'ni "bekor
+      qilindi" deb ko'rsatadi (sabab mijozga ko'rinmaydi); grafikda
+      manfiy kun 0-stub bo'lib qoladi, haqiqiy summa title'da.
+      Kassa-by-staff'da bekor qilgan xodim manfiyda ko'rinadi — bu
+      ataylab: egasi kunni yopayotganda ko'rsin.
+
+---
+
+## F–M — 2026-08-15 audit yechimlari (D-002 tartibi: F→G→H→I→K→L→M→J)
+
+Har epic o'z Research/Decision bosqichi bilan ochiladi (D-001). Epic
+boshlanishida SPEC.md tegishli bo'limi YOZILADI, keyin kod.
+
+### F · Xavfsizlik (2026-08-15: F1–F5 bajarildi; F3-b switchover'ni kutadi)
+
+- [x] **F1 · Bot lookup himoyasi** ✅ — free-text qidiruvda to'liq karta
+      (vazn/narx/foto) faqat trek EGASIGA yoki faol xodimga; boshqalarga
+      holat + sana + reys (SPEC §3.6 yangilandi, §10.2 qoidasi bilan bir
+      xil). Egasiz trek'ka registratsiyalangan mijoz "➕ orqali qo'shing"
+      maslahatini oladi.
+- [x] **F2 · Botga kiruvchi rate-limit** ✅ — `inboundLimiter.ts`:
+      per-(tenant,chat) 25/min + per-tenant 400/min, session/DB'dan OLDIN,
+      jim tashlash, xotira chegaralangan; testlar bilan.
+- [x] **F3 · Webhook secret_token + opaque path** ✅ — yangi path
+      `/webhook/t/:tenantId` + `X-Telegram-Bot-Api-Secret-Token`
+      (HMAC(SESSION_SECRET, tenantId) — `@kargotrack/shared/webhook`,
+      DB'da secret YO'Q). Eski token-path switchover uchun qoladi va har
+      hit'da warn yozadi. Onboarding tartibi: getMe → tenant → setWebhook.
+      **Deploy'dan keyin har tenant'da /sa "Webhook" tugmasi bosiladi**
+      (docs/DEPLOY.md).
+- [ ] **F3-b · Eski token-path'ni o'chirish** — barcha tenantlar yangi
+      webhook'ka o'tgach (trigger: F3 warn-logi ~7 kun jim bo'lganda)
+      `/webhook/:botToken` marshruti olib tashlanadi. Ungacha eski
+      loglardan token olgan hujumchi hali ham update yuborishi mumkin —
+      teshik to'liq yopilgani YO'Q.
+- [x] **F4 · Uploads zaxira** ✅ (sobiq P3) — backup.sh endi
+      `uploads_<stamp>.tar.gz` ham oladi (`docker cp` tar-stream), 14 kun;
+      tiklash protsedurasi docs/DEPLOY.md §9.1.
+- [x] **F5 · Owner parol tiklash** ✅ (sobiq P4) — /sa qatorida "Parol
+      tiklash": eng birinchi faol owner'ga yangi invite-kod (mavjud oqim,
+      superadmin parolni BILMAYDI); kod bosilguncha eski parol ishlayveradi.
+
+### G · Peshtaxta: topshirish ekrani (D-003)
+
+Research (boshlanishida): topshirish UX — bir qo'l, telefon, navbat;
+QuickPaymentSheet/StatusChangeDialog'dan nima qayta ishlatiladi.
+
+- [ ] **G1 · SPEC §5.15** — peshtaxta ekrani spesifikatsiyasi (oqim,
+      chekka holatlar: qisman to'lov, avansli mijoz, narxsiz trek).
+- [ ] **G2 · `/handover` ekrani** — mijoz qidiruv (keyin L2 QR skan
+      ulanadi) → READY_FOR_PICKUP treklari → tanlash → jami summa →
+      bitta tugma: DELIVERED + to'lov (bitta tranzaksiya, notify bitta).
+- [ ] **G3 · Qisman to'lov** — summa default = tanlanganlar jami,
+      tahrirlanadi; yakuniy balans ko'rsatiladi (D-003: per-trek holat
+      YO'Q, balansga ishonch).
+- [ ] **G4 · Testlar** — pul harakati: to'liq/qisman/avans/0-narx.
+
+### H · Nizo va dalil (D-004)
+
+- [ ] **H1 · Trek metadata** — `tracks`ga `marka`, `description`, `note`
+      ustunlari (P7 validatsiyasidan OLDIN shart!); import mapping'ga
+      marka/tavsif; qidiruvga marka; weigh oqimidagi marka endi saqlanadi.
+- [ ] **H2 · Ko'p foto** — `track_photos` jadvali, fayl yo'li
+      `{tenantId}/{trackId}/{photoId}.jpg`; mavjud `photo_path`
+      migratsiyasi; bot/panel/weigh/TWA ko'p fotoga o'tadi; foto turi
+      belgisi (qabul / shikast / topshirish).
+- [ ] **H3 · Ticket tizimi** — `tickets` (status: open/in_progress/closed,
+      kategoriya: vazn/shikast/yo'qolgan/to'lov/boshqa, assigned_to,
+      track_id nullable) + `ticket_messages`. Bot: "✍️ Murojaat" tugmasi +
+      trek kartasida "Muammo bor"; javob paneldan botga yetkaziladi.
+      Panel: ticket worklist + detal + status/tayinlash. SLA-taymer YO'Q
+      (D-004).
+- [ ] **H4 · Ticket bildirishnomalari** — javoblar notify-worker orqali
+      (rate-limit hurmat qilinadi), `message_log`ga yoziladi; dashboardda
+      ochiq ticketlar soni.
+
+### I · Hajmiy narxlash (D-005)
+
+- [ ] **I1 · Model** — `tracks`ga o'lchamlar (sm, ixtiyoriy); `tariffs`ga
+      hajmiy koeffitsiyent (kg/m³, default 167, tahrirlanadi); shared
+      narx xizmati: narx = max(haqiqiy kg, m³ × koeff) × tarif.
+      O'lchamsiz trek — sof kg (regressiya yo'q). Testlar.
+- [ ] **I2 · Kiritish** — /weigh konsoli va WeightForm'ga U×K×B maydonlari
+      (ixtiyoriy, skaner oqimini sekinlashtirmaydi).
+- [ ] **I3 · Ko'rsatish** — kalkulyator (bot+TWA) hajmiy hisobni biladi;
+      trek detalida hajmiy vazn ko'rinadi.
+
+### K · Broadcast xavfsizligi
+
+- [ ] **K1 · "Menga test yubor"** — broadcast formasida o'z akkauntiga
+      sinov xabari.
+- [ ] **K2 · Kechiktirish + bekor qilish** — jo'natish 60s `startAfter`
+      bilan navbatga tushadi; shu oynada "Bekor qilish" pg-boss cancel.
+- [ ] **K3 · Blok ko'rinishi** — "N mijoz botni bloklagan" dashboardda +
+      mijozlar ro'yxatida filtr (message_log'dagi mavjud ma'lumotdan).
+
+### L · QR klient-karta (Cargou pariteti)
+
+Kichik qaror (epic boshlanishida, DECISIONS'ga): QR payload — oddiy
+client_code (o'qilishi oson, soxtalash mumkin) vs imzolangan token.
+
+- [ ] **L1 · Mijoz QR'i** — botda "Mening kartam" (rasm) + TWA'da ekran;
+      client_code + QR.
+- [ ] **L2 · Skan** — /weigh va /handover'da mavjud `BarcodeDetector`
+      infra bilan QR o'qish → mijoz avto-tanlanadi.
+
+### M · Import himoyasi
+
+- [ ] **M1 · `import_runs`** — har apply run yozuvi; qatorlarga run_id
+      izi (track_events meta orqali, yangi ustunsiz).
+- [ ] **M2 · Undo** — 60 daqiqa ichida: faqat shu run YOZGAN maydonlar/
+      statuslar qaytariladi; keyin o'zgargan qatorlar tashlab o'tiladi va
+      hisobot beriladi.
+- [ ] **M3 · Rad etilgan qatorlar eksporti** — xato qatorlar xlsx bo'lib
+      qaytadi (Xitoy ofisiga qaytarib berish uchun).
+
+### J · SaaS boshqaruv (pul olishdan oldin — F–M ning oxiri)
+
+- [ ] **J1 · Tenant disable** — `tenants.active`; o'chirilganda webhook
+      deleteWebhook, panel login qulfi, TWA gate. /sa'da toggle.
+- [ ] **J2 · Billing-lite** — `paid_until` sana + /sa'da belgilash;
+      tugashidan 7/1 kun oldin owner'ga ogohlantirish; grace 7 kun,
+      keyin auto-disable. Hisob-faktura YO'Q (kerak bo'lsa alohida qaror).
 
 ---
 
