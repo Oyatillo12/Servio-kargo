@@ -9,10 +9,17 @@ import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import { enqueueNotifications } from '@kargotrack/db/queue';
-import { customers, trackEvents, tracks } from '@kargotrack/db/schema';
+import {
+  customers,
+  payments,
+  trackEvents,
+  tracks,
+  type Payment,
+} from '@kargotrack/db/schema';
 import {
   BULK_CHUNK,
   chunked,
+  isHandoverEligible,
   planAssignCustomer,
   planBulkStatusChange,
   type AssignEventMeta,
@@ -111,6 +118,131 @@ export async function setTrackStatuses(args: {
   );
   result.queued = toNotify.length;
 
+  return result;
+}
+
+// --- Handover counter (SPEC §5.15, tasks.md G, D-003) ------------------------
+
+export interface HandoverResult {
+  /** Tracks marked DELIVERED (events appended). */
+  delivered: number;
+  /** §4.2 notifications enqueued after the commit. */
+  queued: number;
+}
+
+/**
+ * The selection no longer matches reality — a parcel was delivered, deleted or
+ * re-assigned since the screen loaded. Nothing was written; reload and retry.
+ */
+export type HandoverError = 'STALE_SELECTION';
+
+/**
+ * The counter action (SPEC §5.15 step 4): mark the selected parcels DELIVERED
+ * and record the payment in ONE transaction — the whole point of the screen is
+ * that "handed the box over" and "took the money" can never half-apply. Every
+ * selected track is re-read inside the transaction and must still belong to
+ * this tenant + customer and still be handover-eligible; any mismatch refuses
+ * the whole action (STALE_SELECTION) rather than delivering a subset.
+ *
+ * Status effects go through the same shared planner as every other status
+ * write; notifications are enqueued only after the commit (see
+ * `setTrackStatuses` for why). `amountTiyin` 0 means "no payment" — handing
+ * over to a customer in advance is an ordinary case, not an error.
+ */
+export async function handoverWithPayment(args: {
+  tenantId: string;
+  customerId: string;
+  trackIds: string[];
+  /** Whole payment in tiyin; 0 skips the payments insert. Never negative. */
+  amountTiyin: number;
+  method: Payment['method'];
+  createdBy: string;
+}): Promise<HandoverResult | HandoverError> {
+  const db = getDb();
+  const result: HandoverResult = { delivered: 0, queued: 0 };
+  if (args.trackIds.length === 0) return 'STALE_SELECTION';
+
+  let toNotify: { trackId: string; customerId: string }[] = [];
+  let stale = false;
+
+  await db.transaction(async (tx) => {
+    const rows = await tx
+      .select({
+        id: tracks.id,
+        currentStatus: tracks.currentStatus,
+        customerId: tracks.customerId,
+        priceTiyin: tracks.priceTiyin,
+        deletedAt: tracks.deletedAt,
+      })
+      .from(tracks)
+      .where(
+        and(
+          eq(tracks.tenantId, args.tenantId),
+          eq(tracks.customerId, args.customerId),
+          inArray(tracks.id, args.trackIds),
+          isNull(tracks.deletedAt),
+        ),
+      );
+
+    const eligible = rows.filter((r) =>
+      isHandoverEligible({
+        currentStatus: r.currentStatus,
+        priceTiyin: r.priceTiyin,
+        deletedAt: r.deletedAt,
+      }),
+    );
+    if (eligible.length !== args.trackIds.length) {
+      stale = true;
+      return; // nothing written — the empty transaction commits as a no-op
+    }
+
+    const plan = planBulkStatusChange('DELIVERED', eligible);
+
+    for (const chunk of chunked(plan.writeIds, BULK_CHUNK)) {
+      await tx
+        .update(tracks)
+        .set({ currentStatus: 'DELIVERED' })
+        .where(
+          and(eq(tracks.tenantId, args.tenantId), inArray(tracks.id, chunk)),
+        );
+    }
+    for (const chunk of chunked(plan.eventIds, BULK_CHUNK)) {
+      await tx.insert(trackEvents).values(
+        chunk.map((trackId) => ({
+          trackId,
+          status: 'DELIVERED' as TrackStatus,
+          meta: { source: 'handover' },
+          createdBy: args.createdBy,
+        })),
+      );
+    }
+
+    if (args.amountTiyin > 0) {
+      await tx.insert(payments).values({
+        tenantId: args.tenantId,
+        customerId: args.customerId,
+        amountTiyin: args.amountTiyin,
+        method: args.method,
+        note: null,
+        createdBy: args.createdBy,
+      });
+    }
+
+    result.delivered = plan.eventIds.length;
+    toNotify = plan.notify;
+  });
+
+  if (stale) return 'STALE_SELECTION';
+
+  await enqueueNotifications(
+    toNotify.map((n) => ({
+      tenantId: args.tenantId,
+      trackId: n.trackId,
+      customerId: n.customerId,
+      status: 'DELIVERED' as TrackStatus,
+    })),
+  );
+  result.queued = toNotify.length;
   return result;
 }
 

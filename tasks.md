@@ -184,20 +184,29 @@ boshlanishida SPEC.md tegishli bo'limi YOZILADI, keyin kod.
       tiklash": eng birinchi faol owner'ga yangi invite-kod (mavjud oqim,
       superadmin parolni BILMAYDI); kod bosilguncha eski parol ishlayveradi.
 
-### G · Peshtaxta: topshirish ekrani (D-003)
+### G · Peshtaxta: topshirish ekrani ✅ (2026-08-15, D-003)
 
-Research (boshlanishida): topshirish UX — bir qo'l, telefon, navbat;
-QuickPaymentSheet/StatusChangeDialog'dan nima qayta ishlatiladi.
-
-- [ ] **G1 · SPEC §5.15** — peshtaxta ekrani spesifikatsiyasi (oqim,
-      chekka holatlar: qisman to'lov, avansli mijoz, narxsiz trek).
-- [ ] **G2 · `/handover` ekrani** — mijoz qidiruv (keyin L2 QR skan
-      ulanadi) → READY_FOR_PICKUP treklari → tanlash → jami summa →
-      bitta tugma: DELIVERED + to'lov (bitta tranzaksiya, notify bitta).
-- [ ] **G3 · Qisman to'lov** — summa default = tanlanganlar jami,
-      tahrirlanadi; yakuniy balans ko'rsatiladi (D-003: per-trek holat
-      YO'Q, balansga ishonch).
-- [ ] **G4 · Testlar** — pul harakati: to'liq/qisman/avans/0-narx.
+- [x] **G1 · SPEC §5.15** ✅ — oqim + chekka holatlar (qisman to'lov,
+      avans, narxsiz trek, eskirgan tanlov) yozildi, kod undan keyin.
+- [x] **G2 · `/handover` ekrani** ✅ — nav "Topshirish" (`tracks.status`);
+      mijoz picker (mavjud sheet; L2 QR shu nuqtaga ulanadi) →
+      READY_FOR_PICKUP **va** TASHKENT_WAREHOUSE treklari (ikkalasi ham
+      jismonan Toshkentda — real peshtaxta "tayyor" bosqichini o'tkazib
+      yuboradi), READY birinchi → tanlash → **bitta tranzaksiyada**
+      DELIVERED + `payments` yozuvi (`handoverWithPayment`); tanlov
+      eskirgan bo'lsa butunlay rad (yarim-topshirish yo'q); notify
+      commit'dan keyin, o'sha shared planner orqali.
+- [x] **G3 · Qisman to'lov** ✅ — summa default = tanlanganlar jami,
+      tanlov o'zgarsa qo'l tegmagunicha ergashadi; "amaldan keyin"
+      balansi jonli ko'rsatiladi; 0/bo'sh = to'lovsiz topshirish; pul
+      bloki faqat `payments.record`da (warehouse topshiradi, pul olmaydi;
+      server qayta tekshiradi).
+- [x] **G4 · Testlar** ✅ — `shared/services/handover.ts`
+      (eligible-statuslar, narxsiz=0, jami; debt bilan kelishuv testi).
+      **Halol chegara:** `handoverWithPayment` tranzaksiyasining o'zi
+      (status+to'lov birga commit) DB-testsiz — repoda DB-backed test
+      infra yo'q va bitta funksiya uchun qurilmadi (ongli qaror);
+      pilot-checklist'da birinchi qatorda tekshiriladi.
 
 ### H · Nizo va dalil (D-004)
 

@@ -552,6 +552,46 @@ two copies would drift the moment one side is edited.
   is capped at 1 MB — a phone camera clears that on the first shot. The upload
   is guarded by `tracks.weigh`, and the DB write doubles as the tenant check.
 
+### 5.15 Handover screen (`/handover`, tasks.md G, D-003)
+
+The busiest hour of a cargo office is the pickup counter: a customer stands
+there, the admin must mark parcels DELIVERED **and** take the money — until
+now two separate flows on two screens. `/handover` folds them into one, with
+payments staying customer-level (D-003: no per-track allocation; the balance
+is the truth).
+
+Flow, one screen, `(app)` group (nav "Topshirish", `tracks.status` to see it):
+
+1. **Pick the customer** — the same picker sheet every flow uses (search by
+   code/name/phone; QR scan joins here with L2). Lands on
+   `/handover?customer={id}`.
+2. **Pick the parcels** — the customer's non-deleted tracks in
+   `READY_FOR_PICKUP` **or** `TASHKENT_WAREHOUSE` (both are physically in
+   Tashkent; real counters hand over parcels that skipped the "ready" step),
+   READY first. All are pre-selected; tapping toggles. Each row: code,
+   status badge, weight, price. A track with no price shows a warning mark
+   and counts as 0 — the admin can proceed (the price is fixed later on the
+   track) but sees that they are doing so.
+3. **Take the money** — total of the selected parcels is pre-filled as the
+   amount (so'm, editable: PARTIAL payment is typing a smaller number,
+   overpay/advance a larger one, and 0 skips the payment entirely) + method
+   (cash default). The customer's current balance is shown next to it, and
+   the balance AFTER this action previews live. The whole money block is
+   rendered only for `payments.record` (a warehouse hand hands over, but
+   never takes cash — their screen simply has no money half; with an amount
+   > 0 the action re-checks the capability server-side).
+4. **One button** — inside ONE transaction: selected tracks → DELIVERED
+   (ordinary §2 rules via the shared planner: event per genuine change,
+   §4.2 notification per attached customer, enqueued only after commit) +
+   one `payments` row (when amount > 0, `created_by` = the admin). If any
+   selected track no longer matches (someone else's, deleted, already
+   DELIVERED elsewhere) the whole action refuses with a reload hint rather
+   than half-applying.
+5. **Aftermath** — the screen re-renders: remaining tracks, new balance, and
+   a "next customer" reset. The payment lands on the customer page ledger
+   exactly like any other payment; a mistake is corrected with the ordinary
+   storno (A7).
+
 ## 6. Super-admin (`/sa`, guarded by SUPERADMIN_TOKEN env)
 
 Tenants table: nomi, bot, treklar soni, mijozlar soni, yaratilgan sana,

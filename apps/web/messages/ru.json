@@ -35,6 +35,7 @@
   "nav": {
     "dashboard": "Главная",
     "weigh": "Весы",
+    "handover": "Выдача",
     "tracks": "Треки",
     "customers": "Клиенты",
     "debtors": "Должники",
@@ -305,6 +306,28 @@
     "photoTooLarge": "Фото слишком большое — максимум {max} МБ.",
     "photoBadType": "Принимаются только фото в формате JPEG.",
     "photoFailed": "Не удалось загрузить фото. Попробуйте ещё раз."
+  },
+  "handover": {
+    "pageTitle": "Выдача",
+    "pickCustomer": "Выбрать клиента",
+    "pickCustomerHint": "Найдите клиента у стойки — по коду, имени или телефону. Его посылки и баланс появятся на одном экране.",
+    "changeCustomer": "Другой клиент",
+    "tracksTitle": "Посылки к выдаче",
+    "noTracks": "У этого клиента нет посылок, готовых к выдаче.",
+    "noPrice": "Цена не указана",
+    "selectedTotal": "{count, plural, other {Выбрано # посылок на сумму}}",
+    "unpricedWarning": "{count, plural, other {# посылок без цены — считаются как 0.}}",
+    "amount": "Сумма оплаты (сум)",
+    "amountHint": "Частичная оплата — введите меньшую сумму; пусто или 0 — выдача без оплаты.",
+    "method": "Способ оплаты",
+    "balanceNow": "Текущий баланс",
+    "balanceAfter": "После операции",
+    "submitWithPayment": "{count, plural, other {Выдать + оплата (#)}}",
+    "submitDeliverOnly": "{count, plural, other {Выдать (#)}}",
+    "done": "{count, plural, other {Выдано # посылок}}",
+    "invalidAmount": "Введите сумму в сумах — целое положительное число.",
+    "paymentNotAllowed": "У вас нет права принимать оплату.",
+    "staleSelection": "Список устарел — обновите страницу и повторите."
   },
   "customers": {
     "pageTitle": "Клиенты",

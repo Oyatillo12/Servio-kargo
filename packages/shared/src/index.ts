@@ -83,6 +83,13 @@ export {
   type PlanReversalResult,
   type ReversiblePayment,
 } from './services/paymentReversal';
+export {
+  HANDOVER_ELIGIBLE_STATUSES,
+  countUnpriced,
+  handoverTotalTiyin,
+  isHandoverEligible,
+  type HandoverTrack,
+} from './services/handover';
 export { parseKgToGrams } from './services/calc';
 export {
   BROADCAST_QUEUE,

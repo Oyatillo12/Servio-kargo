@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Megaphone,
   Package,
+  PackageCheck,
   Scale,
   Settings,
   Truck,
@@ -42,6 +43,12 @@ export const NAV_ITEMS: NavItem[] = [
     capability: 'tracks.view',
   },
   { href: '/weigh', key: 'weigh', icon: Scale, capability: 'tracks.weigh' },
+  {
+    href: '/handover',
+    key: 'handover',
+    icon: PackageCheck,
+    capability: 'tracks.status',
+  },
   { href: '/tracks', key: 'tracks', icon: Package, capability: 'tracks.view' },
   {
     href: '/customers',

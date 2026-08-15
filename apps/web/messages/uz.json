@@ -35,6 +35,7 @@
   "nav": {
     "dashboard": "Bosh sahifa",
     "weigh": "Tarozi",
+    "handover": "Topshirish",
     "tracks": "Treklar",
     "customers": "Mijozlar",
     "debtors": "Qarzdorlar",
@@ -305,6 +306,28 @@
     "photoTooLarge": "Rasm juda katta — eng ko'pi {max} MB.",
     "photoBadType": "Faqat JPEG rasm qabul qilinadi.",
     "photoFailed": "Rasmni yuklab bo'lmadi. Qayta urinib ko'ring."
+  },
+  "handover": {
+    "pageTitle": "Topshirish",
+    "pickCustomer": "Mijozni tanlash",
+    "pickCustomerHint": "Peshtaxtaga kelgan mijozni toping — kod, ism yoki telefon bo'yicha. Treklari va balansi bitta ekranda chiqadi.",
+    "changeCustomer": "Boshqa mijoz",
+    "tracksTitle": "Topshiriladigan treklar",
+    "noTracks": "Bu mijozda topshirishga tayyor trek yo'q.",
+    "noPrice": "Narx kiritilmagan",
+    "selectedTotal": "{count, plural, other {Tanlangan # ta trek jami}}",
+    "unpricedWarning": "{count, plural, other {# ta trek narxsiz — 0 deb hisoblanadi.}}",
+    "amount": "To'lov summasi (so'm)",
+    "amountHint": "Qisman to'lov — kichikroq summa yozing; bo'sh yoki 0 — to'lovsiz topshirish.",
+    "method": "To'lov usuli",
+    "balanceNow": "Hozirgi balans",
+    "balanceAfter": "Amaldan keyin",
+    "submitWithPayment": "{count, plural, other {Topshirish + to'lov (# ta)}}",
+    "submitDeliverOnly": "{count, plural, other {Topshirish (# ta)}}",
+    "done": "{count, plural, other {# ta trek topshirildi}}",
+    "invalidAmount": "Summani so'mda, butun musbat son kiriting.",
+    "paymentNotAllowed": "To'lov qabul qilishga ruxsatingiz yo'q.",
+    "staleSelection": "Ro'yxat eskirgan — sahifani yangilab, qayta urinib ko'ring."
   },
   "customers": {
     "pageTitle": "Mijozlar",
