@@ -134,6 +134,13 @@
       "when": 1786824294916,
       "tag": "0018_tricky_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786837579367,
+      "tag": "0019_ancient_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }

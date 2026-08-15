@@ -18,6 +18,7 @@
 import { isValidTrackCode, normalizeCode } from '../normalize';
 import { normalizePhone } from '../phone';
 import { computeTrackPrice, type Currency } from './price';
+import { chargeableWeight, type Dimensions } from './volumetric';
 
 /** Fields an admin can map a spreadsheet column onto. `code` is mandatory. */
 export const IMPORT_FIELDS = [
@@ -526,6 +527,8 @@ export interface ImportPriceFields {
   usdRateUsed: number | null;
   tariffId: string | null;
   priceManual: boolean;
+  /** Frozen volumetric weight when the target parcel was measured (§7.16). */
+  volumetricGrams: number | null;
 }
 
 export interface ImportPricingContext {
@@ -533,7 +536,12 @@ export interface ImportPricingContext {
   /** Som per 1 USD in tiyin; required when `currency` is 'USD'. */
   usdRateTiyin: number | null;
   /** The tenant's default tariff, or `null` when none is configured. */
-  tariff: { id: string; pricePerKgMinor: number } | null;
+  tariff: {
+    id: string;
+    pricePerKgMinor: number;
+    /** kg per m³ (§7.16); absent/null disables volumetric pricing. */
+    volumetricCoef?: number | null;
+  } | null;
 }
 
 /**
@@ -546,7 +554,16 @@ export interface ImportPricingContext {
  * - Neither present → nothing to write.
  */
 export function planImportPricing(
-  row: { weightGrams: number | null; priceTiyin: number | null },
+  row: {
+    weightGrams: number | null;
+    priceTiyin: number | null;
+    /**
+     * Sides already stored on the parcel this row targets (§7.16). A file never
+     * carries dimensions, but a parcel measured at the warehouse must not lose
+     * its volumetric price because a weight arrived by import afterwards.
+     */
+    dimensions?: Dimensions | null;
+  },
   ctx: ImportPricingContext,
 ): ImportPriceFields | null {
   if (row.priceTiyin != null) {
@@ -558,6 +575,14 @@ export function planImportPricing(
       // A tariff is only meaningful next to a weight.
       tariffId: row.weightGrams != null ? (ctx.tariff?.id ?? null) : null,
       priceManual: true,
+      volumetricGrams:
+        row.weightGrams != null
+          ? chargeableWeight(
+              row.weightGrams,
+              row.dimensions ?? null,
+              ctx.tariff?.volumetricCoef ?? null,
+            ).volumetricGrams
+          : null,
     };
   }
 
@@ -573,21 +598,29 @@ export function planImportPricing(
       usdRateUsed: null,
       tariffId: ctx.tariff?.id ?? null,
       priceManual: false,
+      volumetricGrams: null,
     };
   }
 
+  const charged = chargeableWeight(
+    row.weightGrams,
+    row.dimensions ?? null,
+    ctx.tariff.volumetricCoef ?? null,
+  );
   const price = computeTrackPrice({
-    weightGrams: row.weightGrams,
+    weightGrams: charged.grams,
     pricePerKgMinor: ctx.tariff.pricePerKgMinor,
     currency: ctx.currency,
     usdRateTiyin: ctx.usdRateTiyin,
   });
   return {
+    // The scale reading the file carried, never the chargeable figure (§7.16).
     weightGrams: row.weightGrams,
     priceTiyin: price.priceTiyin,
     priceUsdCents: price.priceUsdCents,
     usdRateUsed: price.usdRateUsed,
     tariffId: ctx.tariff.id,
     priceManual: false,
+    volumetricGrams: charged.volumetricGrams,
   };
 }

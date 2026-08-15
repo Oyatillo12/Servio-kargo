@@ -47,6 +47,21 @@ export {
   type TrackPriceInput,
   type TrackPrice,
 } from './services/price';
+// Volumetric weight (SPEC §7.16)
+export {
+  DEFAULT_VOLUMETRIC_COEF,
+  MAX_DIMENSION_CM,
+  isValidDimensionCm,
+  readDimensions,
+  parseDimensionCm,
+  parseDimensions,
+  volumetricGrams,
+  chargeableWeight,
+  storedChargeableWeight,
+  type Dimensions,
+  type WeightBasis,
+  type ChargeableWeight,
+} from './services/volumetric';
 export {
   resolveDefaultId,
   planCreateTariff,

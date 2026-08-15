@@ -36,7 +36,12 @@ describe('planWeighEntry — pricing (§7.4)', () => {
       priceUsdCents: null,
       usdRateUsed: null,
       priceManual: false,
+      // §7.16: nothing measured, so the scale is the whole story — and no
+      // dimension keys at all, since a spread of nulls would clear stored ones.
+      volumetricGrams: null,
     });
+    expect(plan().basis).toBe('actual');
+    expect(plan().chargeableGrams).toBe(3200);
   });
 
   it('freezes the kurs onto a USD tenant’s parcel', () => {
@@ -236,5 +241,79 @@ describe('planWeighEntry — storeMarka (§7.13, H1)', () => {
       plan({ markaTyped: true, markaCustomerId: null, markaRaw: '   ' })
         .storeMarka,
     ).toBeNull();
+  });
+});
+
+describe('planWeighEntry — volumetric weight (§7.16)', () => {
+  // 50×40×30 cm at the 167 kg/m³ default = 10.02 kg — far past the 3.2 kg scale.
+  const DIMS = { lengthCm: 50, widthCm: 40, heightCm: 30 };
+  const TARIFF = {
+    id: 'tariff-1',
+    pricePerKgMinor: 3_000_000,
+    volumetricCoef: 167,
+  };
+
+  it('prices a light bulky parcel by its volume, keeping the scale reading', () => {
+    const p = plan({ tariff: TARIFF, dimensions: DIMS });
+    expect(p.pricing.weightGrams).toBe(3200); // what the scale said
+    expect(p.chargeableGrams).toBe(10_020);
+    expect(p.pricing.volumetricGrams).toBe(10_020);
+    expect(p.basis).toBe('volumetric');
+    // 10.02 kg × 30 000 so'm = 300 600 so'm
+    expect(p.pricing.priceTiyin).toBe(30_060_000);
+    // The typed sides are written alongside the price.
+    expect(p.pricing.lengthCm).toBe(50);
+    expect(p.pricing.widthCm).toBe(40);
+    expect(p.pricing.heightCm).toBe(30);
+  });
+
+  it('leaves a dense parcel on its scale price', () => {
+    const p = plan({ tariff: TARIFF, dimensions: DIMS, weightGrams: 25_000 });
+    expect(p.chargeableGrams).toBe(25_000);
+    expect(p.basis).toBe('actual');
+    expect(p.pricing.priceTiyin).toBe(75_000_000); // 25 kg × 30 000
+    // Still frozen: the box was measured, and a dispute will ask.
+    expect(p.pricing.volumetricGrams).toBe(10_020);
+  });
+
+  it('prices with the stored dimensions when none are typed (bot parity, D-007)', () => {
+    // The bot's staff line carries no dimensions; the same box must not get a
+    // cheaper price there than it got on the console.
+    const p = plan({
+      tariff: TARIFF,
+      track: {
+        currentStatus: 'CREATED',
+        customerId: CUSTOMER,
+        dimensions: DIMS,
+      },
+    });
+    expect(p.chargeableGrams).toBe(10_020);
+    expect(p.basis).toBe('volumetric');
+    // Nothing typed → no dimension keys written, so stored sides survive.
+    expect('lengthCm' in p.pricing).toBe(false);
+  });
+
+  it('lets typed dimensions win over stored ones — the box is in hand', () => {
+    const p = plan({
+      tariff: TARIFF,
+      dimensions: { lengthCm: 20, widthCm: 20, heightCm: 20 }, // 1.336 kg
+      track: {
+        currentStatus: 'CREATED',
+        customerId: CUSTOMER,
+        dimensions: DIMS,
+      },
+    });
+    expect(p.pricing.lengthCm).toBe(20);
+    expect(p.pricing.widthCm).toBe(20);
+    expect(p.pricing.heightCm).toBe(20);
+    expect(p.chargeableGrams).toBe(3200); // scale wins now
+    expect(p.basis).toBe('actual');
+  });
+
+  it('NO REGRESSION: a tariff with no coefficient prices exactly as before', () => {
+    const withDims = plan({ dimensions: DIMS }); // tariff without volumetricCoef
+    expect(withDims.pricing.priceTiyin).toBe(9_600_000);
+    expect(withDims.basis).toBe('actual');
+    expect(withDims.pricing.volumetricGrams).toBeNull();
   });
 });

@@ -26,10 +26,14 @@ import {
   clientCodeKey,
   periodRange,
   planWeighEntry,
+  readDimensions,
+  storedChargeableWeight,
   type Currency,
+  type Dimensions,
   type MarkaOutcomeKind,
   type WeighEffects,
   type WeighRejection,
+  type WeightBasis,
 } from '@kargotrack/shared';
 
 import { isUniqueViolation } from './internal';
@@ -69,6 +73,10 @@ export interface WeighedRow {
   marka: MarkaOutcomeKind;
   /** A warehouse photo is on file (from here or the bot) — W4. */
   hasPhoto: boolean;
+  /** The grams the price was built on — volumetric when volume won (§7.16). */
+  chargeableGrams: number;
+  /** Which weight decided the price; drives the row's `hajmiy` marker. */
+  basis: WeightBasis;
 }
 
 export type WeighResult =
@@ -110,6 +118,11 @@ async function findTrackByCode(tenantId: string, codeNormalized: string) {
       currentStatus: tracks.currentStatus,
       customerId: tracks.customerId,
       hasPhoto: hasPhotoExpr,
+      // §7.16: read back so a re-weighing with no sides typed still prices by
+      // the volume this parcel was already measured at.
+      lengthCm: tracks.lengthCm,
+      widthCm: tracks.widthCm,
+      heightCm: tracks.heightCm,
     })
     .from(tracks)
     .where(
@@ -159,6 +172,11 @@ export async function applyPanelWeighing(args: {
   weightGrams: number;
   /** The marka exactly as typed, or null when the field was left empty. */
   marka: string | null;
+  /**
+   * Sides typed on the console, or null when the dimension block was left
+   * closed/empty (§7.16). Null keeps whatever the track already stores.
+   */
+  dimensions?: Dimensions | null;
   /** `admin_users.id` — the console is always a signed-in employee. */
   createdBy: string;
 }): Promise<WeighResult> {
@@ -174,11 +192,24 @@ export async function applyPanelWeighing(args: {
       currency: args.currency,
       usdRateTiyin: args.usdRateTiyin,
       tariff: tariff
-        ? { id: tariff.id, pricePerKgMinor: tariff.pricePerKgMinor }
+        ? {
+            id: tariff.id,
+            pricePerKgMinor: tariff.pricePerKgMinor,
+            volumetricCoef: tariff.volumetricCoef,
+          }
         : null,
       weightGrams: args.weightGrams,
+      dimensions: args.dimensions ?? null,
       track: track
-        ? { currentStatus: track.currentStatus, customerId: track.customerId }
+        ? {
+            currentStatus: track.currentStatus,
+            customerId: track.customerId,
+            dimensions: readDimensions(
+              track.lengthCm,
+              track.widthCm,
+              track.heightCm,
+            ),
+          }
         : null,
       markaTyped: args.marka != null,
       markaCustomerId: markaCustomer?.id ?? null,
@@ -267,6 +298,8 @@ async function createWeighed(
     owner: await ownerById(args.tenantId, plan.attachCustomerId),
     marka: plan.marka.kind,
     hasPhoto: false,
+    chargeableGrams: plan.chargeableGrams,
+    basis: plan.basis,
   };
 }
 
@@ -348,6 +381,8 @@ async function weighExisting(
     ),
     marka: plan.marka.kind,
     hasPhoto: track.hasPhoto,
+    chargeableGrams: plan.chargeableGrams,
+    basis: plan.basis,
   };
 }
 
@@ -389,6 +424,7 @@ export async function listTodaysWeighings(
       code: tracks.codeOriginal,
       weightGrams: tracks.weightGrams,
       priceTiyin: tracks.priceTiyin,
+      volumetricGrams: tracks.volumetricGrams,
       meta: trackEvents.meta,
       hasPhoto: hasPhotoExpr,
       clientCode: customers.clientCode,
@@ -417,6 +453,12 @@ export async function listTodaysWeighings(
     const owner = r.clientCode
       ? { clientCode: r.clientCode, fullName: r.fullName }
       : null;
+    // §7.16: read the frozen columns rather than recomputing — a coefficient
+    // edited mid-shift must not restate this morning's rows.
+    const charged = storedChargeableWeight(
+      r.weightGrams ?? 0,
+      r.volumetricGrams,
+    );
     return {
       trackId: r.trackId,
       code: r.code,
@@ -430,6 +472,8 @@ export async function listTodaysWeighings(
         ? meta.marka
         : 'none') as MarkaOutcomeKind,
       hasPhoto: r.hasPhoto,
+      chargeableGrams: charged?.grams ?? r.weightGrams ?? 0,
+      basis: charged?.basis ?? 'actual',
     };
   });
 }

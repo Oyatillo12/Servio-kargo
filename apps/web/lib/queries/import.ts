@@ -22,6 +22,7 @@ import {
   planAssignCustomer,
   planImportPricing,
   planStatusChange,
+  readDimensions,
   type AssignEventMeta,
   type ImportCode,
   type ImportPricingContext,
@@ -102,7 +103,11 @@ export async function getImportPricingContext(
     currency: tenant?.currency ?? 'UZS',
     usdRateTiyin: tenant?.usdRateTiyin ?? null,
     tariff: tariff
-      ? { id: tariff.id, pricePerKgMinor: tariff.pricePerKgMinor }
+      ? {
+          id: tariff.id,
+          pricePerKgMinor: tariff.pricePerKgMinor,
+          volumetricCoef: tariff.volumetricCoef,
+        }
       : null,
   };
 }
@@ -145,6 +150,8 @@ interface EnrichWrite {
   priceManual: boolean | null;
   marka: string | null;
   description: string | null;
+  /** Frozen volumetric weight when this row re-priced a measured parcel (§7.16). */
+  volumetricGrams: number | null;
 }
 
 /**
@@ -203,6 +210,9 @@ export async function applyImport(
       tariffId: string | null;
       marka: string | null;
       description: string | null;
+      lengthCm: number | null;
+      widthCm: number | null;
+      heightCm: number | null;
     }> = [];
     for (const chunk of chunked(
       codes.map((c) => c.normalized),
@@ -220,6 +230,11 @@ export async function applyImport(
           tariffId: tracks.tariffId,
           marka: tracks.marka,
           description: tracks.description,
+          // §7.16: a parcel measured at the warehouse keeps its volumetric
+          // price when a weight arrives by file afterwards.
+          lengthCm: tracks.lengthCm,
+          widthCm: tracks.widthCm,
+          heightCm: tracks.heightCm,
         })
         .from(tracks)
         .where(
@@ -350,6 +365,7 @@ export async function applyImport(
       let fillRate: number | null = null;
       let fillTariffId: string | null = null;
       let fillManual: boolean | null = null;
+      let fillVolumetric: number | null = null;
 
       if (existing.priceTiyin == null) {
         if (code.priceTiyin != null) {
@@ -364,13 +380,22 @@ export async function applyImport(
           }
         } else if (fillWeight != null) {
           const price = planImportPricing(
-            { weightGrams: fillWeight, priceTiyin: null },
+            {
+              weightGrams: fillWeight,
+              priceTiyin: null,
+              dimensions: readDimensions(
+                existing.lengthCm,
+                existing.widthCm,
+                existing.heightCm,
+              ),
+            },
             pricing,
           );
           if (price) {
             fillPrice = price.priceTiyin;
             fillUsdCents = price.priceUsdCents;
             fillRate = price.usdRateUsed;
+            fillVolumetric = price.volumetricGrams;
             if (existing.tariffId == null) fillTariffId = price.tariffId;
           }
         }
@@ -400,6 +425,7 @@ export async function applyImport(
           priceManual: fillManual,
           marka: fillMarka,
           description: fillDescription,
+          volumetricGrams: fillVolumetric,
         });
         if (fillCustomerId != null) {
           result.assigned++;
@@ -459,7 +485,7 @@ export async function applyImport(
       const values = sql.join(
         chunk.map(
           (r) =>
-            sql`(${r.id}::uuid, ${r.customerId}::uuid, ${r.weightGrams}::integer, ${r.priceTiyin}::bigint, ${r.priceUsdCents}::bigint, ${r.usdRateUsed}::bigint, ${r.tariffId}::uuid, ${r.priceManual}::boolean, ${r.marka}::text, ${r.description}::text)`,
+            sql`(${r.id}::uuid, ${r.customerId}::uuid, ${r.weightGrams}::integer, ${r.priceTiyin}::bigint, ${r.priceUsdCents}::bigint, ${r.usdRateUsed}::bigint, ${r.tariffId}::uuid, ${r.priceManual}::boolean, ${r.marka}::text, ${r.description}::text, ${r.volumetricGrams}::integer)`,
         ),
         sql`, `,
       );
@@ -473,10 +499,11 @@ export async function applyImport(
           tariff_id = COALESCE(v.tariff_id, t.tariff_id),
           price_manual = COALESCE(v.price_manual, t.price_manual),
           marka = COALESCE(v.marka, t.marka),
-          description = COALESCE(v.description, t.description)
+          description = COALESCE(v.description, t.description),
+          volumetric_grams = COALESCE(v.volumetric_grams, t.volumetric_grams)
         FROM (VALUES ${values}) AS v(id, customer_id, weight_grams, price_tiyin,
           price_usd_cents, usd_rate_used, tariff_id, price_manual, marka,
-          description)
+          description, volumetric_grams)
         WHERE t.id = v.id AND t.tenant_id = ${tenantId}::uuid
       `);
     }

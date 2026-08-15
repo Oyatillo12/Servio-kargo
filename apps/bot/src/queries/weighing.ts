@@ -12,9 +12,11 @@ import {
 } from '@kargotrack/db/schema';
 import {
   planWeighEntry,
+  readDimensions,
   type MarkaOutcomeKind,
   type WeighEffects,
   type WeighRejection,
+  type WeightBasis,
 } from '@kargotrack/shared';
 
 import { findCustomerByMarka, getClientCode } from './customers';
@@ -39,6 +41,10 @@ export type StaffWeighingResult =
       marka: MarkaOutcomeKind;
       /** The parcel's owner after the write, named as staff would name them. */
       ownerClientCode: string | null;
+      /** The grams the price was built on — volumetric when volume won (§7.16). */
+      chargeableGrams: number;
+      /** Which weight decided the price, so the reply can say `hajmiy`. */
+      basis: WeightBasis;
     }
   | { ok: false; reason: WeighRejection };
 
@@ -73,11 +79,27 @@ export async function applyStaffWeighing(args: {
       currency: tenant.currency,
       usdRateTiyin: tenant.usdRateTiyin,
       tariff: tariff
-        ? { id: tariff.id, pricePerKgMinor: tariff.pricePerKgMinor }
+        ? {
+            id: tariff.id,
+            pricePerKgMinor: tariff.pricePerKgMinor,
+            volumetricCoef: tariff.volumetricCoef,
+          }
         : null,
       weightGrams,
+      // §7.16 / D-007: the staff line carries no dimensions — three numbers in a
+      // Telegram message is an error waiting to happen — but a parcel measured
+      // on the console must not get a cheaper price just because it was
+      // re-weighed here. Its stored sides still price it.
       track: track
-        ? { currentStatus: track.currentStatus, customerId: track.customerId }
+        ? {
+            currentStatus: track.currentStatus,
+            customerId: track.customerId,
+            dimensions: readDimensions(
+              track.lengthCm,
+              track.widthCm,
+              track.heightCm,
+            ),
+          }
         : null,
       markaTyped: args.marka != null,
       markaCustomerId: markaCustomer?.id ?? null,
@@ -119,6 +141,8 @@ async function finish(
     ownerClientCode: ownerId
       ? await getClientCode(args.tenant.id, ownerId)
       : null,
+    chargeableGrams: plan.chargeableGrams,
+    basis: plan.basis,
   };
 }
 

@@ -193,6 +193,10 @@ export const tariffs = pgTable('tariffs', {
     .references(() => tenants.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   pricePerKgMinor: bigint('price_per_kg_minor', { mode: 'number' }).notNull(),
+  // Volumetric coefficient in kg per m³ (SPEC §7.16, D-007). 167 is the
+  // 1:6000 air-freight standard; a road tariff usually wants 200–333. It only
+  // ever matters for a parcel whose dimensions were entered.
+  volumetricCoef: integer('volumetric_coef').notNull().default(167),
   isDefault: boolean('is_default').notNull().default(false),
   active: boolean('active').notNull().default(true),
   sort: integer('sort').notNull().default(0),
@@ -425,6 +429,15 @@ export const tracks = pgTable(
     marka: text('marka'),
     description: text('description'),
     note: text('note'),
+    // SPEC 7.16 volumetric pricing. Dimensions in whole centimetres, only
+    // meaningful all three together. `volumetric_grams` is the weight those
+    // dimensions bought at the tariff's coefficient, FROZEN when the price was
+    // written — the same stance as `usd_rate_used`, so editing a coefficient
+    // later never makes an old track's displayed weight contradict its price.
+    lengthCm: integer('length_cm'),
+    widthCm: integer('width_cm'),
+    heightCm: integer('height_cm'),
+    volumetricGrams: integer('volumetric_grams'),
     // SPEC 7.8 soft delete.
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })

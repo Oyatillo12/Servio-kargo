@@ -8,7 +8,11 @@ import { and, eq, isNull } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import { tariffs, tenants, tracks, type Tariff } from '@kargotrack/db/schema';
-import { computeTrackPrice } from '@kargotrack/shared';
+import {
+  chargeableWeight,
+  computeTrackPrice,
+  readDimensions,
+} from '@kargotrack/shared';
 
 import { getDefaultTariff } from './tariffs';
 
@@ -19,9 +23,16 @@ export type PricingError = 'NO_TARIFF' | 'NO_RATE';
  * rate and the chosen tariff (falling back to the tenant default when none is
  * passed), then:
  *  - manual override (`priceManual`): store the admin-typed som price as-is;
- *  - otherwise recompute via `computeTrackPrice` (freezing the USD rate).
+ *  - otherwise recompute via `computeTrackPrice` (freezing the USD rate) on the
+ *    CHARGEABLE weight — volume beats the scale for a light bulky parcel
+ *    (§7.16), while `weight_grams` keeps holding what the scale said.
  * Clearing the weight clears the price. Returns an error code the action maps to
  * a message, or null on success.
+ *
+ * Unlike weighing, this is the deliberate-edit surface: blank dimensions here
+ * CLEAR the stored ones (§7.16), because an admin who empties the fields on the
+ * track page means it — the rule that an empty field never clears belongs to the
+ * scanner flow, where the field is skipped rather than emptied.
  */
 export async function setTrackPricing(args: {
   tenantId: string;
@@ -32,6 +43,10 @@ export async function setTrackPricing(args: {
   priceManual: boolean;
   /** Admin-typed som price in tiyin; used only when `priceManual` + weight set. */
   manualPriceTiyin: number | null;
+  /** Sides in whole cm, each null when the field was left empty (§7.16). */
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
 }): Promise<PricingError | null> {
   const db = getDb();
 
@@ -57,11 +72,26 @@ export async function setTrackPricing(args: {
     tariff = await getDefaultTariff(args.tenantId);
   }
 
+  // §7.16: all three sides or none — a half-measured box describes nothing.
+  const dims = readDimensions(args.lengthCm, args.widthCm, args.heightCm);
+
   const set: Partial<typeof tracks.$inferInsert> = {
     weightGrams: args.weightGrams,
     tariffId: tariff?.id ?? null,
     priceManual: args.priceManual,
+    lengthCm: dims?.lengthCm ?? null,
+    widthCm: dims?.widthCm ?? null,
+    heightCm: dims?.heightCm ?? null,
   };
+
+  // The volume these sides buy at this tariff. Computed even under a manual
+  // price: the customer will still ask what the box measured, and a manual
+  // price on a bulky parcel is exactly when they ask.
+  const charged =
+    args.weightGrams == null
+      ? null
+      : chargeableWeight(args.weightGrams, dims, tariff?.volumetricCoef ?? null);
+  set.volumetricGrams = charged?.volumetricGrams ?? null;
 
   if (args.weightGrams == null) {
     // No weight → no price, regardless of manual/auto.
@@ -78,7 +108,7 @@ export async function setTrackPricing(args: {
     if (!tariff) return 'NO_TARIFF';
     if (tenant.currency === 'USD' && tenant.usdRateTiyin == null) return 'NO_RATE';
     const price = computeTrackPrice({
-      weightGrams: args.weightGrams,
+      weightGrams: charged?.grams ?? args.weightGrams,
       pricePerKgMinor: tariff.pricePerKgMinor,
       currency: tenant.currency,
       usdRateTiyin: tenant.usdRateTiyin,

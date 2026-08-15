@@ -224,6 +224,33 @@ describe('planImportPricing', () => {
     )!;
     expect(plan.priceManual).toBe(false);
     expect(plan.priceTiyin).toBe(5_250_000); // 1.5 kg × 35 000 so'm
+    // §7.16: a file carries no dimensions, so nothing volumetric to freeze.
+    expect(plan.volumetricGrams).toBeNull();
+  });
+
+  it('prices a MEASURED parcel by its volume (§7.16)', () => {
+    // The warehouse measured the box; the weight arrived by file afterwards.
+    // Losing the volumetric price at that point would silently undercharge.
+    const plan = planImportPricing(
+      {
+        weightGrams: 1500,
+        priceTiyin: null,
+        dimensions: { lengthCm: 50, widthCm: 40, heightCm: 30 },
+      },
+      { ...uzs, tariff: { ...uzs.tariff, volumetricCoef: 167 } },
+    )!;
+    expect(plan.weightGrams).toBe(1500); // the scale reading is kept
+    expect(plan.volumetricGrams).toBe(10_020);
+    expect(plan.priceTiyin).toBe(35_070_000); // 10.02 kg × 35 000 so'm
+  });
+
+  it('leaves an unmeasured parcel priced exactly as before (§7.16)', () => {
+    const withCoef = planImportPricing(
+      { weightGrams: 1500, priceTiyin: null },
+      { ...uzs, tariff: { ...uzs.tariff, volumetricCoef: 167 } },
+    )!;
+    expect(withCoef.priceTiyin).toBe(5_250_000);
+    expect(withCoef.volumetricGrams).toBeNull();
   });
 
   it('freezes the rate for a USD tenant', () => {

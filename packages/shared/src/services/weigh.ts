@@ -16,6 +16,11 @@
 import type { TrackStatus } from '../status';
 import { computeTrackPrice, type Currency } from './price';
 import { planStaffWeighing } from './staff';
+import {
+  chargeableWeight,
+  type Dimensions,
+  type WeightBasis,
+} from './volumetric';
 
 /** §7.13 cap for the stored box marking; a client code is far shorter. */
 export const MAX_MARKA_LENGTH = 32;
@@ -55,6 +60,13 @@ export type MarkaOutcomeKind = MarkaOutcome['kind'];
 export interface WeighTrackState {
   currentStatus: TrackStatus;
   customerId: string | null;
+  /**
+   * Dimensions already stored on the track (§7.16). Read so that re-weighing a
+   * measured parcel without retyping its sides still prices by volume — the
+   * bot's staff line cannot carry dimensions at all (D-007), and it must not
+   * quietly produce a cheaper price than the console did for the same box.
+   */
+  dimensions?: Dimensions | null;
 }
 
 export interface WeighInput {
@@ -62,9 +74,20 @@ export interface WeighInput {
   /** Som per 1 USD in tiyin. Required when `currency` is 'USD'. */
   usdRateTiyin: number | null;
   /** The tenant's default tariff, or null when none is configured. */
-  tariff: { id: string; pricePerKgMinor: number } | null;
-  /** Integer grams (CLAUDE.md rule 6). */
+  tariff: {
+    id: string;
+    pricePerKgMinor: number;
+    /** kg per m³ (§7.16); absent/null disables volumetric pricing. */
+    volumetricCoef?: number | null;
+  } | null;
+  /** Integer grams (CLAUDE.md rule 6) — what the scale said, always. */
   weightGrams: number;
+  /**
+   * Dimensions typed at this weighing, or null when none were (§7.16). Null
+   * does NOT clear stored ones — an empty field never erases evidence, the
+   * same rule marka follows.
+   */
+  dimensions?: Dimensions | null;
   /** The existing track, or null when the code is unknown and will be created. */
   track: WeighTrackState | null;
   /** Whether a marka was typed at all — separates "none" from "not found". */
@@ -75,7 +98,15 @@ export interface WeighInput {
   markaRaw?: string | null;
 }
 
-/** The pricing columns a weighing writes. Always the auto path (§7.4). */
+/**
+ * The pricing columns a weighing writes. Always the auto path (§7.4).
+ *
+ * Column-shaped on purpose: both query layers spread this straight into the
+ * insert/update, so every key here is a `tracks` column and nothing else is.
+ * The dimension keys are OPTIONAL rather than nullable — omitted when none were
+ * typed, because a spread of `lengthCm: null` would clear stored evidence
+ * (§7.16), which is precisely what an empty field must never do.
+ */
 export interface WeighPricing {
   weightGrams: number;
   tariffId: string | null;
@@ -84,6 +115,11 @@ export interface WeighPricing {
   usdRateUsed: number | null;
   /** Weighing is auto-pricing, so it clears any earlier manual override. */
   priceManual: false;
+  /** The volumetric weight frozen onto the track, or null (§7.16). */
+  volumetricGrams: number | null;
+  lengthCm?: number;
+  widthCm?: number;
+  heightCm?: number;
 }
 
 export interface WeighEffects {
@@ -102,6 +138,10 @@ export interface WeighEffects {
   /** Who the notification is for — the existing owner, or the fresh attach. */
   notifyCustomerId: string | null;
   marka: MarkaOutcome;
+  /** The grams that multiplied the tariff — actual or volumetric (§7.16). */
+  chargeableGrams: number;
+  /** Which of the two won, so the operator is told when volume decided. */
+  basis: WeightBasis;
   /**
    * Write this string into `tracks.marka` (§7.13), or null to leave the column
    * alone. Set whenever a non-empty marka was typed — whatever it resolved to:
@@ -144,6 +184,11 @@ function planMarka(input: WeighInput): {
  * has an owner — a notification, and an unknown code is created unattached and
  * already at the China warehouse so the customer can claim it later.
  *
+ * Since I1 the price is built on the CHARGEABLE weight (§7.16) — volume wins
+ * over the scale for a light bulky parcel — while `weight_grams` keeps holding
+ * what the scale said. Dimensions typed here win; typing none keeps the stored
+ * ones and prices with them.
+ *
  * On top of that, W2's addition: a marka resolves an unowned parcel to its
  * customer right there at intake. A newly attached owner is notified about the
  * status move, because the notification is about the parcel ARRIVING — they are
@@ -162,19 +207,38 @@ export function planWeighEntry(input: WeighInput): WeighPlan {
     return { ok: false, reason: 'NO_TARIFF' };
   }
 
+  // §7.16: the tariff multiplies the chargeable weight. Typed dimensions win
+  // over stored ones (the box is in the operator's hands); typing none keeps
+  // what the track already knows, so the two surfaces never disagree on price.
+  const effectiveDims = input.dimensions ?? input.track?.dimensions ?? null;
+  const chargeable = chargeableWeight(
+    input.weightGrams,
+    effectiveDims,
+    input.tariff.volumetricCoef ?? null,
+  );
+
   const price = computeTrackPrice({
-    weightGrams: input.weightGrams,
+    weightGrams: chargeable.grams,
     pricePerKgMinor: input.tariff.pricePerKgMinor,
     currency: input.currency,
     usdRateTiyin: input.usdRateTiyin,
   });
   const pricing: WeighPricing = {
+    // The scale reading, never the chargeable figure (§7.16).
     weightGrams: input.weightGrams,
     tariffId: input.tariff.id,
     priceTiyin: price.priceTiyin,
     priceUsdCents: price.priceUsdCents,
     usdRateUsed: price.usdRateUsed,
     priceManual: false,
+    volumetricGrams: chargeable.volumetricGrams,
+    ...(input.dimensions != null
+      ? {
+          lengthCm: input.dimensions.lengthCm,
+          widthCm: input.dimensions.widthCm,
+          heightCm: input.dimensions.heightCm,
+        }
+      : {}),
   };
 
   const { marka, attachCustomerId } = planMarka(input);
@@ -197,6 +261,8 @@ export function planWeighEntry(input: WeighInput): WeighPlan {
       attachCustomerId,
       notifyCustomerId: attachCustomerId,
       marka,
+      chargeableGrams: chargeable.grams,
+      basis: chargeable.basis,
       storeMarka,
     };
   }
@@ -220,6 +286,8 @@ export function planWeighEntry(input: WeighInput): WeighPlan {
     attachCustomerId,
     notifyCustomerId: plan.willNotify ? effectiveCustomerId : null,
     marka,
+    chargeableGrams: chargeable.grams,
+    basis: chargeable.basis,
     storeMarka,
   };
 }
