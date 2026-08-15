@@ -65,6 +65,11 @@ export interface LookupCardVars {
   kg?: string;
   /** Formatted so'm (no suffix), present only when price is set. */
   som?: string;
+  /**
+   * Goods description (§7.13) — owner's own card only, never the limited one.
+   * Marka and note are panel-only and must never reach this card at all.
+   */
+  description?: string;
 }
 
 export interface ReadyNotifVars {
@@ -94,6 +99,8 @@ export interface Strings {
   menuChinaAddress: string;
   menuInfo: string;
   menuLang: string;
+  /** §3.13 support-ticket entry. */
+  menuTicket: string;
   /** Premium reply-keyboard entry into the Mini App (SPEC §10.1). */
   menuCabinet: string;
 
@@ -173,6 +180,29 @@ export interface Strings {
    * Weight/price/photo are never shown on someone else's track.
    */
   lookupClaimHint: string;
+
+  // --- §3.13 tickets (§4.6 — D-004/D-006) ---
+  /** Category picker prompt. */
+  ticketAskCategory: string;
+  /** Free-text prompt after a category (or continue) is chosen. */
+  ticketAskText: string;
+  ticketCreated: string;
+  ticketAppended: string;
+  /** Header + prompt when an open/in_progress ticket already exists. */
+  ticketOpenHeader(category: string, status: string): string;
+  /** Choice shown when the latest ticket is closed. */
+  ticketClosedChoice(category: string): string;
+  /** `🔄 Davom ettirish` / `🆕 Yangi murojaat` inline buttons. */
+  ticketContinue: string;
+  ticketNew: string;
+  /** `⚠️ Muammo bor` button on the customer's own track card (§3.6). */
+  ticketIssueButton: string;
+  /** Unregistered user pressed ✍️ — register first. */
+  ticketRegisterFirst: string;
+  /** H4: staff reply as delivered to the customer. */
+  ticketReply(category: string, text: string): string;
+  /** H4: closure notice. */
+  ticketClosedNotice(category: string): string;
 
   // --- §3.9 calculator (§4.5) ---
   /** `1/2 · …` step prefix shown above the tariff picker (§3.11). */

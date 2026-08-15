@@ -81,6 +81,7 @@ export async function applyStaffWeighing(args: {
         : null,
       markaTyped: args.marka != null,
       markaCustomerId: markaCustomer?.id ?? null,
+      markaRaw: args.marka,
     });
 
   const existing = await findTrackByCode(tenant.id, args.codeNormalized);
@@ -138,6 +139,7 @@ async function createWeighed(
         codeOriginal: args.codeOriginal,
         customerId: plan.attachCustomerId,
         currentStatus: plan.newStatus,
+        marka: plan.storeMarka,
         ...plan.pricing,
       })
       .returning();
@@ -152,7 +154,14 @@ async function createWeighed(
   await db.insert(trackEvents).values({
     trackId: track.id,
     status: plan.newStatus,
-    meta: { source: EVENT_SOURCE, created: true, marka: plan.marka.kind },
+    meta: {
+      source: EVENT_SOURCE,
+      created: true,
+      marka: plan.marka.kind,
+      // §7.13: the typed string — the column keeps only the latest marking,
+      // the append-only log keeps them all.
+      ...(plan.storeMarka != null ? { markaRaw: plan.storeMarka } : {}),
+    },
     createdBy: args.createdBy,
   });
 
@@ -173,6 +182,8 @@ async function weighExisting(
     .set({
       ...plan.pricing,
       currentStatus: plan.newStatus,
+      // §7.13: overwrite with the latest marking; never clear on an empty one.
+      ...(plan.storeMarka != null ? { marka: plan.storeMarka } : {}),
       ...(plan.attachCustomerId != null
         ? { customerId: plan.attachCustomerId }
         : {}),
@@ -200,7 +211,12 @@ async function weighExisting(
     await db.insert(trackEvents).values({
       trackId: track.id,
       status: plan.newStatus,
-      meta: { source: EVENT_SOURCE, created: false, marka: plan.marka.kind },
+      meta: {
+        source: EVENT_SOURCE,
+        created: false,
+        marka: plan.marka.kind,
+        ...(plan.storeMarka != null ? { markaRaw: plan.storeMarka } : {}),
+      },
       createdBy: args.createdBy,
     });
   }

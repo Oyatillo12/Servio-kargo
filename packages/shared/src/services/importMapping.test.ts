@@ -99,7 +99,34 @@ describe('detectImportLayout', () => {
       customer: 1,
       weight: 2,
       price: 3,
+      description: null,
     });
+  });
+
+  it('maps a realistic manifest with a наименование column (H1)', () => {
+    const layout = detectImportLayout([
+      ['Трек', 'Марка клиента', 'Кг', 'Наименование товара'],
+      ['YT1000000001', 'DK-1042', '1,5', 'чёрные футболки, 2 кор.'],
+    ]);
+    expect(layout.hasHeader).toBe(true);
+    expect(layout.mapping).toEqual({
+      code: 0,
+      customer: 1,
+      weight: 2,
+      price: null,
+      description: 3,
+    });
+  });
+
+  it('claims an English "Item name" column as description, not customer', () => {
+    // `name` is a customer keyword; DETECT_ORDER tests description first so a
+    // goods column is not mistaken for an owner column.
+    const layout = detectImportLayout([
+      ['Track', 'Item name', 'Client'],
+      ['YT1000000001', 'black t-shirts', 'DK-1042'],
+    ]);
+    expect(layout.mapping?.description).toBe(1);
+    expect(layout.mapping?.customer).toBe(2);
   });
 
   it('falls back to the column that holds codes when there is no header', () => {
@@ -122,6 +149,7 @@ describe('classifyMappedRows', () => {
     customer: 1,
     weight: 2,
     price: 3,
+    description: 4,
   };
 
   it('keeps a row whose kg cell is unreadable, and warns', () => {
@@ -153,6 +181,22 @@ describe('classifyMappedRows', () => {
     expect(res.rows).toHaveLength(1);
     expect(res.malformed).toEqual([{ line: 1, text: 'SF123' }]);
     expect(res.duplicateCount).toBe(1);
+  });
+
+  it('keeps a description cell as typed and blanks as null (§7.13)', () => {
+    const res = classifyMappedRows(
+      [
+        ['YT1000000001', 'DK-1042', '1,5', '', 'qora ko‘ylak, 2 quti'],
+        ['YT1000000002', '', '', '', '-'],
+      ],
+      mapping,
+      false,
+    );
+    expect(res.rows[0]!.description).toBe('qora ko‘ylak, 2 quti');
+    // The owner cell keeps its code shape → doubles as the marka upstream.
+    expect(res.rows[0]!.customerRef?.codeKey).toBe('DK1042');
+    expect(res.rows[1]!.description).toBeNull();
+    expect(res.warnings).toEqual([]);
   });
 });
 

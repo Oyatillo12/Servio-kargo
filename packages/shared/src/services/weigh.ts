@@ -17,6 +17,9 @@ import type { TrackStatus } from '../status';
 import { computeTrackPrice, type Currency } from './price';
 import { planStaffWeighing } from './staff';
 
+/** §7.13 cap for the stored box marking; a client code is far shorter. */
+export const MAX_MARKA_LENGTH = 32;
+
 /** Why a weighing cannot be priced. Both are tenant misconfigurations (§7.4). */
 export type WeighRejection =
   /** The tenant has no default tariff, so there is no price per kg. */
@@ -68,6 +71,8 @@ export interface WeighInput {
   markaTyped: boolean;
   /** The customer that marka resolved to, or null when it matched nobody. */
   markaCustomerId: string | null;
+  /** The marka exactly as typed, or null — becomes the box evidence (§7.13). */
+  markaRaw?: string | null;
 }
 
 /** The pricing columns a weighing writes. Always the auto path (§7.4). */
@@ -97,6 +102,13 @@ export interface WeighEffects {
   /** Who the notification is for — the existing owner, or the fresh attach. */
   notifyCustomerId: string | null;
   marka: MarkaOutcome;
+  /**
+   * Write this string into `tracks.marka` (§7.13), or null to leave the column
+   * alone. Set whenever a non-empty marka was typed — whatever it resolved to:
+   * on a `conflict`, "the box says DK-1042" is exactly the evidence a dispute
+   * needs. Never an empty string, so an empty field never clears a stored one.
+   */
+  storeMarka: string | null;
 }
 
 export type WeighPlan = { ok: false; reason: WeighRejection } | WeighEffects;
@@ -166,6 +178,12 @@ export function planWeighEntry(input: WeighInput): WeighPlan {
   };
 
   const { marka, attachCustomerId } = planMarka(input);
+  // §7.13: the typed string is evidence of what the box says, kept regardless
+  // of how (or whether) it resolved to a customer. Truncated to the cap, never
+  // refused — a refusal mid-shift at a scanner is worse than short evidence.
+  const storeMarka = input.markaTyped
+    ? (input.markaRaw?.trim().slice(0, MAX_MARKA_LENGTH) || null)
+    : null;
 
   // Unknown code → a brand-new parcel, straight into CHINA_WAREHOUSE.
   if (input.track == null) {
@@ -179,6 +197,7 @@ export function planWeighEntry(input: WeighInput): WeighPlan {
       attachCustomerId,
       notifyCustomerId: attachCustomerId,
       marka,
+      storeMarka,
     };
   }
 
@@ -201,5 +220,6 @@ export function planWeighEntry(input: WeighInput): WeighPlan {
     attachCustomerId,
     notifyCustomerId: plan.willNotify ? effectiveCustomerId : null,
     marka,
+    storeMarka,
   };
 }

@@ -19,6 +19,7 @@ import {
   workNotifications,
   workReminderSweeps,
   workReminders,
+  workTicketDeliveries,
   type JobMeta,
 } from '@kargotrack/db/queue';
 import {
@@ -27,12 +28,14 @@ import {
   formatSom,
   statusNotification,
   STATUS_META,
+  TICKET_CATEGORY_META,
   t,
   tashkentSchedule,
   weeklyReminderDedupeKey,
   type BroadcastJob,
   type NotifyJob,
   type ReminderJob,
+  type TicketJob,
 } from '@kargotrack/shared';
 
 import { getConfig } from './config';
@@ -41,12 +44,14 @@ import { captureError } from './sentry';
 import {
   getNotifyContext,
   getSendContext,
+  getTicketDeliveryContext,
   incrementBroadcastSent,
   insertMessageOutcome,
   listCustomerPayments,
   listCustomerTracks,
   listTenantDebtorIds,
   listTenants,
+  listTrackPhotoPaths,
   pruneStaleSessions,
   SESSION_MAX_AGE_DAYS,
   type MessageOutcome,
@@ -146,10 +151,12 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
 
   await limiter.acquire(tenant.botToken, chatId);
   try {
-    // Attach the warehouse photo to the status notification when one exists, so
-    // the customer's next update after a staff upload carries it (§3.8, §4.2).
-    const photoAbs = track.photoPath
-      ? join(getConfig().uploadsDir, track.photoPath)
+    // Attach the NEWEST warehouse photo to the status notification when one
+    // exists (§7.14), so the customer's next update after a staff upload
+    // carries it (§3.8, §4.2).
+    const [newestPath] = await listTrackPhotoPaths(tenant.id, track.id, 1);
+    const photoAbs = newestPath
+      ? join(getConfig().uploadsDir, newestPath)
       : undefined;
 
     if (photoAbs && existsSync(photoAbs)) {
@@ -208,6 +215,107 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
 export async function startNotificationWorker(): Promise<void> {
   await workNotifications(handleNotifyJob);
   logger.info('notification worker started');
+}
+
+// --- Ticket deliveries (SPEC §5.16/§7.15, tasks.md H4) ----------------------
+
+/**
+ * Deliver one staff ticket reply or closure notice to the customer's chat.
+ * Same rate-limit / retry / outcome-log discipline as notifications; the
+ * outcome row carries `ticket_message_id` so the panel thread can show
+ * whether the customer actually received the answer.
+ */
+async function handleTicketJob(job: TicketJob, meta: JobMeta): Promise<void> {
+  const ctx = await getTicketDeliveryContext(
+    job.tenantId,
+    job.ticketId,
+    job.messageId,
+  );
+  if (!ctx) {
+    logger.warn({ job }, 'ticket: ticket gone, dropping');
+    return;
+  }
+  const { tenant, ticket, customer, message } = ctx;
+
+  if (job.kind === 'reply' && !message) {
+    logger.warn({ job }, 'ticket: message gone, dropping');
+    return;
+  }
+  if (!customer.tgUserId) {
+    logger.warn({ customerId: customer.id }, 'ticket: no telegram id, dropping');
+    await logOutcome({
+      tenantId: job.tenantId,
+      customerId: customer.id,
+      kind: 'ticket',
+      status: 'dropped',
+      ticketMessageId: job.messageId,
+      error: 'no telegram id',
+    });
+    return;
+  }
+
+  const s = t(customer.lang);
+  const catMeta = TICKET_CATEGORY_META[ticket.category];
+  const category = `${catMeta.emoji} ${catMeta[customer.lang]}`;
+  const text =
+    job.kind === 'reply'
+      ? s.ticketReply(category, message!.text)
+      : s.ticketClosedNotice(category);
+
+  const api = apiFor(tenant.botToken);
+  const chatId = customer.tgUserId;
+
+  await limiter.acquire(tenant.botToken, chatId);
+  try {
+    await api.sendMessage(chatId, text);
+    await logOutcome({
+      tenantId: job.tenantId,
+      customerId: customer.id,
+      kind: 'ticket',
+      status: 'sent',
+      ticketMessageId: job.messageId,
+    });
+  } catch (err) {
+    if (isPermanentSendError(err)) {
+      logger.warn(
+        { err: err instanceof GrammyError ? err.description : err, chatId },
+        'ticket: permanent send error, dropping',
+      );
+      await logOutcome({
+        tenantId: job.tenantId,
+        customerId: customer.id,
+        kind: 'ticket',
+        status: 'dropped',
+        ticketMessageId: job.messageId,
+        error: sendErrorText(err),
+      });
+      return;
+    }
+    if (meta.retryCount >= meta.retryLimit) {
+      logger.error({ jobId: meta.id, chatId, err }, 'ticket: failed after retries');
+      await logOutcome({
+        tenantId: job.tenantId,
+        customerId: customer.id,
+        kind: 'ticket',
+        status: 'failed',
+        ticketMessageId: job.messageId,
+        error: sendErrorText(err),
+      });
+      captureError(err, {
+        queue: 'ticket',
+        jobId: meta.id,
+        tenantId: job.tenantId,
+        ticketId: job.ticketId,
+      });
+    }
+    throw err; // transient → let pg-boss retry with backoff
+  }
+}
+
+/** Start consuming ticket-delivery jobs. */
+export async function startTicketWorker(): Promise<void> {
+  await workTicketDeliveries(handleTicketJob);
+  logger.info('ticket delivery worker started');
 }
 
 // --- Debt reminders (SPEC §4.4, §7.7) --------------------------------------

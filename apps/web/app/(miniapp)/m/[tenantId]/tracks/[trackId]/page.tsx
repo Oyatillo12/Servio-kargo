@@ -79,11 +79,24 @@ export default async function TwaTrackDetailPage({
           </div>
         )}
 
-        {detail.weightGrams != null || detail.priceTiyin != null ? (
+        {detail.weightGrams != null ||
+        detail.priceTiyin != null ||
+        detail.description != null ? (
           <dl
             className="twa-divider mt-3.5 border-t pt-1"
             style={{ borderColor: 'var(--twa-border)' }}
           >
+            {detail.description != null ? (
+              <div
+                className="flex justify-between gap-3 py-2 text-[13.5px]"
+                style={{ borderColor: 'var(--twa-border)' }}
+              >
+                <dt className="twa-hint flex-none">{t('trackDescription')}</dt>
+                <dd className="min-w-0 break-words text-right font-semibold">
+                  {detail.description}
+                </dd>
+              </div>
+            ) : null}
             {detail.weightGrams != null ? (
               <div
                 className="flex justify-between py-2 text-[13.5px]"
@@ -110,20 +123,21 @@ export default async function TwaTrackDetailPage({
         ) : null}
       </div>
 
-      {detail.hasPhoto ? (
+      {detail.photoIds.map((photoId, i) => (
         <div
+          key={photoId}
           className="twa-card twa-rise overflow-hidden"
-          style={{ '--twa-i': 1 } as React.CSSProperties}
+          style={{ '--twa-i': 1 + i } as React.CSSProperties}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- dynamic
               session-guarded API route; next/image adds nothing here */}
           <img
-            src={`/api/twa/photo/${detail.id}`}
+            src={`/api/twa/photo/${detail.id}/${photoId}`}
             alt={t('photoAlt')}
             className="w-full"
           />
         </div>
-      ) : null}
+      ))}
 
       {/* Journey log */}
       <div

@@ -1,7 +1,7 @@
 /**
- * Warehouse photo for the Mini App (tasks.md B3). Same serving rules as the
- * panel's photo route, but gated by the TWA customer session — and by
- * OWNERSHIP: a customer only ever sees photos of their own parcels.
+ * ONE warehouse photo for the Mini App (tasks.md B3, SPEC §7.14). Same serving
+ * rules as the panel's photo route, but gated by the TWA customer session —
+ * and by OWNERSHIP: a customer only ever sees photos of their own parcels.
  */
 
 import { readFile } from 'node:fs/promises';
@@ -16,7 +16,7 @@ const UPLOADS_DIR = process.env.UPLOADS_DIR ?? '/data/uploads';
 
 export async function GET(
   _req: Request,
-  { params }: { params: { trackId: string } },
+  { params }: { params: { trackId: string; photoId: string } },
 ) {
   const claims = verifyTwaSessionToken(cookies().get(TWA_COOKIE_NAME)?.value);
   if (!claims) return new Response('Unauthorized', { status: 401 });
@@ -25,6 +25,7 @@ export async function GET(
     claims.tenantId,
     claims.customerId,
     params.trackId,
+    params.photoId,
   );
   if (!photoPath) return new Response('Not found', { status: 404 });
 
@@ -40,7 +41,8 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'image/jpeg',
-        'Cache-Control': 'private, max-age=60',
+        // A photo row is immutable (§7.14), so the browser may keep it.
+        'Cache-Control': 'private, max-age=3600',
       },
     });
   } catch {

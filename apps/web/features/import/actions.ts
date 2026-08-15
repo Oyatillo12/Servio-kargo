@@ -138,6 +138,7 @@ export async function readImportSourceAction(
   if (locked.includes('customer')) mapping.customer = null;
   if (locked.includes('weight')) mapping.weight = null;
   if (locked.includes('price')) mapping.price = null;
+  if (locked.includes('description')) mapping.description = null;
 
   return {
     ok: true,
@@ -162,6 +163,7 @@ function lockedFields(role: Parameters<typeof can>[0]): string[] {
   const locked: string[] = [];
   if (!can(role, 'tracks.assign')) locked.push('customer');
   if (!can(role, 'tracks.weigh')) locked.push('weight', 'price');
+  if (!can(role, 'tracks.edit')) locked.push('description');
   return locked;
 }
 
@@ -186,6 +188,12 @@ const mappingSchema = z.object({
     .max(MAX_IMPORT_COLUMNS - 1)
     .nullable(),
   price: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_IMPORT_COLUMNS - 1)
+    .nullable(),
+  description: z.coerce
     .number()
     .int()
     .min(0)
@@ -219,6 +227,8 @@ export interface PreviewResult {
     weight: number;
     /** Rows carrying a usable price. */
     price: number;
+    /** Rows whose description will land (fill-empty, §7.13). */
+    description: number;
   };
   samples?: {
     create: PreviewLine[];
@@ -243,6 +253,7 @@ function mappingFromForm(
     customer: num('col.customer'),
     weight: num('col.weight'),
     price: num('col.price'),
+    description: num('col.description'),
   });
   if (!parsed.success) return null;
 
@@ -252,6 +263,9 @@ function mappingFromForm(
     customer: locked.includes('customer') ? null : parsed.data.customer,
     weight: locked.includes('weight') ? null : parsed.data.weight,
     price: locked.includes('price') ? null : parsed.data.price,
+    description: locked.includes('description')
+      ? null
+      : parsed.data.description,
   };
 }
 
@@ -294,6 +308,7 @@ async function buildPlan(
     ambiguous: 0,
     weight: 0,
     price: 0,
+    description: 0,
   };
   const samples: ImportPlan['samples'] = {
     create: [],
@@ -330,6 +345,9 @@ async function buildPlan(
     }
     if (row.weightGrams != null && !target?.hasWeight) counts.weight++;
     if (row.priceTiyin != null && !target?.hasPrice) counts.price++;
+    if (row.description != null && !target?.hasDescription) {
+      counts.description++;
+    }
 
     const isNew = target === undefined;
     const bucket = isNew ? 'create' : 'update';
@@ -345,6 +363,10 @@ async function buildPlan(
       customerId,
       weightGrams: row.weightGrams,
       priceTiyin: row.priceTiyin,
+      // §7.13: the owner cell doubles as the box marking when it has the shape
+      // of a client code — a name or phone is a reference, not a marking.
+      marka: row.customerRef?.codeKey != null ? row.customerRef.raw : null,
+      description: row.description,
     });
   }
 

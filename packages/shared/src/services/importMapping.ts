@@ -20,7 +20,13 @@ import { normalizePhone } from '../phone';
 import { computeTrackPrice, type Currency } from './price';
 
 /** Fields an admin can map a spreadsheet column onto. `code` is mandatory. */
-export const IMPORT_FIELDS = ['code', 'customer', 'weight', 'price'] as const;
+export const IMPORT_FIELDS = [
+  'code',
+  'customer',
+  'weight',
+  'price',
+  'description',
+] as const;
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
 /** Column index per field; `null` means "this file has no such column". */
@@ -29,6 +35,8 @@ export interface ColumnMapping {
   customer: number | null;
   weight: number | null;
   price: number | null;
+  /** Goods description → `tracks.description` (§7.13), fill-if-empty. */
+  description: number | null;
 }
 
 /** Grid limits — an import is one flight, not a data warehouse. */
@@ -246,12 +254,30 @@ const HEADER_KEYWORDS: Record<ImportField, readonly string[]> = {
     'посылк',
     'yuk',
   ],
+  description: [
+    'tavsif',
+    'описание',
+    'наименование',
+    'товар',
+    'tovar',
+    'mahsulot',
+    'description',
+    'item',
+    'product',
+    'goods',
+  ],
 };
 
-/** Field priority when scanning headers — most specific label first. */
+/**
+ * Field priority when scanning headers — most specific label first.
+ * `description` goes before `customer`: an English "Item name" / "Product
+ * name" header contains customer's `name` keyword and would be claimed as an
+ * owner column otherwise.
+ */
 const DETECT_ORDER: readonly ImportField[] = [
   'weight',
   'price',
+  'description',
   'customer',
   'code',
 ];
@@ -369,6 +395,7 @@ export function detectImportLayout(
       customer: found.customer ?? null,
       weight: found.weight ?? null,
       price: found.price ?? null,
+      description: found.description ?? null,
     },
     columnCount,
   };
@@ -403,6 +430,8 @@ export interface MappedImportRow {
   weightGrams: number | null;
   /** Agreed price from the file, in tiyin → a manual override (§7.4). */
   priceTiyin: number | null;
+  /** Goods description as typed, or `null` when unmapped/blank (§7.13). */
+  description: string | null;
 }
 
 export interface MappedParseResult {
@@ -470,6 +499,8 @@ export function classifyMappedRows(
       warnings.push({ line, field: 'price', value: priceCell });
     }
 
+    const descriptionCell = cell(row, mapping.description);
+
     rows.push({
       line,
       original: codeCell,
@@ -477,6 +508,8 @@ export function classifyMappedRows(
       customerRef: customerRefKeys(cell(row, mapping.customer)),
       weightGrams,
       priceTiyin,
+      // Free text — anything non-blank counts, there is nothing to mis-parse.
+      description: isBlankCell(descriptionCell) ? null : descriptionCell,
     });
   }
 

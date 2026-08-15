@@ -38,6 +38,12 @@ import {
 } from './menu';
 import { staffPhotoHandler } from './staffPhoto';
 import { cancelCallback, textRouter } from './text';
+import {
+  ticketCategoryCallback,
+  ticketContinueCallback,
+  ticketIssueCallback,
+  ticketNewCallback,
+} from './tickets';
 
 export function registerHandlers(bot: Bot<KargoContext>): void {
   bot.command('start', startCommand);
@@ -62,6 +68,12 @@ export function registerHandlers(bot: Bot<KargoContext>): void {
   bot.callbackQuery(/^addmore$/, addMoreCallback);
   bot.callbackQuery(/^balance$/, balanceCallback);
   bot.callbackQuery(/^help$/, helpCallback);
+  // Tickets (SPEC §3.13): start from a track card, pick a category, or decide
+  // what to do with the latest closed ticket.
+  bot.callbackQuery(/^issue:(.+)$/, ticketIssueCallback);
+  bot.callbackQuery(/^tcat:(.+)$/, ticketCategoryCallback);
+  bot.callbackQuery(/^tcont$/, ticketContinueCallback);
+  bot.callbackQuery(/^tnew$/, ticketNewCallback);
   bot.callbackQuery(/^cancel$/, cancelCallback);
 
   bot.on('message:contact', contactHandler);

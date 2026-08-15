@@ -13,8 +13,10 @@ import {
   customers,
   payments,
   trackEvents,
+  trackPhotos,
   tracks,
   type Payment,
+  type TrackPhoto,
 } from '@kargotrack/db/schema';
 import {
   BULK_CHUNK,
@@ -377,22 +379,65 @@ export async function setTracksCustomer(args: {
 }
 
 /**
- * Link a stored warehouse photo to a track (SPEC §3.8, §5.14). Tenant-scoped;
- * the path is relative to the uploads root and written by the caller, which is
- * what decides the filename — this only records it.
- *
- * Returns whether a row was actually updated, so an upload for a track that
- * belongs to another tenant (or has been deleted) fails loudly rather than
- * leaving an orphan file on disk claiming to be linked.
+ * Record a new warehouse photo for a track (SPEC §7.14). Tenant-scoped: the
+ * insert only happens when the track is this tenant's and not soft-deleted —
+ * so an upload for somebody else's parcel fails loudly rather than leaving an
+ * orphan file on disk claiming to be linked. The caller writes the file; the
+ * path here only records where.
  */
-export async function setTrackPhoto(args: {
+export async function addTrackPhoto(args: {
   tenantId: string;
   trackId: string;
-  photoPath: string;
+  photoId: string;
+  kind: TrackPhoto['kind'];
+  path: string;
+  createdBy: string | null;
+}): Promise<boolean> {
+  const db = getDb();
+  const [track] = await db
+    .select({ id: tracks.id })
+    .from(tracks)
+    .where(
+      and(
+        eq(tracks.tenantId, args.tenantId),
+        eq(tracks.id, args.trackId),
+        isNull(tracks.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!track) return false;
+
+  await db.insert(trackPhotos).values({
+    id: args.photoId,
+    tenantId: args.tenantId,
+    trackId: args.trackId,
+    kind: args.kind,
+    path: args.path,
+    createdBy: args.createdBy,
+  });
+  return true;
+}
+
+/**
+ * Overwrite a track's metadata — marka, description, note (SPEC §7.13). The
+ * panel edit is the one surface allowed to CLEAR a field (weigh and import
+ * only ever fill), so nulls here are written, not skipped. Tenant-scoped.
+ * Returns false when the track isn't this tenant's (or is soft-deleted).
+ */
+export async function setTrackMeta(args: {
+  tenantId: string;
+  trackId: string;
+  marka: string | null;
+  description: string | null;
+  note: string | null;
 }): Promise<boolean> {
   const rows = await getDb()
     .update(tracks)
-    .set({ photoPath: args.photoPath })
+    .set({
+      marka: args.marka,
+      description: args.description,
+      note: args.note,
+    })
     .where(
       and(
         eq(tracks.tenantId, args.tenantId),
@@ -405,43 +450,27 @@ export async function setTrackPhoto(args: {
 }
 
 /**
- * Unlink a track's warehouse photo (tasks.md A5 — the office-side fix-up).
- * Tenant-scoped. Returns the path that was stored, so the caller can remove the
- * file after the DB no longer points at it; null when there was nothing linked
+ * Delete ONE of a track's photos (SPEC §7.14; A5's per-photo successor).
+ * Tenant-scoped. Returns the path the row held, so the caller can remove the
+ * file after the DB no longer points at it; null when there was no such photo
  * (or the track isn't this tenant's), which callers treat as already done.
  */
-export async function clearTrackPhoto(args: {
+export async function deleteTrackPhoto(args: {
   tenantId: string;
   trackId: string;
+  photoId: string;
 }): Promise<string | null> {
-  const db = getDb();
-  // RETURNING hands back the post-update row (null), so read the path first.
-  // A racing re-upload between the two statements loses its link and simply
-  // re-takes the shot — the same stance the upload handler documents.
-  const [row] = await db
-    .select({ photoPath: tracks.photoPath })
-    .from(tracks)
+  const rows = await getDb()
+    .delete(trackPhotos)
     .where(
       and(
-        eq(tracks.tenantId, args.tenantId),
-        eq(tracks.id, args.trackId),
-        isNull(tracks.deletedAt),
+        eq(trackPhotos.tenantId, args.tenantId),
+        eq(trackPhotos.trackId, args.trackId),
+        eq(trackPhotos.id, args.photoId),
       ),
     )
-    .limit(1);
-  if (!row?.photoPath) return null;
-
-  await db
-    .update(tracks)
-    .set({ photoPath: null })
-    .where(
-      and(
-        eq(tracks.tenantId, args.tenantId),
-        eq(tracks.id, args.trackId),
-        isNull(tracks.deletedAt),
-      ),
-    );
-  return row.photoPath;
+    .returning({ path: trackPhotos.path });
+  return rows[0]?.path ?? null;
 }
 
 /** Soft-delete a track (SPEC §5.3 `O'chirish`). Tenant-scoped, idempotent. */

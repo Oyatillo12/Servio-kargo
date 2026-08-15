@@ -190,3 +190,51 @@ describe('planWeighEntry — marka against an existing parcel (W2)', () => {
     expect(p.willNotify).toBe(false);
   });
 });
+
+describe('planWeighEntry — storeMarka (§7.13, H1)', () => {
+  it('keeps the typed string as box evidence, trimmed', () => {
+    const p = plan({
+      markaTyped: true,
+      markaCustomerId: CUSTOMER,
+      markaRaw: ' DK-1042 ',
+    });
+    expect(p.storeMarka).toBe('DK-1042');
+  });
+
+  it('keeps it even on a conflict — that IS the dispute evidence', () => {
+    const p = plan({
+      track: { currentStatus: 'CHINA_WAREHOUSE', customerId: OTHER },
+      markaTyped: true,
+      markaCustomerId: CUSTOMER,
+      markaRaw: 'DK-1042',
+    });
+    expect(p.marka.kind).toBe('conflict');
+    expect(p.storeMarka).toBe('DK-1042');
+  });
+
+  it('keeps a marka that matched nobody — the box is real either way', () => {
+    const p = plan({
+      markaTyped: true,
+      markaCustomerId: null,
+      markaRaw: 'ZZ-9999',
+    });
+    expect(p.storeMarka).toBe('ZZ-9999');
+  });
+
+  it('truncates to the §7.13 cap instead of refusing mid-shift', () => {
+    const p = plan({
+      markaTyped: true,
+      markaCustomerId: null,
+      markaRaw: 'X'.repeat(100),
+    });
+    expect(p.storeMarka).toBe('X'.repeat(32));
+  });
+
+  it('never stores an empty string, so a blank field cannot clear one', () => {
+    expect(plan().storeMarka).toBeNull();
+    expect(
+      plan({ markaTyped: true, markaCustomerId: null, markaRaw: '   ' })
+        .storeMarka,
+    ).toBeNull();
+  });
+});

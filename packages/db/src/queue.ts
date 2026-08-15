@@ -27,11 +27,13 @@ import {
   REMINDER_SWEEP_CRON,
   REMINDER_SWEEP_QUEUE,
   REMINDER_TZ,
+  TICKET_QUEUE,
   chunked,
   notifyDedupeKey,
   type BroadcastJob,
   type NotifyJob,
   type ReminderJob,
+  type TicketJob,
 } from '@kargotrack/shared';
 
 // SPEC §8: retry ×5 with exponential backoff.
@@ -94,6 +96,16 @@ export function getBoss(): Promise<PgBoss> {
       });
       await boss.updateQueue(BROADCAST_QUEUE, {
         name: BROADCAST_QUEUE,
+        policy: 'standard',
+      });
+      // Ticket deliveries (§7.15/H4): 'standard' — every reply is its own
+      // message, nothing to dedupe.
+      await boss.createQueue(TICKET_QUEUE, {
+        name: TICKET_QUEUE,
+        policy: 'standard',
+      });
+      await boss.updateQueue(TICKET_QUEUE, {
+        name: TICKET_QUEUE,
         policy: 'standard',
       });
       return boss;
@@ -348,6 +360,34 @@ export function workBroadcasts(handler: BroadcastJobHandler): Promise<string> {
       BROADCAST_QUEUE,
       { batchSize: BATCH_SIZE, includeMetadata: true, pollingIntervalSeconds: 1 },
       (jobs) => runBatch(boss, BROADCAST_QUEUE, jobs, handler),
+    ),
+  );
+}
+
+// --- Ticket deliveries (SPEC §7.15, tasks.md H4) ----------------------------
+
+/**
+ * Enqueue a staff ticket reply / closure notice for bot delivery. Callers
+ * enqueue only AFTER their DB write commits (same stance as notifications).
+ */
+export function enqueueTicketDelivery(job: TicketJob): Promise<string | null> {
+  return getBoss().then((boss) =>
+    boss.send(TICKET_QUEUE, job, {
+      retryLimit: RETRY_LIMIT,
+      retryBackoff: RETRY_BACKOFF,
+    }),
+  );
+}
+
+export type TicketJobHandler = JobHandler<TicketJob>;
+
+/** Register the ticket-delivery worker (mirrors {@link workNotifications}). */
+export function workTicketDeliveries(handler: TicketJobHandler): Promise<string> {
+  return getBoss().then((boss) =>
+    boss.work<TicketJob>(
+      TICKET_QUEUE,
+      { batchSize: BATCH_SIZE, includeMetadata: true, pollingIntervalSeconds: 1 },
+      (jobs) => runBatch(boss, TICKET_QUEUE, jobs, handler),
     ),
   );
 }

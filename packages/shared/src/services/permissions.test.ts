@@ -102,6 +102,20 @@ describe('can — the boundaries that motivated T8', () => {
     expect(can('warehouse', 'tracks.view')).toBe(true);
   });
 
+  it('keeps the ticket desk in the office (H3, §5.16)', () => {
+    expect(can('owner', 'tickets.handle')).toBe(true);
+    expect(can('manager', 'tickets.handle')).toBe(true);
+    expect(can('warehouse', 'tickets.handle')).toBe(false);
+  });
+
+  it('keeps track-metadata editing in the office (H1, §7.13)', () => {
+    // The warehouse writes the marka through the weighing flow; re-editing
+    // evidence from the track page is office work.
+    expect(can('owner', 'tracks.edit')).toBe(true);
+    expect(can('manager', 'tracks.edit')).toBe(true);
+    expect(can('warehouse', 'tracks.edit')).toBe(false);
+  });
+
   it('lets a warehouse hand attribute a parcel at intake', () => {
     // The marka is read off the box by the person holding it (tasks.md W2);
     // weighing without being able to say whose it is leaves the job half done.

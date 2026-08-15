@@ -34,6 +34,12 @@ export const CAPABILITIES = [
   'tracks.assign',
   /** Soft-delete a track. Irreversible in practice until T14 ships a trash. */
   'tracks.delete',
+  /**
+   * Edit a track's metadata — marka, description, internal note (SPEC 7.13).
+   * Office work: the warehouse writes the marka through the weighing flow
+   * (`tracks.weigh`), it does not re-edit evidence from the track page.
+   */
+  'tracks.edit',
   /** See customer records and their contact details. */
   'customers.view',
   /** Create or edit a customer. */
@@ -69,6 +75,12 @@ export const CAPABILITIES = [
   'settings.manage',
   /** Invite/deactivate employees, change roles, revoke sessions. */
   'team.manage',
+  /**
+   * Work the ticket desk: read threads, reply, change status, assign (H3,
+   * SPEC 5.16). Office work — a warehouse hand's evidence enters as photos
+   * and events, not as correspondence.
+   */
+  'tickets.handle',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -94,6 +106,7 @@ export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
     'tracks.status',
     'tracks.weigh',
     'tracks.assign',
+    'tracks.edit',
     'customers.view',
     'customers.manage',
     'money.customerDebt',
@@ -104,6 +117,7 @@ export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
     'import.run',
     'reminders.send',
     'export.data',
+    'tickets.handle',
   ],
 
   /**

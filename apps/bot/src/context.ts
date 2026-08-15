@@ -14,11 +14,21 @@ export interface SessionData {
   /** Language chosen during /start, before a customer row exists. */
   lang?: Lang;
   /** Which prompt we're waiting on. */
-  step?: 'awaiting_phone' | 'awaiting_tracks' | 'awaiting_calc_kg';
+  step?:
+    | 'awaiting_phone'
+    | 'awaiting_tracks'
+    | 'awaiting_calc_kg'
+    | 'awaiting_ticket_text';
   /** Calculator (§3.9): the tariff chosen before entering a weight. */
   calcTariffId?: string;
   /** Calculator: whether we've already re-asked once after a bad number (§3.9). */
   calcRetried?: boolean;
+  /** Ticket flow (§3.13): the ticket the next message appends to. */
+  ticketId?: string;
+  /** Ticket flow: category picked for a NEW ticket (no ticketId yet). */
+  ticketCategory?: string;
+  /** Ticket flow: track the new ticket is bound to (`issue:{id}`, §3.13). */
+  ticketTrackId?: string;
 }
 
 /** Fields the loading middleware guarantees on every handled update. */

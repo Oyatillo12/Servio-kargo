@@ -104,3 +104,24 @@ O'lcham kiritilmasa — hozirgidek sof kg (regressiya yo'q).
 boshqa narx) birinchi versiyaga kirmaydi — pilot real jadval ko'rsatsa,
 tarif modeliga diapazonlar keyin qo'shiladi. price_manual override har
 doim ustun turadi (o'zgarmaydi).
+
+---
+
+## D-006 · Ticket xulq-atvori (D-004 davomi) — 2026-08-16 (egasi)
+
+**Kontekst.** D-004 to'liq ticket tizimini tanladi, lekin to'rt xulq-atvor
+savoli ochiq qolgan edi. H3 boshlanishidan oldin egasi bilan hal qilindi.
+
+**Qaror (egasi, 4/4 tavsiya bo'yicha).**
+1. **Javob yuzasi:** faqat panel. Xodim javobni panelda yozadi, bot
+   yetkazadi; botning staff-rejimi ticketlarga aralashmaydi.
+2. **Closed xulqi:** mijoz yopiq ticketga yozsa — avto qayta ochiladi
+   (statusi `open`ga qaytadi, xabar tarixga qo'shiladi).
+3. **Kategoriyalar:** vazn / shikast / yo'qolgan / to'lov / boshqa —
+   D-004 ro'yxati o'zgarishsiz.
+4. **Yopish:** faqat xodim (panelda). Mijozga yopilgani haqida xabar
+   boradi; botda "hal bo'ldi" tugmasi yo'q.
+
+**Oqibatlar.** Bot tomonida bitta oddiy oqim qoladi (murojaat yozish /
+davom ettirish); xodim oqimi butunlay panelda. Mijoz-tomonlama yopish va
+bot-staff javoblari keyinroq alohida qaror bilan qo'shilishi mumkin.

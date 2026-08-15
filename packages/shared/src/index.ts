@@ -190,6 +190,21 @@ export {
   type StatusChangeInput,
 } from './services/notify';
 export {
+  TICKET_AUTHORS,
+  TICKET_CATEGORIES,
+  TICKET_CATEGORY_META,
+  TICKET_QUEUE,
+  TICKET_STATUSES,
+  TICKET_STATUS_META,
+  TICKET_TEXT_MAX,
+  clampTicketText,
+  ticketStatusAfterMessage,
+  type TicketAuthor,
+  type TicketCategory,
+  type TicketJob,
+  type TicketStatus,
+} from './services/tickets';
+export {
   planStatusChange,
   planBulkStatusChange,
   type StatusTransitionInput,

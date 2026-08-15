@@ -12,11 +12,13 @@ import {
   batches,
   customers,
   trackEvents,
+  trackPhotos,
   tracks,
   type Batch,
   type Customer,
   type Track,
   type TrackEvent,
+  type TrackPhoto,
 } from '@kargotrack/db/schema';
 import type { TrackStatus } from '@kargotrack/shared';
 
@@ -96,6 +98,15 @@ export interface TrackDetail {
   customer: Customer | null;
   batch: Batch | null;
   events: TrackEvent[];
+  /** The parcel's photos, newest first (SPEC §7.14). */
+  photos: TrackPhotoListRow[];
+}
+
+/** One gallery row — the file itself is served by id, never by path. */
+export interface TrackPhotoListRow {
+  id: string;
+  kind: TrackPhoto['kind'];
+  createdAt: Date;
 }
 
 export async function getTrackDetail(
@@ -148,25 +159,48 @@ export async function getTrackDetail(
     .where(eq(trackEvents.trackId, track.id))
     .orderBy(desc(trackEvents.createdAt));
 
-  return { track, customer, batch, events };
+  const photos = await listTrackPhotos(tenantId, trackId);
+
+  return { track, customer, batch, events, photos };
 }
 
-/** The stored photo path for a track (tenant-scoped), or `null`. */
+/** A track's photos, newest first (SPEC §7.14). Tenant-scoped. */
+export async function listTrackPhotos(
+  tenantId: string,
+  trackId: string,
+): Promise<TrackPhotoListRow[]> {
+  return getDb()
+    .select({
+      id: trackPhotos.id,
+      kind: trackPhotos.kind,
+      createdAt: trackPhotos.createdAt,
+    })
+    .from(trackPhotos)
+    .where(
+      and(
+        eq(trackPhotos.tenantId, tenantId),
+        eq(trackPhotos.trackId, trackId),
+      ),
+    )
+    .orderBy(desc(trackPhotos.createdAt));
+}
+
+/** The stored path of ONE photo of this tenant's track, or `null` (§7.14). */
 export async function getTrackPhotoPath(
   tenantId: string,
   trackId: string,
+  photoId: string,
 ): Promise<string | null> {
-  const db = getDb();
-  const [row] = await db
-    .select({ photoPath: tracks.photoPath })
-    .from(tracks)
+  const [row] = await getDb()
+    .select({ path: trackPhotos.path })
+    .from(trackPhotos)
     .where(
       and(
-        eq(tracks.tenantId, tenantId),
-        eq(tracks.id, trackId),
-        isNull(tracks.deletedAt),
+        eq(trackPhotos.tenantId, tenantId),
+        eq(trackPhotos.trackId, trackId),
+        eq(trackPhotos.id, photoId),
       ),
     )
     .limit(1);
-  return row?.photoPath ?? null;
+  return row?.path ?? null;
 }

@@ -28,6 +28,7 @@ import {
 import { statusView } from '@/lib/status-ui';
 import { cn } from '@/lib/utils';
 import { CustomerCard } from '@/features/tracks/components/customer-card';
+import { MetaCard } from '@/features/tracks/components/meta-card';
 import { PhotoCard } from '@/features/tracks/components/photo-card';
 import {
   WeightForm,
@@ -128,7 +129,7 @@ export default async function TrackDetailPage({
   ]);
   if (!detail) notFound();
 
-  const { track, customer, batch, events } = detail;
+  const { track, customer, batch, events, photos } = detail;
   const isUsd = tenant.currency === 'USD';
 
   // Outbound notifications about THIS parcel (tasks.md A3): "did the customer
@@ -255,12 +256,21 @@ export default async function TrackDetailPage({
         />
       </SectionCard>
 
-      {/* Photo: view for everyone, upload/replace/delete behind tracks.weigh
-          (tasks.md A5 — the office-side fix-up; the endpoint re-checks). */}
+      {/* Marka / tavsif / izoh (SPEC §7.13, tasks.md H1). */}
+      <MetaCard
+        trackId={track.id}
+        marka={track.marka}
+        description={track.description}
+        note={track.note}
+        canEdit={can(role, 'tracks.edit')}
+      />
+
+      {/* Photo gallery (SPEC §7.14): view for everyone, upload/delete behind
+          tracks.weigh (the endpoints re-check). */}
       <PhotoCard
         trackId={track.id}
         code={track.codeOriginal}
-        hasPhoto={track.photoPath != null}
+        photos={photos}
         canEdit={can(role, 'tracks.weigh')}
       />
 

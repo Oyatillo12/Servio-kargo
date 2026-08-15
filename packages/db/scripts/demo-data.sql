@@ -36,7 +36,7 @@
 --    dialled. `settings.reminders.weekly_enabled` is false and every customer
 --    tg_user_id is fake, so the reminder sweep will not try to message anyone.
 --    Paste a real token into this tenant if you want the demo bot to work.
---  * photo_path is left NULL everywhere — pointing it at files that do not
+--  * No track_photos rows are seeded — pointing them at files that do not
 --    exist under /data/uploads would render broken thumbnails.
 --  * Money is integer tiyin throughout (CLAUDE.md rule 6): 55 000 so'm/kg is
 --    5 500 000 tiyin.
@@ -426,7 +426,7 @@ FROM final f;
 INSERT INTO tracks (
   id, tenant_id, customer_id, tariff_id, batch_id, code_normalized, code_original,
   current_status, weight_grams, price_tiyin, price_usd_cents, usd_rate_used,
-  price_manual, photo_path, deleted_at, created_at
+  price_manual, deleted_at, created_at
 )
 SELECT
   t.id,
@@ -444,7 +444,6 @@ SELECT
   t.price_tiyin,
   NULL, NULL,                    -- UZS tenant: no USD columns
   t.price_manual,
-  NULL,                          -- see header note on photo_path
   t.deleted_at,
   t.created_at
 FROM d_tracks t

@@ -60,9 +60,9 @@ TASHKENT_WAREHOUSE as their own status.
 
 Main menu (reply keyboard, 2 columns, 4 rows):
 - uz: `➕ Trek qo'shish` `📦 Mening yuklarim` / `🧮 Kalkulyator` `💰 Balans` /
-  `🇨🇳 Ombor manzili` `ℹ️ Ma'lumot` / `🌐 Til / Язык`
+  `🇨🇳 Ombor manzili` `ℹ️ Ma'lumot` / `✍️ Murojaat` `🌐 Til / Язык`
 - ru: `➕ Добавить трек` `📦 Мои посылки` / `🧮 Калькулятор` `💰 Баланс` /
-  `🇨🇳 Адрес склада` `ℹ️ Информация` / `🌐 Til / Язык`
+  `🇨🇳 Адрес склада` `ℹ️ Информация` / `✍️ Обращение` `🌐 Til / Язык`
 
 Immediately after registration the bot also sends the `help_card` (3.12) — a
 brand-new customer is looking at seven unexplained buttons and this is the
@@ -136,7 +136,9 @@ their account by sending their invitation code to the bot (5.12); an owner
 revokes it by deactivating them or unlinking their Telegram, and both take
 effect on the next update.
 1. **Photo**: a photo with caption = track code → download to
-   `/data/uploads/{tenantId}/{trackId}.jpg`, link to track, confirm.
+   `/data/uploads/{tenantId}/{trackId}/{photoId}.jpg`, add to the parcel's
+   photos as `intake` (7.14 — each shot is a new photo, nothing overwritten),
+   confirm.
 2. **Weighing**: caption or plain text of the form `CODE 3.2 [MARKA]` (weight
    in kg, dot or comma; the marka optional) → set weight_grams, compute price
    per 7.4, and link the photo when present. If the track was in CREATED →
@@ -146,7 +148,8 @@ effect on the next update.
    new. A marka attributes the parcel exactly as on the /weigh console
    (5.14) — same shared planner, same refusal to move a parcel that already
    belongs to somebody else. A third token only counts as a marka if it
-   carries a digit, so `CODE 3.2 kg` still means 3.2 kg.
+   carries a digit, so `CODE 3.2 kg` still means 3.2 kg. The typed marka is
+   saved onto the track as box evidence per 7.13, whatever it resolved to.
    Replies per 4.5 staff strings.
 
    This is the FALLBACK channel: Telegram is blocked in China, so 5.14 is the
@@ -188,6 +191,9 @@ Callback-data grammar — `action[:arg][:modifier]`:
 | `calc:restart` | run the calculator again |
 | `addmore` | re-open the add-track prompt |
 | `balance` \| `help` | open that card |
+| `issue:{trackId}` | start a ticket bound to the customer's own track (3.13) |
+| `tcat:{category}` | pick a ticket category (3.13) |
+| `tcont` \| `tnew` | continue the closed ticket / start a fresh one (3.13) |
 | `cancel` | abandon the pending prompt; strip the button, keep the text |
 
 Rules:
@@ -207,6 +213,40 @@ Rules:
 notifies you) plus one line per menu section. It exists because the reply
 keyboard shows seven labels and explains none of them — in particular that a
 bare trek code typed into the chat is itself a query (3.6).
+
+### 3.13 Support tickets (`✍️ Murojaat` — D-004, D-006, tasks.md H3)
+
+Every problem used to be a phone call that left no trace. A ticket is the
+dispute living where the work is: category, status, an assigned employee and
+the full message history. The customer writes from the bot; **staff reply only
+from the panel** (5.16, D-006) — the bot is the delivery channel, never the
+staff surface.
+
+Entry points:
+- `✍️ Murojaat` main-menu button.
+- `⚠️ Muammo bor` inline button on the customer's OWN track card (3.6) — a
+  NEW ticket starts bound to that track. Never on the limited card. Both
+  entry points run the SAME flow below — with an open ticket the message
+  joins it (step 1, binding untouched); the track binding applies only when
+  a new ticket is actually created.
+
+Flow (registered customers only — 4.1 asks others to register first):
+1. If the customer has an OPEN or IN_PROGRESS ticket: show its one-line header
+   (`{category} · {status}`) and prompt for the next message (with `❌`).
+   The reply is appended to that ticket as a customer message. One open
+   dispute at a time keeps the history in one place.
+2. Else, if their LATEST ticket is closed: inline choice —
+   `🔄 Davom ettirish` (append to it; the append REOPENS it, D-006) /
+   `🆕 Yangi murojaat` / `❌`.
+3. Else (or after `🆕`): category picker — vazn / shikast / yo'qolgan /
+   to'lov / boshqa (inline, one row of emoji buttons + `❌`) → text prompt →
+   create the ticket (`open`) with that first message. Confirm with
+   `ticket_created` (4.6).
+
+A customer message landing in a ticket that is `closed` at write time flips it
+back to `open` (D-006) — "the problem came back" must never be silently filed
+into a closed case. Statuses and category names shown to the customer come
+from the shared catalogue (rule 5) — the panel shows the same words.
 
 ## 4. Message & notification templates
 
@@ -282,6 +322,19 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
 - Broadcast messages have no wrapper — admin's text is sent as-is.
 - ru variants for all of the above.
 
+### 4.6 Ticket strings (3.13, 5.16 — D-004/D-006)
+- ticket_ask_category — uz: `Muammo qaysi turga tegishli?`
+- ticket_ask_text — uz: `Muammoni yozib yuboring — imkon qadar batafsil:`
+- ticket_created — uz: `✅ Murojaatingiz qabul qilindi. Javobni shu botda olasiz.`
+- ticket_appended — uz: `✅ Xabaringiz murojaatga qo'shildi.`
+- ticket_open_header — uz: `📮 Ochiq murojaatingiz: {category} · {status}\nYangi xabar yozing:`
+- ticket_closed_choice — uz: `Oxirgi murojaatingiz ({category}) yopilgan. Davom ettirasizmi yoki yangi ochasizmi?`
+- ticket_reply (staff reply delivery, H4) — uz: `💬 Murojaatingizga javob ({category}):\n\n{text}\n\nJavob yozish uchun: ✍️ Murojaat`
+- ticket_closed_notice (H4) — uz: `✅ Murojaatingiz ({category}) yopildi. Yana muammo bo'lsa — ✍️ Murojaat.`
+- Category and status names live in `packages/shared` (rule 5): categories
+  vazn/shikast/yo'qolgan/to'lov/boshqa, statuses ochiq/jarayonda/yopiq.
+- ru variants for all of the above.
+
 ## 5. Admin panel screens (all tenant-scoped, uz + ru)
 
 The panel runs next-intl **without i18n routing**: paths stay `/tracks`,
@@ -301,7 +354,7 @@ two copies would drift the moment one side is edited.
 - **5.2 /tracks** — table: Kod, Mijoz (client_code + ism, link), Status
   (colored badge), Reys, Og'irlik, Narx, Sana. Header carries `⬇️ Excel`
   (5.11). Filters: status dropdown,
-  reys dropdown + search (code / customer name / phone), plus the operational
+  reys dropdown + search (code / customer name / phone / marka, 7.13), plus the operational
   worklists of 5.10 as `?work=<unassigned|to_weigh|stale_pickup>`. A worklist
   replaces the status chips with a labelled banner and a `✕ Filtrsiz` exit,
   because each one already implies a status; it combines with search, reys and
@@ -323,8 +376,12 @@ two copies would drift the moment one side is edited.
 - **5.3 /tracks/[id]** — status select, tariff select (defaults to tenant's
   default tariff), weight input (kg, up to 2 decimals → stored grams, auto
   price per 7.4), price field with `Qo'lda kiritish` toggle (manual override,
-  7.4), batch display, photo preview, event timeline (status, date, who),
-  customer card. `O'chirish` = soft delete with confirm.
+  7.4), batch display, photo gallery (7.14: every photo with its kind badge
+  and date; upload with a kind choice, per-photo delete — both behind
+  `tracks.weigh`), event timeline (status, date, who),
+  customer card, and a metadata card: marka, tavsif, izoh (7.13) shown when
+  set and edited in place (`tracks.edit`). `O'chirish` = soft delete with
+  confirm.
   The customer card is also the assignment control (7.3): unattached →
   `Biriktirish`; attached → `O'zgartirish` / `Ajratish` next to the profile
   and call shortcuts. Both open the customer picker: search by
@@ -337,7 +394,8 @@ two copies would drift the moment one side is edited.
      as columns (copy out of Excel); without tabs it stays one code per line.
   2. **Ustunlar** — column mapping. A cargo Excel is a table, not a bag of
      codes: the admin binds each column to `Trek kodi` (majburiy), `Mijoz`,
-     `Vazn (kg)` and `Narx (so'm)`, with a `Birinchi qator — sarlavha` toggle
+     `Vazn (kg)`, `Narx (so'm)` and `Tavsif` (7.13; needs `tracks.edit`),
+     with a `Birinchi qator — sarlavha` toggle
      and a 6-row sample of the file. The layout is GUESSED first (header
      keywords in uz/ru/en, and the code column verified against the data), so
      the usual file needs no touching. Only the fields the role may write are
@@ -526,7 +584,9 @@ two copies would drift the moment one side is edited.
   matching nobody is not an error (the parcel is real either way), and a marka
   naming somebody else NEVER moves the parcel: weight and price are written,
   the owner is left alone, the operator is warned. A mistyped marka must not
-  move a parcel, and its debt, onto the wrong person.
+  move a parcel, and its debt, onto the wrong person. Whatever the marka
+  resolved to, the typed string itself is saved onto the track (7.13) — in a
+  conflict, "the box says DK-1042" is exactly the evidence the dispute needs.
 
   Beside the form, today's entries (code, kg, price, owner, warnings), so a
   wrong weight is seen in a second rather than at the end of the shift. The
@@ -545,9 +605,9 @@ two copies would drift the moment one side is edited.
   frame — and closing the sheet stops the camera tracks.
 
   **Photo** — each entry in the day list carries a camera button: JPEG, max
-  10 MB, stored at `{uploadsDir}/{tenantId}/{trackId}.jpg`, exactly where and
-  how the bot's staff-photo flow (3.8) stores it, so a parcel has ONE photo
-  whichever surface took it and re-shooting overwrites. Uploaded to
+  10 MB, stored per 7.14 as a new `intake` photo (re-shooting adds another
+  shot; nothing overwrites), exactly how the bot's staff-photo flow (3.8)
+  stores one. Uploaded to
   `POST /api/tracks/:id/photo` rather than a Server Action, whose request body
   is capped at 1 MB — a phone camera clears that on the first shot. The upload
   is guarded by `tracks.weigh`, and the DB write doubles as the tenant check.
@@ -591,6 +651,34 @@ Flow, one screen, `(app)` group (nav "Topshirish", `tracks.status` to see it):
    a "next customer" reset. The payment lands on the customer page ledger
    exactly like any other payment; a mistake is corrected with the ordinary
    storno (A7).
+
+### 5.16 Tickets (`/tickets`, tasks.md H3 — D-004, D-006)
+
+The dispute desk, for `tickets.handle` (owner + manager — office work; a
+warehouse hand's evidence enters as photos and events, not as correspondence).
+
+**List** — status chips `Ochiq (default) / Jarayonda / Yopiq / Hammasi`
+(default view = open + in_progress: the queue, not the archive). Each row:
+category, customer (client_code + name, link), bound track code when any,
+first line of the LAST message, assigned employee (or `—`), last-activity
+time. Sorted by last activity, newest first, paged 20. NO SLA timers (D-004).
+
+**Detail** (`/tickets/[id]`) — the thread as bubbles (customer left, staff
+right, each with author + time), customer/track cards linking out, and three
+controls:
+- **Reply** — textarea; sending appends a staff `ticket_messages` row and
+  queues delivery to the customer's bot chat through the notify worker
+  (H4, §8 rate limits). Outcome lands in `message_log` (kind `ticket`) and is
+  shown beside the message — an answer the customer never received must not
+  look answered.
+- **Status** — open / in_progress / closed. Closing sends
+  `ticket_closed_notice` (4.6). A customer message into a closed ticket
+  reopens it (D-006) and the row returns to the default view.
+- **Assign** — any active employee of the tenant, or nobody. Assignment is a
+  workflow aid, not a permission: any `tickets.handle` holder may reply to
+  any ticket.
+
+Dashboard (5.10) shows an open-tickets count linking here (H4).
 
 ## 6. Super-admin (`/sa`, guarded by SUPERADMIN_TOKEN env)
 
@@ -721,6 +809,71 @@ working until the code is redeemed.
     number until an admin merges them. Duplicates are refused in the
     application, where a clash can be reported instead of aborting a bot
     registration mid-flow.
+
+- **7.13 Track metadata (tasks.md H1):** three nullable text columns on
+  `tracks`, each answering a different question in a dispute:
+  - `marka` (≤ 32 chars, longer input truncated — never refused mid-shift) —
+    **what is written on the box**, exactly as typed,
+    NOT who owns the parcel. Ownership stays with `customer_id` and its
+    attach/conflict rules (3.8, 5.14); marka is the evidence those rules were
+    applied to. Weighing with a marka typed always saves it (overwriting the
+    previous value — the box in hand is the latest evidence), and the typed
+    string also goes into the weighing event's `meta.markaRaw`, so history
+    survives the overwrite (rule: events are append-only). An empty marka
+    field on a weighing never CLEARS a stored marka. On import, the owner
+    cell is saved as marka when it has the shape of a client code — a name or
+    phone in that cell is an owner reference, not a box marking.
+  - `description` (≤ 200 chars) — what the parcel is ("qora ko'ylak, 2 quti").
+    Comes from an import column (5.4) or the track page (5.3). Shown to the
+    customer (a person with twelve identical codes deserves to know which is
+    which) — unlike the other two fields.
+  - `note` (≤ 500 chars) — internal admin note. **Panel-only: never sent to
+    the bot, never rendered in the TWA, never exported to the customer's
+    statement.** Marka is likewise panel-only (it is warehouse routing data,
+    meaningless to the customer).
+  - Import fills `marka`/`description` only when the track's field is still
+    NULL — a file re-imported next week must not clobber what an admin typed
+    by hand. The track page edits all three freely (`tracks.edit`).
+
+- **7.14 Photos (tasks.md H2):** a parcel carries MANY photos, not one —
+  `track_photos` (id, tenant_id, track_id, kind, path, created_by,
+  created_at), append-only in spirit: uploading never overwrites, deleting
+  removes one row + its file.
+  - `kind` labels why the shot was taken: `intake` (qabul — the box arriving),
+    `damage` (shikast — the evidence photo a dispute lives on), `handover`
+    (topshirish — the state it left in). The bot staff flow and the /weigh
+    console always write `intake` — speed matters there; the track page
+    chooses the kind on upload.
+  - Files live at `{uploadsDir}/{tenantId}/{trackId}/{photoId}.jpg`; the
+    `path` column stores the actual relative path, so photos migrated from
+    the single-photo era (`{tenantId}/{trackId}.jpg`) keep serving from where
+    they are. JPEG, ≤ 10 MB, same as before (§8).
+  - The migration copies every existing `tracks.photo_path` into
+    `track_photos` as `intake` and DROPS the column — one source of truth.
+  - Customer surfaces (bot card, §4.2 notification attach, TWA) show a
+    parcel's photos regardless of kind — a damage photo is exactly what the
+    customer must see before pickup. The notification attaches the NEWEST
+    photo; the bot's 📷 sends up to the 10 newest as an album.
+  - Upload/delete stays behind `tracks.weigh` on every surface (A5 rule);
+    the serving routes stay session-guarded and ownership-scoped (B3, F1).
+
+- **7.15 Tickets (tasks.md H3 — D-004, D-006):**
+  - `tickets` (tenant_id, customer_id, track_id nullable, category, status,
+    assigned_to nullable, last_message_at) + `ticket_messages` (ticket_id,
+    author 'customer'|'staff', author_id, text). Messages are append-only;
+    a ticket is one dispute, its thread is the record.
+  - Statuses `open → in_progress → closed`, moved only by staff in the panel.
+    A CUSTOMER message written into a `closed` ticket flips it to `open` in
+    the same transaction (D-006). `last_message_at` orders every list.
+  - Categories are the fixed D-004 five; category and status display names
+    live in `packages/shared` (rule 5) — both surfaces read one catalogue.
+  - Staff reply from the panel ONLY (D-006). Delivery to the bot goes through
+    the throttled queue (§8) and records its outcome in `message_log`
+    (kind `ticket`) — best-effort logging, same stance as §4.2.
+  - Every read is tenant-scoped AND, on the bot side, customer-scoped: a
+    customer sees only their own tickets, ever.
+  - Ticket text ≤ 2000 chars per message (a Telegram message fits ~4096;
+    staff replies get the same cap). Longer input is truncated on intake.
 
 ## 8. Non-functional requirements
 

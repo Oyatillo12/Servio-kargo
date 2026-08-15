@@ -17,12 +17,16 @@ import { handleLookup } from './lookup';
 import { showBalance, showInfo, showMyTracks } from './menu';
 import { handleStaffLink } from './staffLink';
 import { handleStaffWeighing, isStaff } from './staffWeigh';
+import { handleTicketText, ticketMenuHandler } from './tickets';
 
 /** Clear every pending multi-step flow's session state. */
 export function resetFlows(ctx: KargoContext): void {
   ctx.session.step = undefined;
   ctx.session.calcTariffId = undefined;
   ctx.session.calcRetried = undefined;
+  ctx.session.ticketId = undefined;
+  ctx.session.ticketCategory = undefined;
+  ctx.session.ticketTrackId = undefined;
 }
 
 export async function textRouter(ctx: KargoContext): Promise<void> {
@@ -47,6 +51,8 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
         return showChinaAddress(ctx);
       case 'info':
         return showInfo(ctx);
+      case 'ticket':
+        return ticketMenuHandler(ctx);
       case 'lang':
         // A registered customer switching language does not need re-greeting;
         // the welcome copy ("welcome to X") read as if they had been logged out.
@@ -66,6 +72,11 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
   if (ctx.session.step === 'awaiting_tracks') {
     ctx.session.step = undefined;
     await handleAddTracks(ctx, text);
+    return;
+  }
+
+  if (ctx.session.step === 'awaiting_ticket_text') {
+    await handleTicketText(ctx, text);
     return;
   }
 

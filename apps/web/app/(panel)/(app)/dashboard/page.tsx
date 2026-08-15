@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { PanelSection, SectionStack } from '@/components/ui/panel-section';
 import { requireAdmin } from '@/lib/auth';
 import {
+  countOpenTickets,
   getCashByStaff,
   getDailyTushum,
   getDashboardStats,
@@ -59,14 +60,20 @@ export default async function DashboardPage({
   // seeing colleagues' takings is a different decision from seeing the total.
   const showCashByStaff = can(role, 'team.manage');
 
-  const [stats, worklists, tushum, cashByStaff] = await Promise.all([
-    getDashboardStats(tenant.id, period),
-    getWorklistCounts(tenant.id),
-    showMoney ? getDailyTushum(tenant.id) : Promise.resolve([]),
-    showCashByStaff
-      ? getCashByStaff(tenant.id, period)
-      : Promise.resolve<CashByStaffRow[]>([]),
-  ]);
+  // The ticket queue is office work (SPEC §5.16) — no count for roles that
+  // cannot open /tickets anyway.
+  const showTickets = can(role, 'tickets.handle');
+
+  const [stats, worklists, tushum, cashByStaff, openTickets] =
+    await Promise.all([
+      getDashboardStats(tenant.id, period),
+      getWorklistCounts(tenant.id),
+      showMoney ? getDailyTushum(tenant.id) : Promise.resolve([]),
+      showCashByStaff
+        ? getCashByStaff(tenant.id, period)
+        : Promise.resolve<CashByStaffRow[]>([]),
+      showTickets ? countOpenTickets(tenant.id) : Promise.resolve(0),
+    ]);
 
   const periodLabel = t(PERIOD_KEY[period]);
 
@@ -118,6 +125,21 @@ export default async function DashboardPage({
           alert={stats.undeliveredMessages > 0}
           className="md:col-span-2"
         />
+
+        {/* Open tickets (tasks.md H4): the dispute queue, NOT period-scoped —
+            an unanswered complaint from last week is still today's problem.
+            The whole tile links into §5.16's default (active) view. */}
+        {showTickets ? (
+          <Link href="/tickets" className="md:col-span-2">
+            <StatTile
+              label={t('openTickets')}
+              sublabel={t('openTicketsHint')}
+              value={openTickets}
+              alert={openTickets > 0}
+              className="h-full transition-shadow hover:shadow-sm"
+            />
+          </Link>
+        ) : null}
 
         {/* Ahead of the chart on phones — one number is cheaper to read than a
             14-day bar chart, and the chart is the natural end of the screen.

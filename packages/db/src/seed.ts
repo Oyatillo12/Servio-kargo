@@ -261,10 +261,8 @@ async function main() {
         currentStatus: status,
         weightGrams,
         priceTiyin,
-        photoPath:
-          status === 'READY_FOR_PICKUP' && rand() > 0.5
-            ? `demo/${code}.jpg`
-            : null,
+        // No demo photos: track_photos rows pointing at files that don't
+        // exist would render as broken frames (see demo-data.sql note).
         createdAt,
       })
       .returning();

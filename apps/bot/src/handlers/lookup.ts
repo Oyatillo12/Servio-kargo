@@ -23,7 +23,12 @@ import type { Track } from '@kargotrack/db/schema';
 import { getConfig } from '../config';
 import type { KargoContext } from '../context';
 import { helpFallbackKeyboard, trackCardKeyboard } from '../keyboards';
-import { findTrackByCode, getBatchById, getLastEventAt } from '../queries';
+import {
+  findTrackByCode,
+  getBatchById,
+  getLastEventAt,
+  listTrackPhotoPaths,
+} from '../queries';
 import { logger } from '../logger';
 
 /** Reformat a stored `YYYY-MM-DD` date to display `DD.MM.YYYY` (§4 formatting). */
@@ -32,11 +37,17 @@ function formatIsoDate(iso: string): string {
   return d && m && y ? `${d}.${m}.${y}` : iso;
 }
 
-/** Absolute path of a track's stored photo, or `undefined` if there isn't one. */
-function photoPathOf(ctx: KargoContext, track: Track): string | undefined {
-  if (!track.photoPath) return undefined;
-  const abs = join(getConfig().uploadsDir, track.photoPath);
-  return existsSync(abs) ? abs : undefined;
+/**
+ * Absolute paths of a track's stored photos (newest first, §7.14), keeping
+ * only files that actually exist on disk. Capped at one Telegram album.
+ */
+async function photoAbsPathsOf(
+  ctx: KargoContext,
+  track: Track,
+): Promise<string[]> {
+  const paths = await listTrackPhotoPaths(ctx.tenant.id, track.id);
+  const dir = getConfig().uploadsDir;
+  return paths.map((p) => join(dir, p)).filter((abs) => existsSync(abs));
 }
 
 /**
@@ -91,33 +102,48 @@ export async function renderTrackCard(
       !opts.limited && track.priceTiyin != null
         ? formatSom(track.priceTiyin)
         : undefined,
+    // §7.13: contents belong on the owner's own card only. Marka and note are
+    // panel-only and deliberately never rendered here.
+    description:
+      !opts.limited && track.description != null
+        ? track.description
+        : undefined,
   });
 
   const keyboard = opts.limited
     ? new InlineKeyboard()
     : trackCardKeyboard(s, track.id, opts.fromPage);
-  if (!opts.limited && photoPathOf(ctx, track)) {
+  if (!opts.limited && (await photoAbsPathsOf(ctx, track)).length > 0) {
     keyboard.row().text(s.nav.photo, `photo:${track.id}`);
+  }
+  // §3.13: a dispute starts from the parcel it is about — but only for the
+  // parcel's OWNER (staff looking at someone else's parcel has the panel).
+  if (!opts.limited && ctx.customer && track.customerId === ctx.customer.id) {
+    keyboard.row().text(s.ticketIssueButton, `issue:${track.id}`);
   }
 
   return { text, keyboard };
 }
 
 /**
- * Send a track's status card as a NEW message, attaching the warehouse photo
- * when one exists (SPEC §3.6). Used by the free-text lookup — where there is no
- * list message to replace — and by the explicit 📷 button.
+ * Send a track's status card as a NEW message, attaching the warehouse photos
+ * when any exist (SPEC §3.6, §7.14). Used by the free-text lookup — where
+ * there is no list message to replace — and by the explicit 📷 button.
+ *
+ * One photo rides as the card's own image; several go out as an album AFTER
+ * the card (an album cannot carry an inline keyboard, and the card's buttons
+ * matter more than a combined message).
  */
 export async function sendTrackCard(
   ctx: KargoContext,
   track: Track,
 ): Promise<void> {
   const { text, keyboard } = await renderTrackCard(ctx, track);
-  const abs = photoPathOf(ctx, track);
+  const abs = await photoAbsPathsOf(ctx, track);
 
-  if (abs) {
+  if (abs.length === 1) {
     try {
-      await ctx.replyWithPhoto(new InputFile(abs), {
+      await ctx.replyWithPhoto(new InputFile(abs[0]!), {
         caption: text,
         // No 📷 button on a message that already IS the photo.
         reply_markup: trackCardKeyboard(ctx.s, track.id),
@@ -128,7 +154,20 @@ export async function sendTrackCard(
     }
   }
 
-  await ctx.reply(text, { reply_markup: keyboard });
+  await ctx.reply(text, {
+    reply_markup:
+      abs.length > 1 ? trackCardKeyboard(ctx.s, track.id) : keyboard,
+  });
+
+  if (abs.length > 1) {
+    try {
+      await ctx.replyWithMediaGroup(
+        abs.map((p) => ({ type: 'photo' as const, media: new InputFile(p) })),
+      );
+    } catch (err) {
+      logger.warn({ err, trackId: track.id }, 'failed to send photo album');
+    }
+  }
 }
 
 export async function handleLookup(

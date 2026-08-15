@@ -109,11 +109,22 @@ entry, and update SPEC.md BEFORE writing the code (workflow: D-001).
   claims them), batch_id (nullable), tariff_id (nullable), code_normalized,
   code_original, current_status, weight_grams (nullable), price_tiyin (nullable),
   price_usd_cents (nullable), usd_rate_used (nullable), price_manual (bool,
-  default false), photo_path (nullable), deleted_at (nullable), created_at
+  default false), marka/description/note (nullable, SPEC 7.13),
+  deleted_at (nullable), created_at
   - UNIQUE index on (tenant_id, code_normalized)
+- `track_photos` — id, tenant_id, track_id, kind ('intake'|'damage'|
+  'handover'), path, created_by, created_at. Many photos per track, never
+  overwritten; files at `{uploadsDir}/{tenantId}/{trackId}/{photoId}.jpg`
+  (SPEC 7.14).
 - `track_events` — id, track_id, status, meta jsonb, created_by, created_at
 - `payments` — id, tenant_id, customer_id, amount_tiyin, method
   ('cash'|'click'|'payme'|'other'), note, created_by (admin_users), created_at
+- `tickets` — id, tenant_id, customer_id, track_id (nullable), category
+  ('weight'|'damage'|'lost'|'payment'|'other'), status ('open'|'in_progress'|
+  'closed'), assigned_to (nullable), last_message_at, created_at +
+  `ticket_messages` (ticket_id, author 'customer'|'staff', author_id, text).
+  Customer writes from the bot, staff reply ONLY from the panel; a customer
+  message into a closed ticket reopens it (SPEC 7.15, D-004/D-006).
 - `broadcasts` — id, tenant_id, text, sent_count, created_at
 - `message_log` — id, tenant_id, customer_id, kind ('notify'|'reminder'|
   'broadcast'), status ('sent'|'dropped'|'failed'), track_id?, broadcast_id?,

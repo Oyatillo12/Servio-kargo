@@ -210,22 +210,49 @@ boshlanishida SPEC.md tegishli bo'limi YOZILADI, keyin kod.
 
 ### H · Nizo va dalil (D-004)
 
-- [ ] **H1 · Trek metadata** — `tracks`ga `marka`, `description`, `note`
-      ustunlari (P7 validatsiyasidan OLDIN shart!); import mapping'ga
-      marka/tavsif; qidiruvga marka; weigh oqimidagi marka endi saqlanadi.
-- [ ] **H2 · Ko'p foto** — `track_photos` jadvali, fayl yo'li
-      `{tenantId}/{trackId}/{photoId}.jpg`; mavjud `photo_path`
-      migratsiyasi; bot/panel/weigh/TWA ko'p fotoga o'tadi; foto turi
-      belgisi (qabul / shikast / topshirish).
-- [ ] **H3 · Ticket tizimi** — `tickets` (status: open/in_progress/closed,
-      kategoriya: vazn/shikast/yo'qolgan/to'lov/boshqa, assigned_to,
-      track_id nullable) + `ticket_messages`. Bot: "✍️ Murojaat" tugmasi +
-      trek kartasida "Muammo bor"; javob paneldan botga yetkaziladi.
-      Panel: ticket worklist + detal + status/tayinlash. SLA-taymer YO'Q
-      (D-004).
-- [ ] **H4 · Ticket bildirishnomalari** — javoblar notify-worker orqali
-      (rate-limit hurmat qilinadi), `message_log`ga yoziladi; dashboardda
-      ochiq ticketlar soni.
+- [x] **H1 · Trek metadata** ✅ (2026-08-16, SPEC 7.13) — `tracks`ga `marka`,
+      `description`, `note` (migratsiya 0015, toza bazada tekshirildi).
+      Weigh (panel + bot staff) yozilgan markani saqlaydi — conflict/notFound
+      bo'lsa ham (dalil!), xom satr event `meta.markaRaw`da; bo'sh maydon
+      hech qachon tozalamaydi. Importda alohida "marka" ustuni YO'Q (rejadan
+      farq): mijoz katagi client-code shakliga ega bo'lsa o'zi marka sifatida
+      saqlanadi; `Tavsif` — yangi mappable ustun (`tracks.edit` bilan).
+      Import fill-if-empty. Qidiruvga marka qo'shildi. Trek detalida metadata
+      karta (yangi `tracks.edit` capability: owner+manager). `description`
+      mijozga ko'rinadi (bot karta + TWA), `marka`/`note` — faqat panel.
+- [x] **H2 · Ko'p foto** ✅ (2026-08-16, SPEC 7.14) — `track_photos`
+      (0016-migratsiya: toza baza + yangilanish yo'li Docker'da tekshirildi,
+      `photo_path` ko'chirilib DROP qilindi). Fayl yo'li
+      `{tenantId}/{trackId}/{photoId}.jpg`, eski fayllar joyida qoladi
+      (path ustunda). Panel: galereya + tur tanlab yuklash + har fotoga
+      o'chirish; weigh/bot staff — doim `intake` (tezlik); bot 📷 — 1 ta
+      bo'lsa karta rasmi, ko'p bo'lsa karta + albom (≤10); notify —
+      eng yangi foto; TWA — hammasi. Tur: qabul/shikast/topshirish.
+      **Halol chegara:** yangi test yo'q — hammasi IO (route/query),
+      pure logika yo'q. Qo'lda tekshirish deploy'dan keyin: turli tur bilan
+      ko'p yuklash, har fotoga o'chirish, bot 📷 (1 vs albom), TWA galereya,
+      notify'ga eng yangi foto ilova. **Deploy ehtiyoti:** 0016 eski kod
+      o'qiydigan `photo_path`ni DROP qiladi — migratsiya va konteyner
+      restart orasida eski kod 500 beradi; H-epic'ni tinch soatda deploy
+      qilish, restart darhol.
+- [x] **H3 · Ticket tizimi** ✅ (2026-08-16, SPEC 3.13/5.16/7.15, D-006) —
+      `tickets` + `ticket_messages` (0017). Bot: menyuda "✍️ Murojaat",
+      trek kartasida "⚠️ Muammo bor" (faqat egasiga); ochiq ticket bo'lsa —
+      xabar qo'shiladi, yopiq bo'lsa — "davom ettirish (qayta ochadi) /
+      yangi" tanlovi (D-006), aks holda kategoriya → matn. Panel: /tickets
+      worklist (chips, default = faol) + detal (thread bubbles, javob,
+      status, tayinlash), yangi `tickets.handle` capability (owner+manager).
+      Kategoriya/status nomlari packages/shared'da (rule 5). Shared testlar:
+      katalog, clampTicketText, D-006 reopen qoidasi.
+- [x] **H4 · Ticket bildirishnomalari** ✅ (2026-08-16) — TICKET_QUEUE
+      (pg-boss, standard) + bot'da ticket-worker: javob/yopilish xabari
+      rate-limiter orqali, natija `message_log`ga (yangi kind 'ticket' +
+      `ticket_message_id` ustuni, 0018) — panel thread'ida har javob yonida
+      "Yetkazildi/Navbatda/Xatolik" ko'rinadi. Dashboardda ochiq murojaatlar
+      kartasi (/tickets'ga havola). **Halol chegara:** DB-tranzaksiyalar va
+      bot oqimi testsiz (DB-backed infra yo'q — G4 bilan bir xil); pure
+      qoidalar testlangan. Qo'lda: murojaat ochish → panelda javob → botda
+      olish → yopish → yopiqga yozib qayta ochilishini tekshirish.
 
 ### I · Hajmiy narxlash (D-005)
 

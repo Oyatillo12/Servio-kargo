@@ -60,6 +60,7 @@ export function mainMenuKeyboard(s: Strings, miniAppUrl?: string): Keyboard {
     .text(s.menuChinaAddress)
     .text(s.menuInfo)
     .row()
+    .text(s.menuTicket)
     .text(s.menuLang)
     .resized();
 }

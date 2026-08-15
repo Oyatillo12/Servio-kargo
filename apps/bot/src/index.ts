@@ -22,6 +22,7 @@ import {
   startBroadcastWorker,
   startNotificationWorker,
   startReminderWorker,
+  startTicketWorker,
 } from './worker';
 
 async function startPolling(pollingToken?: string): Promise<void> {
@@ -91,6 +92,12 @@ async function main(): Promise<void> {
   startBroadcastWorker().catch((err) => {
     logger.error({ err }, 'failed to start broadcast worker');
     captureError(err, { where: 'startBroadcastWorker' });
+  });
+
+  // Ticket replies/closures (panel → customer, H4). Same rule 8 guarantee.
+  startTicketWorker().catch((err) => {
+    logger.error({ err }, 'failed to start ticket worker');
+    captureError(err, { where: 'startTicketWorker' });
   });
 
   if (config.polling) {

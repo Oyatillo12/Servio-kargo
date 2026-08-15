@@ -7,7 +7,7 @@
 
 import 'server-only';
 
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import {
@@ -17,6 +17,7 @@ import {
   tariffs,
   tenants,
   trackEvents,
+  trackPhotos,
   tracks,
   type Customer,
   type Payment,
@@ -179,7 +180,7 @@ export async function listTwaTracks(
       currentStatus: tracks.currentStatus,
       weightGrams: tracks.weightGrams,
       priceTiyin: tracks.priceTiyin,
-      photoPath: tracks.photoPath,
+      hasPhoto: sql<boolean>`exists (select 1 from ${trackPhotos} where ${trackPhotos.trackId} = ${tracks.id})`,
       createdAt: tracks.createdAt,
       batchEta: batches.etaDate,
       batchStatus: batches.status,
@@ -203,7 +204,7 @@ export async function listTwaTracks(
       currentStatus: r.currentStatus,
       weightGrams: r.weightGrams,
       priceTiyin: r.priceTiyin,
-      hasPhoto: r.photoPath != null,
+      hasPhoto: r.hasPhoto,
       createdAt: r.createdAt,
       // ETA only makes sense while the batch itself is still en route.
       batchEta:
@@ -224,7 +225,10 @@ export interface TwaTrackDetail {
   currentStatus: TrackStatus;
   weightGrams: number | null;
   priceTiyin: number | null;
-  hasPhoto: boolean;
+  /** Goods description (§7.13) — customer-visible; marka/note never are. */
+  description: string | null;
+  /** Photo ids, newest first (§7.14) — served one by one, ownership-gated. */
+  photoIds: string[];
   createdAt: Date;
   batchEta: string | null;
   events: { status: TrackStatus; createdAt: Date }[];
@@ -244,7 +248,7 @@ export async function getTwaTrackDetail(
       currentStatus: tracks.currentStatus,
       weightGrams: tracks.weightGrams,
       priceTiyin: tracks.priceTiyin,
-      photoPath: tracks.photoPath,
+      description: tracks.description,
       createdAt: tracks.createdAt,
       batchEta: batches.etaDate,
       batchStatus: batches.status,
@@ -268,13 +272,26 @@ export async function getTwaTrackDetail(
     .where(eq(trackEvents.trackId, row.id))
     .orderBy(asc(trackEvents.createdAt));
 
+  // §7.14: all kinds — a damage photo is exactly what the customer must see.
+  const photoRows = await db
+    .select({ id: trackPhotos.id })
+    .from(trackPhotos)
+    .where(
+      and(
+        eq(trackPhotos.tenantId, tenantId),
+        eq(trackPhotos.trackId, row.id),
+      ),
+    )
+    .orderBy(desc(trackPhotos.createdAt));
+
   return {
     id: row.id,
     codeOriginal: row.codeOriginal,
     currentStatus: row.currentStatus,
     weightGrams: row.weightGrams,
     priceTiyin: row.priceTiyin,
-    hasPhoto: row.photoPath != null,
+    description: row.description,
+    photoIds: photoRows.map((p) => p.id),
     createdAt: row.createdAt,
     batchEta:
       row.batchEta && row.batchStatus !== 'TASHKENT_WAREHOUSE'
@@ -284,26 +301,30 @@ export async function getTwaTrackDetail(
   };
 }
 
-/** Photo path for the TWA photo route — same ownership gate as the detail. */
+/** ONE photo's path for the TWA route — same ownership gate as the detail. */
 export async function getTwaTrackPhotoPath(
   tenantId: string,
   customerId: string,
   trackId: string,
+  photoId: string,
 ): Promise<string | null> {
   const db = getDb();
   const [row] = await db
-    .select({ photoPath: tracks.photoPath })
-    .from(tracks)
+    .select({ path: trackPhotos.path })
+    .from(trackPhotos)
+    .innerJoin(tracks, eq(trackPhotos.trackId, tracks.id))
     .where(
       and(
-        eq(tracks.id, trackId),
+        eq(trackPhotos.id, photoId),
+        eq(trackPhotos.trackId, trackId),
+        eq(trackPhotos.tenantId, tenantId),
         eq(tracks.tenantId, tenantId),
         eq(tracks.customerId, customerId),
         isNull(tracks.deletedAt),
       ),
     )
     .limit(1);
-  return row?.photoPath ?? null;
+  return row?.path ?? null;
 }
 
 export interface TwaFinance {

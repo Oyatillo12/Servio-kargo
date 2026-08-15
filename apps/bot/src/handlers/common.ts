@@ -17,6 +17,7 @@ export type MenuAction =
   | 'balance'
   | 'chinaAddress'
   | 'info'
+  | 'ticket'
   | 'lang';
 
 const MENU_LABEL: Record<MenuAction, (d: typeof uz) => string> = {
@@ -26,6 +27,7 @@ const MENU_LABEL: Record<MenuAction, (d: typeof uz) => string> = {
   balance: (d) => d.menuBalance,
   chinaAddress: (d) => d.menuChinaAddress,
   info: (d) => d.menuInfo,
+  ticket: (d) => d.menuTicket,
   lang: (d) => d.menuLang,
 };
 

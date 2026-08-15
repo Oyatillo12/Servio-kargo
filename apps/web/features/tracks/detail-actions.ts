@@ -7,7 +7,11 @@ import { z } from 'zod';
 import { parseSomToTiyin } from '@kargotrack/shared';
 
 import { authorize, requireAdmin } from '@/lib/auth';
-import { setTrackPricing, setTracksCustomer } from '@/lib/queries';
+import {
+  setTrackMeta,
+  setTrackPricing,
+  setTracksCustomer,
+} from '@/lib/queries';
 
 export interface WeightState {
   error?: string;
@@ -82,6 +86,57 @@ export async function setWeightAction(input: {
   if (err === 'NO_RATE') return { error: t('noUsdRate') };
 
   revalidatePath(`/tracks/${parsed.data.trackId}`);
+  return { ok: true };
+}
+
+// --- Metadata: marka / description / note (SPEC §7.13, tasks.md H1) ---------
+
+export interface TrackMetaState {
+  ok?: boolean;
+  error?: string;
+}
+
+/** §7.13 length caps; the UI mirrors them as maxLength, the server decides. */
+const metaSchema = z.object({
+  trackId: z.string().uuid(),
+  marka: z.string().max(32),
+  description: z.string().max(200),
+  note: z.string().max(500),
+});
+
+/**
+ * Save a track's metadata card (SPEC §5.3). The one surface that may CLEAR a
+ * field — an empty input becomes NULL. Guarded by `tracks.edit` (rule 9).
+ */
+export async function updateTrackMetaAction(input: {
+  trackId: string;
+  marka: string;
+  description: string;
+  note: string;
+}): Promise<TrackMetaState> {
+  const auth = await authorize('tracks.edit');
+  if (!auth.ok) return { error: auth.error };
+  const { tenant } = auth.ctx;
+
+  const parsed = metaSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: (await getTranslations('trackDetail'))('metaTooLong') };
+  }
+
+  const clean = (s: string) => s.trim() || null;
+  const found = await setTrackMeta({
+    tenantId: tenant.id,
+    trackId: parsed.data.trackId,
+    marka: clean(parsed.data.marka),
+    description: clean(parsed.data.description),
+    note: clean(parsed.data.note),
+  });
+  if (!found) {
+    return { error: (await getTranslations('common'))('errorGeneric') };
+  }
+
+  revalidatePath(`/tracks/${parsed.data.trackId}`);
+  revalidatePath('/tracks');
   return { ok: true };
 }
 

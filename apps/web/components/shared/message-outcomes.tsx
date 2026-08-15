@@ -36,7 +36,9 @@ export async function MessageOutcomesCard({
                       ? 'kindNotify'
                       : m.kind === 'reminder'
                         ? 'kindReminder'
-                        : 'kindBroadcast',
+                        : m.kind === 'ticket'
+                          ? 'kindTicket'
+                          : 'kindBroadcast',
                   )}
                 </p>
                 <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">

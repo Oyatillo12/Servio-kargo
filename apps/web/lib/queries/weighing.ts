@@ -16,7 +16,12 @@ import { and, desc, eq, gte, isNull, lt, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import { enqueueNotification } from '@kargotrack/db/queue';
-import { customers, trackEvents, tracks } from '@kargotrack/db/schema';
+import {
+  customers,
+  trackEvents,
+  trackPhotos,
+  tracks,
+} from '@kargotrack/db/schema';
 import {
   clientCodeKey,
   periodRange,
@@ -73,6 +78,9 @@ export type WeighResult =
 /** `DK-1042` and `dk1042` are the same marka — compare both sides stripped. */
 const clientCodeExpr = sql<string>`upper(regexp_replace(${customers.clientCode}, '[^A-Za-z0-9]', '', 'g'))`;
 
+/** "This parcel has at least one photo" (SPEC §7.14) — drives the W4 icon. */
+const hasPhotoExpr = sql<boolean>`exists (select 1 from ${trackPhotos} where ${trackPhotos.trackId} = ${tracks.id})`;
+
 /** Resolve a typed marka to one of this tenant's customers, or null. */
 async function findCustomerByMarka(
   tenantId: string,
@@ -101,7 +109,7 @@ async function findTrackByCode(tenantId: string, codeNormalized: string) {
       codeOriginal: tracks.codeOriginal,
       currentStatus: tracks.currentStatus,
       customerId: tracks.customerId,
-      photoPath: tracks.photoPath,
+      hasPhoto: hasPhotoExpr,
     })
     .from(tracks)
     .where(
@@ -174,6 +182,7 @@ export async function applyPanelWeighing(args: {
         : null,
       markaTyped: args.marka != null,
       markaCustomerId: markaCustomer?.id ?? null,
+      markaRaw: args.marka,
     });
 
   const existing = await findTrackByCode(tenantId, args.codeNormalized);
@@ -218,6 +227,7 @@ async function createWeighed(
         codeOriginal: args.codeOriginal,
         customerId: plan.attachCustomerId,
         currentStatus: plan.newStatus,
+        marka: plan.storeMarka,
         ...plan.pricing,
       })
       .returning({ id: tracks.id });
@@ -237,6 +247,9 @@ async function createWeighed(
       source: WEIGH_EVENT_SOURCE,
       created: true,
       marka: plan.marka.kind,
+      // §7.13: the typed string itself — the column holds only the LATEST
+      // marking, the append-only log keeps every one that was ever weighed in.
+      ...(plan.storeMarka != null ? { markaRaw: plan.storeMarka } : {}),
     },
     createdBy: args.createdBy,
   });
@@ -271,6 +284,9 @@ async function weighExisting(
       .set({
         ...plan.pricing,
         currentStatus: plan.newStatus,
+        // §7.13: the box in hand is the latest evidence — overwrite; an empty
+        // field (storeMarka null) never clears a stored marka.
+        ...(plan.storeMarka != null ? { marka: plan.storeMarka } : {}),
         ...(plan.attachCustomerId != null
           ? { customerId: plan.attachCustomerId }
           : {}),
@@ -307,6 +323,7 @@ async function weighExisting(
           source: WEIGH_EVENT_SOURCE,
           created: false,
           marka: plan.marka.kind,
+          ...(plan.storeMarka != null ? { markaRaw: plan.storeMarka } : {}),
         },
         createdBy: args.createdBy,
       });
@@ -330,7 +347,7 @@ async function weighExisting(
       plan.attachCustomerId ?? track.customerId,
     ),
     marka: plan.marka.kind,
-    hasPhoto: track.photoPath != null,
+    hasPhoto: track.hasPhoto,
   };
 }
 
@@ -373,7 +390,7 @@ export async function listTodaysWeighings(
       weightGrams: tracks.weightGrams,
       priceTiyin: tracks.priceTiyin,
       meta: trackEvents.meta,
-      photoPath: tracks.photoPath,
+      hasPhoto: hasPhotoExpr,
       clientCode: customers.clientCode,
       fullName: customers.fullName,
     })
@@ -412,7 +429,7 @@ export async function listTodaysWeighings(
       marka: (typeof meta.marka === 'string'
         ? meta.marka
         : 'none') as MarkaOutcomeKind,
-      hasPhoto: r.photoPath != null,
+      hasPhoto: r.hasPhoto,
     };
   });
 }

@@ -19,6 +19,8 @@ export interface MessageOutcome {
   status: MessageDeliveryStatus;
   trackId?: string;
   broadcastId?: string;
+  /** The staff `ticket_messages` row a `ticket` delivery carried (H4). */
+  ticketMessageId?: string;
   error?: string;
 }
 
@@ -34,6 +36,7 @@ export async function insertMessageOutcome(o: MessageOutcome): Promise<void> {
     status: o.status,
     trackId: o.trackId,
     broadcastId: o.broadcastId,
+    ticketMessageId: o.ticketMessageId,
     error: o.error ? o.error.slice(0, ERROR_MAX_LENGTH) : undefined,
   });
 }

@@ -74,7 +74,27 @@ export const messageKind = pgEnum('message_kind', [
   'notify',
   'reminder',
   'broadcast',
+  // Staff ticket reply / closure delivery (SPEC §7.15).
+  'ticket',
 ]);
+
+/** Ticket dispute categories — the fixed D-004 five (SPEC §7.15). */
+export const ticketCategory = pgEnum('ticket_category', [
+  'weight',
+  'damage',
+  'lost',
+  'payment',
+  'other',
+]);
+
+export const ticketStatus = pgEnum('ticket_status', [
+  'open',
+  'in_progress',
+  'closed',
+]);
+
+/** Who wrote a ticket message (SPEC §7.15). */
+export const ticketAuthor = pgEnum('ticket_author', ['customer', 'staff']);
 
 /**
  * Delivery outcome. `sent` = Telegram accepted it; `dropped` = permanently
@@ -400,7 +420,11 @@ export const tracks = pgTable(
     usdRateUsed: bigint('usd_rate_used', { mode: 'number' }),
     // Manual override (§7.4): admin typed a som price; suspends auto-recompute.
     priceManual: boolean('price_manual').notNull().default(false),
-    photoPath: text('photo_path'),
+    // SPEC 7.13 metadata. `marka` is what the box SAYS (evidence), never who
+    // owns the parcel; `note` is panel-only and must not reach the customer.
+    marka: text('marka'),
+    description: text('description'),
+    note: text('note'),
     // SPEC 7.8 soft delete.
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -439,6 +463,130 @@ export const tracks = pgTable(
       .where(sql`${t.deletedAt} IS NULL`),
   }),
 );
+
+/** Why a photo was taken (SPEC 7.14). */
+export const photoKind = pgEnum('photo_kind', [
+  'intake',
+  'damage',
+  'handover',
+]);
+
+/**
+ * A parcel's photos (SPEC 7.14, tasks.md H2) — many per track, never
+ * overwritten. `path` is the file's actual relative path under the uploads
+ * root: new shots go to `{tenantId}/{trackId}/{photoId}.jpg`, rows migrated
+ * from the single-photo era still point at `{tenantId}/{trackId}.jpg`.
+ */
+export const trackPhotos = pgTable(
+  'track_photos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    trackId: uuid('track_id')
+      .notNull()
+      .references(() => tracks.id, { onDelete: 'cascade' }),
+    kind: photoKind('kind').notNull().default('intake'),
+    path: text('path').notNull(),
+    // Free-form actor, same convention as track_events.created_by.
+    createdBy: text('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // The gallery, the notification attach and every hasPhoto EXISTS all ask
+    // "photos of THIS track, newest first".
+    trackIdx: index('track_photos_track_idx').on(
+      t.trackId,
+      t.createdAt.desc().nullsFirst(),
+    ),
+  }),
+);
+
+export type TrackPhoto = typeof trackPhotos.$inferSelect;
+
+/**
+ * A customer's dispute (SPEC §7.15, tasks.md H3 — D-004/D-006): one problem,
+ * one thread. The customer writes from the bot; staff reply from the panel.
+ */
+export const tickets = pgTable(
+  'tickets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    // Optional bound parcel; the dispute outlives a deleted track row.
+    trackId: uuid('track_id').references(() => tracks.id, {
+      onDelete: 'set null',
+    }),
+    category: ticketCategory('category').notNull(),
+    status: ticketStatus('status').notNull().default('open'),
+    // Workflow aid, not a permission (SPEC §5.16).
+    assignedTo: uuid('assigned_to').references(() => adminUsers.id, {
+      onDelete: 'set null',
+    }),
+    // Orders every list; bumped on each message (§7.15).
+    lastMessageAt: timestamp('last_message_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // The §5.16 list: tenant + status chips, newest activity first.
+    tenantStatusIdx: index('tickets_tenant_status_idx').on(
+      t.tenantId,
+      t.status,
+      t.lastMessageAt.desc().nullsFirst(),
+    ),
+    // The bot's "does this customer have a ticket?" entry question (§3.13).
+    tenantCustomerIdx: index('tickets_tenant_customer_idx').on(
+      t.tenantId,
+      t.customerId,
+      t.lastMessageAt.desc().nullsFirst(),
+    ),
+  }),
+);
+
+export type Ticket = typeof tickets.$inferSelect;
+
+/** One message of a ticket's thread — append-only (SPEC §7.15). */
+export const ticketMessages = pgTable(
+  'ticket_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'cascade' }),
+    author: ticketAuthor('author').notNull(),
+    // customers.id or admin_users.id, per `author` — free-form like
+    // track_events.created_by, resolved for display at read time.
+    authorId: text('author_id'),
+    text: text('text').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // The thread read: one ticket's messages in order.
+    ticketIdx: index('ticket_messages_ticket_idx').on(
+      t.ticketId,
+      t.createdAt,
+    ),
+  }),
+);
+
+export type TicketMessage = typeof ticketMessages.$inferSelect;
 
 export const trackEvents = pgTable(
   'track_events',
@@ -633,6 +781,11 @@ export const messageLog = pgTable(
     broadcastId: uuid('broadcast_id').references(() => broadcasts.id, {
       onDelete: 'cascade',
     }),
+    /** The staff message a `ticket` delivery carried (SPEC §5.16/H4). */
+    ticketMessageId: uuid('ticket_message_id').references(
+      () => ticketMessages.id,
+      { onDelete: 'cascade' },
+    ),
     /** Short technical reason (Telegram error description), for diagnosis. */
     error: text('error'),
     createdAt: timestamp('created_at', { withTimezone: true })

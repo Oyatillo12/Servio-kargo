@@ -35,6 +35,8 @@ export interface ImportTarget {
   hasCustomer: boolean;
   hasWeight: boolean;
   hasPrice: boolean;
+  hasMarka: boolean;
+  hasDescription: boolean;
 }
 
 /**
@@ -61,6 +63,8 @@ export async function getImportTargets(
         customerId: tracks.customerId,
         weightGrams: tracks.weightGrams,
         priceTiyin: tracks.priceTiyin,
+        marka: tracks.marka,
+        description: tracks.description,
       })
       .from(tracks)
       .where(
@@ -74,6 +78,8 @@ export async function getImportTargets(
         hasCustomer: row.customerId != null,
         hasWeight: row.weightGrams != null,
         hasPrice: row.priceTiyin != null,
+        hasMarka: row.marka != null,
+        hasDescription: row.description != null,
       });
     }
   }
@@ -108,6 +114,13 @@ export interface ImportRow extends ImportCode {
   weightGrams?: number | null;
   /** Agreed so'm price from the file (tiyin) — a manual override (§7.4). */
   priceTiyin?: number | null;
+  /**
+   * Box marking (§7.13) — the owner cell as typed, only when it had the shape
+   * of a client code. A name or phone is an owner reference, not a marking.
+   */
+  marka?: string | null;
+  /** Goods description from the mapped column (§7.13). */
+  description?: string | null;
 }
 
 export interface ImportResult {
@@ -130,6 +143,8 @@ interface EnrichWrite {
   usdRateUsed: number | null;
   tariffId: string | null;
   priceManual: boolean | null;
+  marka: string | null;
+  description: string | null;
 }
 
 /**
@@ -186,6 +201,8 @@ export async function applyImport(
       weightGrams: number | null;
       priceTiyin: number | null;
       tariffId: string | null;
+      marka: string | null;
+      description: string | null;
     }> = [];
     for (const chunk of chunked(
       codes.map((c) => c.normalized),
@@ -201,6 +218,8 @@ export async function applyImport(
           weightGrams: tracks.weightGrams,
           priceTiyin: tracks.priceTiyin,
           tariffId: tracks.tariffId,
+          marka: tracks.marka,
+          description: tracks.description,
         })
         .from(tracks)
         .where(
@@ -244,6 +263,8 @@ export async function applyImport(
               usdRateUsed: price?.usdRateUsed ?? null,
               tariffId: price?.tariffId ?? null,
               priceManual: price?.priceManual ?? false,
+              marka: code.marka ?? null,
+              description: code.description ?? null,
             };
           }),
         )
@@ -355,8 +376,18 @@ export async function applyImport(
         }
       }
 
+      // §7.13 fill-if-empty: a re-imported file must not clobber what an admin
+      // typed by hand, so metadata only lands where the column is still NULL.
+      const fillMarka = existing.marka == null ? (code.marka ?? null) : null;
+      const fillDescription =
+        existing.description == null ? (code.description ?? null) : null;
+
       const hasEnrichment =
-        fillCustomerId != null || fillWeight != null || fillPrice != null;
+        fillCustomerId != null ||
+        fillWeight != null ||
+        fillPrice != null ||
+        fillMarka != null ||
+        fillDescription != null;
       if (hasEnrichment) {
         enrich.push({
           id: existing.id,
@@ -367,6 +398,8 @@ export async function applyImport(
           usdRateUsed: fillRate,
           tariffId: fillTariffId,
           priceManual: fillManual,
+          marka: fillMarka,
+          description: fillDescription,
         });
         if (fillCustomerId != null) {
           result.assigned++;
@@ -426,7 +459,7 @@ export async function applyImport(
       const values = sql.join(
         chunk.map(
           (r) =>
-            sql`(${r.id}::uuid, ${r.customerId}::uuid, ${r.weightGrams}::integer, ${r.priceTiyin}::bigint, ${r.priceUsdCents}::bigint, ${r.usdRateUsed}::bigint, ${r.tariffId}::uuid, ${r.priceManual}::boolean)`,
+            sql`(${r.id}::uuid, ${r.customerId}::uuid, ${r.weightGrams}::integer, ${r.priceTiyin}::bigint, ${r.priceUsdCents}::bigint, ${r.usdRateUsed}::bigint, ${r.tariffId}::uuid, ${r.priceManual}::boolean, ${r.marka}::text, ${r.description}::text)`,
         ),
         sql`, `,
       );
@@ -438,9 +471,12 @@ export async function applyImport(
           price_usd_cents = COALESCE(v.price_usd_cents, t.price_usd_cents),
           usd_rate_used = COALESCE(v.usd_rate_used, t.usd_rate_used),
           tariff_id = COALESCE(v.tariff_id, t.tariff_id),
-          price_manual = COALESCE(v.price_manual, t.price_manual)
+          price_manual = COALESCE(v.price_manual, t.price_manual),
+          marka = COALESCE(v.marka, t.marka),
+          description = COALESCE(v.description, t.description)
         FROM (VALUES ${values}) AS v(id, customer_id, weight_grams, price_tiyin,
-          price_usd_cents, usd_rate_used, tariff_id, price_manual)
+          price_usd_cents, usd_rate_used, tariff_id, price_manual, marka,
+          description)
         WHERE t.id = v.id AND t.tenant_id = ${tenantId}::uuid
       `);
     }

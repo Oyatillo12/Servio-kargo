@@ -2,6 +2,7 @@ import {
   Import,
   LayoutDashboard,
   Megaphone,
+  MessageSquareText,
   Package,
   PackageCheck,
   Scale,
@@ -61,6 +62,12 @@ export const NAV_ITEMS: NavItem[] = [
     key: 'debtors',
     icon: Wallet,
     capability: 'money.reports',
+  },
+  {
+    href: '/tickets',
+    key: 'tickets',
+    icon: MessageSquareText,
+    capability: 'tickets.handle',
   },
   {
     href: '/batches',

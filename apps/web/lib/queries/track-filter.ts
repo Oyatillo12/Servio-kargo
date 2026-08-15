@@ -98,6 +98,8 @@ export function tracksFilter(args: TrackFilter): SQL | undefined {
       ilike(customers.fullName, like),
       ilike(customers.phone, like),
       ilike(customers.clientCode, like),
+      // §7.13: what the box says — the way a disputed parcel is found again.
+      ilike(tracks.marka, like),
     ];
     searchConds.push(
       norm ? ilike(tracks.codeNormalized, `%${norm}%`) : ilike(tracks.codeOriginal, like),

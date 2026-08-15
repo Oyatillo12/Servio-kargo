@@ -14,6 +14,7 @@
  * the bot (CLAUDE.md rule 8, SPEC §8).
  */
 
+import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
@@ -23,7 +24,7 @@ import { isValidTrackCode, normalizeCode, parseStaffWeighing } from '@kargotrack
 import { getConfig } from '../config';
 import type { KargoContext } from '../context';
 import { logger } from '../logger';
-import { findTrackByCode, setTrackPhoto } from '../queries';
+import { addTrackPhoto, findTrackByCode } from '../queries';
 import { handleStaffWeighing, isStaff } from './staffWeigh';
 
 /** SPEC §8: photos are JPEG, max 10 MB. */
@@ -119,12 +120,20 @@ export async function downloadStaffPhoto(
       return false;
     }
 
-    const photoPath = `${tenantId}/${track.id}.jpg`;
+    // §7.14: every shot is a NEW photo — nothing overwritten.
+    const photoId = randomUUID();
+    const photoPath = `${tenantId}/${track.id}/${photoId}.jpg`;
     const abs = join(getConfig().uploadsDir, photoPath);
     await mkdir(dirname(abs), { recursive: true });
     await writeFile(abs, bytes);
 
-    await setTrackPhoto(tenantId, track.id, photoPath);
+    await addTrackPhoto({
+      tenantId,
+      trackId: track.id,
+      photoId,
+      path: photoPath,
+      createdBy: ctx.staff?.id ?? null,
+    });
     return true;
   } catch (err) {
     logger.error({ err, trackId: track.id }, 'staff photo: failed to save');

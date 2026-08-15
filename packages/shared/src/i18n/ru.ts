@@ -30,6 +30,7 @@ export const ru: Strings = {
   menuChinaAddress: '🇨🇳 Адрес склада',
   menuInfo: 'ℹ️ Информация',
   menuLang: '🌐 Til / Язык',
+  menuTicket: '✍️ Обращение',
   menuCabinet: '📱 Кабинет',
 
   // --- Telegram command-menu descriptions (setMyCommands) ---
@@ -130,12 +131,14 @@ export const ru: Strings = {
     batchEta,
     kg,
     som,
+    description,
   }) => {
     const lines = [
       `🔍 ${code}`,
       `Статус: ${statusEmoji} ${statusLabel}`,
       `Дата: ${date}`,
     ];
+    if (description) lines.push(`📦 Описание: ${description}`);
     if (batchName) {
       lines.push(
         batchEta
@@ -150,6 +153,25 @@ export const ru: Strings = {
   lookupNotFound: (code) => `🔍 ${code} — трек не найден.`,
   lookupClaimHint:
     'Этот трек не привязан к вам. Если он ваш — отправьте его через ➕ Добавить трек.',
+
+  // --- §3.13 tickets (§4.6) ---
+  ticketAskCategory: 'К какой теме относится проблема?',
+  ticketAskText: 'Опишите проблему — как можно подробнее:',
+  ticketCreated: '✅ Обращение принято. Ответ придёт в этот бот.',
+  ticketAppended: '✅ Сообщение добавлено к обращению.',
+  ticketOpenHeader: (category, status) =>
+    `📮 Ваше открытое обращение: ${category} · ${status}\nНапишите новое сообщение:`,
+  ticketClosedChoice: (category) =>
+    `Ваше последнее обращение (${category}) закрыто. Продолжить его или открыть новое?`,
+  ticketContinue: '🔄 Продолжить',
+  ticketNew: '🆕 Новое обращение',
+  ticketIssueButton: '⚠️ Есть проблема',
+  ticketRegisterFirst:
+    'Чтобы написать обращение, сначала зарегистрируйтесь — нажмите /start.',
+  ticketReply: (category, text) =>
+    `💬 Ответ на ваше обращение (${category}):\n\n${text}\n\nЧтобы ответить: ✍️ Обращение`,
+  ticketClosedNotice: (category) =>
+    `✅ Ваше обращение (${category}) закрыто. Если проблема появится снова — ✍️ Обращение.`,
 
   // --- §3.9 calculator (§4.5) ---
   calcStepTariff: '🧮 1/2 · Выберите тариф',

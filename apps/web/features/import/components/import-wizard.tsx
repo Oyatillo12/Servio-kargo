@@ -232,6 +232,8 @@ export function ImportWizard({
         fd.set('col.customer', String(mapping.customer));
       if (mapping.weight != null) fd.set('col.weight', String(mapping.weight));
       if (mapping.price != null) fd.set('col.price', String(mapping.price));
+      if (mapping.description != null)
+        fd.set('col.description', String(mapping.description));
     }
     fd.set('hasHeader', hasHeader ? '1' : '0');
     fd.set('status', status);
@@ -394,7 +396,7 @@ export function ImportWizard({
                   v != null && setMapping({ ...mapping, code: v })
                 }
               />
-              {(['customer', 'weight', 'price'] as const).map((field) =>
+              {(['customer', 'weight', 'price', 'description'] as const).map((field) =>
                 locked.includes(field) ? null : (
                   <ColumnPicker
                     key={field}
@@ -429,7 +431,13 @@ export function ImportWizard({
                       >
                         {columns.map((c) => {
                           const role = (
-                            ['code', 'customer', 'weight', 'price'] as const
+                            [
+                              'code',
+                              'customer',
+                              'weight',
+                              'price',
+                              'description',
+                            ] as const
                           ).find((f) => mapping[f] === c.index);
                           return (
                             <td
@@ -510,6 +518,12 @@ export function ImportWizard({
             ) : null}
             {mapping?.price != null ? (
               <PreviewCount label={t('rowPriced')} count={counts.price} />
+            ) : null}
+            {mapping?.description != null ? (
+              <PreviewCount
+                label={t('rowDescribed')}
+                count={counts.description}
+              />
             ) : null}
             <PreviewRow
               label={t('rowWarnings')}

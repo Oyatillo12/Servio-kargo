@@ -6,6 +6,8 @@ import { Camera, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
+import { formatDateTime } from '@kargotrack/shared';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,6 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { SectionCard } from '@/components/ui/section-card';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -22,35 +31,46 @@ import { Spinner } from '@/components/ui/spinner';
 const MAX_PHOTO_MB = 10;
 const MAX_PHOTO_BYTES = MAX_PHOTO_MB * 1024 * 1024;
 
+const KINDS = ['intake', 'damage', 'handover'] as const;
+export type PhotoKind = (typeof KINDS)[number];
+
+export interface TrackPhotoView {
+  id: string;
+  kind: PhotoKind;
+  createdAt: Date;
+}
+
 /**
- * The track detail's photo card (tasks.md A5): view + upload/replace + delete
- * from the office, against the same `/api/tracks/[id]/photo` endpoint the
- * /weigh console uses (W4) — one photo per parcel whichever surface took it.
- * `canEdit` mirrors the endpoint's `tracks.weigh` gate; hiding the buttons is a
- * courtesy, the route re-checks (CLAUDE.md rule 9).
+ * The track detail's photo gallery (SPEC §7.14, tasks.md H2): every photo with
+ * its kind badge and date; upload with a kind choice, per-photo delete.
+ * `canEdit` mirrors the endpoints' `tracks.weigh` gate; hiding the buttons is
+ * a courtesy, the routes re-check (CLAUDE.md rule 9).
  */
 export function PhotoCard({
   trackId,
   code,
-  hasPhoto: initialHasPhoto,
+  photos,
   canEdit,
 }: {
   trackId: string;
   code: string;
-  hasPhoto: boolean;
+  photos: TrackPhotoView[];
   canEdit: boolean;
 }) {
   const t = useTranslations('trackDetail');
   const tCommon = useTranslations('common');
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [hasPhoto, setHasPhoto] = useState(initialHasPhoto);
-  // Bumped after every upload so the <img> bypasses the 60s HTTP cache and
-  // shows the replacement immediately.
-  const [version, setVersion] = useState(0);
+  const [kind, setKind] = useState<PhotoKind>('intake');
   const [busy, setBusy] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, startDelete] = useTransition();
+
+  const kindLabels: Record<PhotoKind, string> = {
+    intake: t('photoKind_intake'),
+    damage: t('photoKind_damage'),
+    handover: t('photoKind_handover'),
+  };
 
   async function onFileChosen(file: File) {
     // Checked here as well as on the server so a too-big shot is refused
@@ -62,6 +82,7 @@ export function PhotoCard({
 
     const body = new FormData();
     body.append('photo', file);
+    body.append('kind', kind);
 
     setBusy(true);
     try {
@@ -77,8 +98,6 @@ export function PhotoCard({
         toast.error(photoErrorText(code));
         return;
       }
-      setHasPhoto(true);
-      setVersion((v) => v + 1);
       toast.success(t('photoUploaded'));
       router.refresh();
     } catch {
@@ -94,18 +113,17 @@ export function PhotoCard({
     return t('photoFailed');
   }
 
-  function onDelete() {
+  function onDelete(photoId: string) {
     startDelete(async () => {
       try {
-        const res = await fetch(`/api/tracks/${trackId}/photo`, {
+        const res = await fetch(`/api/tracks/${trackId}/photo/${photoId}`, {
           method: 'DELETE',
         });
         if (!res.ok) {
           toast.error(t('photoFailed'));
           return;
         }
-        setHasPhoto(false);
-        setDeleteOpen(false);
+        setDeleteId(null);
         toast.success(t('photoDeleted'));
         router.refresh();
       } catch {
@@ -116,10 +134,24 @@ export function PhotoCard({
 
   return (
     <SectionCard
-      title={t('photo')}
+      title={
+        photos.length > 0 ? `${t('photo')} · ${photos.length}` : t('photo')
+      }
       action={
         canEdit ? (
-          <div className="flex gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <Select value={kind} onValueChange={(v) => setKind(v as PhotoKind)}>
+              <SelectTrigger className="h-8 w-auto gap-1 text-[12.5px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {KINDS.map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {kindLabels[k]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"
@@ -127,30 +159,45 @@ export function PhotoCard({
               onClick={() => inputRef.current?.click()}
             >
               {busy ? <Spinner /> : <Camera className="h-4 w-4" aria-hidden />}
-              {hasPhoto ? t('photoReplace') : t('photoUpload')}
+              {t('photoUpload')}
             </Button>
-            {hasPhoto ? (
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label={t('photoDelete')}
-                disabled={busy}
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-              </Button>
-            ) : null}
           </div>
         ) : undefined
       }
     >
-      {hasPhoto ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/api/tracks/${trackId}/photo${version ? `?v=${version}` : ''}`}
-          alt={t('photoAlt', { code })}
-          className="max-h-80 w-auto rounded-lg border border-border"
-        />
+      {photos.length > 0 ? (
+        <ul className="space-y-3">
+          {photos.map((p) => (
+            <li key={p.id}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/tracks/${trackId}/photo/${p.id}`}
+                alt={t('photoAlt', { code })}
+                className="max-h-80 w-auto rounded-lg border border-border"
+              />
+              <div className="mt-1 flex items-center gap-2">
+                <span className="rounded-full bg-accent px-2 py-0.5 text-[11.5px] font-semibold text-slate-700">
+                  {kindLabels[p.kind]}
+                </span>
+                <span className="font-mono text-[11.5px] text-muted-foreground">
+                  {formatDateTime(p.createdAt)}
+                </span>
+                {canEdit ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto h-7 px-2"
+                    aria-label={t('photoDelete')}
+                    disabled={busy}
+                    onClick={() => setDeleteId(p.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  </Button>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
       ) : (
         <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-input text-sm text-muted-foreground">
           {t('noPhoto')}
@@ -170,7 +217,10 @@ export function PhotoCard({
         }}
       />
 
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <Dialog
+        open={deleteId != null}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('photoDeleteTitle')}</DialogTitle>
@@ -180,7 +230,7 @@ export function PhotoCard({
             <Button
               variant="secondary"
               className="flex-1"
-              onClick={() => setDeleteOpen(false)}
+              onClick={() => setDeleteId(null)}
               disabled={isDeleting}
             >
               {tCommon('cancel')}
@@ -188,7 +238,7 @@ export function PhotoCard({
             <Button
               variant="destructive"
               className="flex-1"
-              onClick={onDelete}
+              onClick={() => deleteId && onDelete(deleteId)}
               disabled={isDeleting}
             >
               {isDeleting ? <Spinner /> : null}

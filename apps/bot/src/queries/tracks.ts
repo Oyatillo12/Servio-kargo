@@ -6,6 +6,7 @@ import { getDb } from '@kargotrack/db';
 import {
   batches,
   trackEvents,
+  trackPhotos,
   tracks,
   type Batch,
   type Track,
@@ -90,16 +91,48 @@ export async function claimTrack(
   return rows.length > 0;
 }
 
-/** Link a warehouse photo (path relative to uploadsDir) to a track (SPEC §3.8). */
-export async function setTrackPhoto(
+/**
+ * Record a new `intake` photo for a track (SPEC §3.8, §7.14). The caller wrote
+ * the file; the path here (relative to uploadsDir) only records where.
+ */
+export async function addTrackPhoto(args: {
+  tenantId: string;
+  trackId: string;
+  photoId: string;
+  path: string;
+  createdBy: string | null;
+}): Promise<void> {
+  await getDb().insert(trackPhotos).values({
+    id: args.photoId,
+    tenantId: args.tenantId,
+    trackId: args.trackId,
+    kind: 'intake',
+    path: args.path,
+    createdBy: args.createdBy,
+  });
+}
+
+/**
+ * A track's stored photo paths, newest first, capped for one Telegram album
+ * (SPEC §7.14 — the 📷 button sends up to 10 as a media group).
+ */
+export async function listTrackPhotoPaths(
   tenantId: string,
   trackId: string,
-  photoPath: string,
-): Promise<void> {
-  await getDb()
-    .update(tracks)
-    .set({ photoPath })
-    .where(and(eq(tracks.tenantId, tenantId), eq(tracks.id, trackId)));
+  limit = 10,
+): Promise<string[]> {
+  const rows = await getDb()
+    .select({ path: trackPhotos.path })
+    .from(trackPhotos)
+    .where(
+      and(
+        eq(trackPhotos.tenantId, tenantId),
+        eq(trackPhotos.trackId, trackId),
+      ),
+    )
+    .orderBy(desc(trackPhotos.createdAt))
+    .limit(limit);
+  return rows.map((r) => r.path);
 }
 
 /** A batch by id (tenant-scoped) — for the §3.6 ETA line + §4.2 notification. */

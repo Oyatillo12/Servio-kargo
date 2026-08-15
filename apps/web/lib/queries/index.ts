@@ -17,6 +17,7 @@ export * from './messages';
 export * from './throttle';
 export * from './tracks';
 export * from './track-pricing';
+export * from './tickets';
 export * from './track-mutations';
 export * from './weighing';
 export * from './exports';

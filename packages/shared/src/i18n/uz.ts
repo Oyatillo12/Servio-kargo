@@ -29,6 +29,7 @@ export const uz: Strings = {
   menuChinaAddress: '🇨🇳 Ombor manzili',
   menuInfo: "ℹ️ Ma'lumot",
   menuLang: '🌐 Til / Язык',
+  menuTicket: '✍️ Murojaat',
   // Premium only: the reply-keyboard entry into the Mini App (tasks.md B7).
   menuCabinet: '📱 Kabinet',
 
@@ -130,12 +131,14 @@ export const uz: Strings = {
     batchEta,
     kg,
     som,
+    description,
   }) => {
     const lines = [
       `🔍 ${code}`,
       `Holat: ${statusEmoji} ${statusLabel}`,
       `Sanasi: ${date}`,
     ];
+    if (description) lines.push(`📦 Tavsif: ${description}`);
     if (batchName) {
       lines.push(
         batchEta
@@ -150,6 +153,25 @@ export const uz: Strings = {
   lookupNotFound: (code) => `🔍 ${code} — bunday trek topilmadi.`,
   lookupClaimHint:
     "Bu trek sizga biriktirilmagan. O'zingizniki bo'lsa, ➕ Trek qo'shish orqali yuboring.",
+
+  // --- §3.13 tickets (§4.6) ---
+  ticketAskCategory: 'Muammo qaysi turga tegishli?',
+  ticketAskText: 'Muammoni yozib yuboring — imkon qadar batafsil:',
+  ticketCreated: '✅ Murojaatingiz qabul qilindi. Javobni shu botda olasiz.',
+  ticketAppended: "✅ Xabaringiz murojaatga qo'shildi.",
+  ticketOpenHeader: (category, status) =>
+    `📮 Ochiq murojaatingiz: ${category} · ${status}\nYangi xabar yozing:`,
+  ticketClosedChoice: (category) =>
+    `Oxirgi murojaatingiz (${category}) yopilgan. Davom ettirasizmi yoki yangi ochasizmi?`,
+  ticketContinue: '🔄 Davom ettirish',
+  ticketNew: '🆕 Yangi murojaat',
+  ticketIssueButton: '⚠️ Muammo bor',
+  ticketRegisterFirst:
+    "Murojaat yozish uchun avval ro'yxatdan o'ting — /start bosing.",
+  ticketReply: (category, text) =>
+    `💬 Murojaatingizga javob (${category}):\n\n${text}\n\nJavob yozish uchun: ✍️ Murojaat`,
+  ticketClosedNotice: (category) =>
+    `✅ Murojaatingiz (${category}) yopildi. Yana muammo bo'lsa — ✍️ Murojaat.`,
 
   // --- §3.9 calculator (§4.5) ---
   calcStepTariff: '🧮 1/2 · Tarifni tanlang',

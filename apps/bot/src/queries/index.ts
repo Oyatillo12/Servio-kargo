@@ -14,6 +14,7 @@ export * from './sessions';
 export * from './tenants';
 export * from './customers';
 export * from './contexts';
+export * from './tickets';
 export * from './tracks';
 export * from './weighing';
 export * from './staff';
