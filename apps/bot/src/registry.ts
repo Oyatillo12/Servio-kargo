@@ -12,7 +12,7 @@ import { t } from '@kargotrack/shared';
 import { createBot } from './bot';
 import type { KargoContext } from './context';
 import { botCommands } from './keyboards';
-import { getTenantByToken } from './queries';
+import { getTenantById, getTenantByToken } from './queries';
 import { logger } from './logger';
 
 export interface BotEntry {
@@ -38,6 +38,17 @@ export class BotRegistry {
       void inflight.finally(() => this.pending.delete(token));
     }
     return inflight;
+  }
+
+  /**
+   * Resolve the bot for a tenant id — the F3 webhook route, where the path
+   * names the tenant and the secret header has already been verified. One
+   * extra DB read on a cache miss only; the cache stays keyed by token.
+   */
+  async getByTenantId(tenantId: string): Promise<BotEntry | undefined> {
+    const tenant = await getTenantById(tenantId);
+    if (!tenant) return undefined;
+    return this.getByToken(tenant.botToken);
   }
 
   private async buildAndInit(token: string): Promise<BotEntry | undefined> {

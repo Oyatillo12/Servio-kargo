@@ -78,6 +78,43 @@ Run `crontab -e` and add (nightly at 03:00, keeps 14 days in `/var/backups/kargo
 0 3 * * * /root/kargotrack/scripts/backup.sh >> /var/log/kargotrack-backup.log 2>&1
 ```
 
+> **One-time after the F3 release (webhook secret):** every tenant's webhook
+> must be re-pointed at the new `/webhook/t/<tenantId>` URL with its secret.
+> Open `/sa` and press the **Webhook** button on each tenant row (new tenants
+> get it automatically at onboarding). Until then the old token-in-path URL
+> keeps working but logs a warning on every update. Do the re-set at a quiet
+> hour: `setWebhook` drops pending updates, so in-flight customer messages
+> at that moment are discarded.
+
+Each run produces TWO files: `kargotrack_<stamp>.sql.gz` (the database) and
+`uploads_<stamp>.tar.gz` (warehouse photos — the evidence in every damage
+dispute, tasks.md F4). Copy both off the VPS periodically; a backup on the
+same disk as the data survives a bad deploy, not a dead server.
+
+### 9.1 Restore procedure (rehearse this once BEFORE you need it)
+
+Database — into the running postgres container:
+
+```bash
+gunzip -c /var/backups/kargotrack/kargotrack_<stamp>.sql.gz \
+  | docker exec -i -e PGPASSWORD="$POSTGRES_PASSWORD" serviokargo-postgres \
+      psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+```
+
+(For a truly fresh start, drop and recreate the database first — the dump is
+`--no-owner` plain SQL and re-creates every table it contains.)
+
+Uploads — back into the shared volume via the bot container:
+
+```bash
+gunzip -c /var/backups/kargotrack/uploads_<stamp>.tar.gz \
+  | docker cp - serviokargo-bot:/data/
+```
+
+The archive contains the `uploads/` directory itself, so extracting into
+`/data/` restores `/data/uploads/...`. Verify with:
+`docker exec serviokargo-bot ls /data/uploads`.
+
 ---
 
 ## 10. Automatic deploys with GitHub Actions

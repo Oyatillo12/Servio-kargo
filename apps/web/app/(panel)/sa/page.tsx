@@ -6,6 +6,7 @@ import { requireSuperadmin } from '@/lib/superadmin';
 
 import { saLogoutAction } from './login/actions';
 import { OnboardForm } from './onboard-form';
+import { OwnerResetButton } from './owner-reset-button';
 import { PlanToggle } from './plan-toggle';
 import { WebhookButton } from './webhook-button';
 
@@ -119,6 +120,7 @@ export default async function SaPage() {
                         <div className="flex items-center gap-2">
                           <WebhookButton tenantId={t.id} />
                           <PlanToggle tenantId={t.id} plan={t.plan} />
+                          <OwnerResetButton tenantId={t.id} />
                         </div>
                       </td>
                     </tr>

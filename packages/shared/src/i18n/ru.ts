@@ -148,6 +148,8 @@ export const ru: Strings = {
     return lines.join('\n');
   },
   lookupNotFound: (code) => `🔍 ${code} — трек не найден.`,
+  lookupClaimHint:
+    'Этот трек не привязан к вам. Если он ваш — отправьте его через ➕ Добавить трек.',
 
   // --- §3.9 calculator (§4.5) ---
   calcStepTariff: '🧮 1/2 · Выберите тариф',

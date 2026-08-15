@@ -1,13 +1,23 @@
 'use server';
 
+import { randomBytes } from 'node:crypto';
+
 import { hash } from '@node-rs/argon2';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
-import { parseSomToTiyin, parseUsdToCents } from '@kargotrack/shared';
+import {
+  formatInviteCode,
+  generateInviteCode,
+  inviteExpiry,
+  parseSomToTiyin,
+  parseUsdToCents,
+} from '@kargotrack/shared';
 
+import { replaceInvite } from '@/lib/queries';
 import {
   createTenantWithOwner,
+  findOwnerForReset,
   getTenantToken,
   setTenantPlan,
   tenantTokenExists,
@@ -159,13 +169,9 @@ export async function onboardTenantAction(
   }
   const botUsername = me.data.username ?? null;
 
-  // 2) Point the webhook at this platform.
-  const hook = await setWebhook(botToken, base);
-  if (!hook.ok) {
-    return { error: `Webhook o‘rnatilmadi: ${hook.error}` };
-  }
-
-  // 3) Persist tenant + first owner admin.
+  // 2) Persist tenant + first owner admin. The webhook URL carries the tenant
+  // id (F3), so the row must exist first; a bad token still aborts above,
+  // before the database is touched.
   const adminPasswordHash = await hash(input.adminPassword);
   let tenantId: string;
   try {
@@ -187,6 +193,17 @@ export async function onboardTenantAction(
   } catch {
     // Unique index race (token registered between our check and insert).
     return { error: 'Bu bot token allaqachon ro‘yxatga olingan.' };
+  }
+
+  // 3) Point the webhook at this platform (tenant-id path + secret, F3).
+  // On failure the tenant still exists — the row's "Webhook" button is the
+  // idempotent retry, so this is reported rather than rolled back.
+  const hook = await setWebhook(botToken, base, tenantId);
+  if (!hook.ok) {
+    revalidatePath('/sa');
+    return {
+      error: `Tenant yaratildi, lekin webhook o‘rnatilmadi: ${hook.error}. Jadvaldagi "Webhook" tugmasi bilan qayta urinib ko‘ring.`,
+    };
   }
 
   // A premium tenant's bot opens the Mini App from the menu button (B7).
@@ -264,7 +281,51 @@ export async function resetWebhookAction(
     return { error: 'WEBHOOK_BASE_URL sozlanmagan.' };
   }
 
-  const hook = await setWebhook(tenant.botToken, base);
+  const hook = await setWebhook(tenant.botToken, base, tenantId);
   if (!hook.ok) return { error: hook.error };
   return { ok: true };
+}
+
+// --- Owner password reset (tasks.md F5, SPEC §6) ----------------------------
+
+export interface OwnerResetState {
+  ok?: { code: string; phone: string; name: string | null };
+  error?: string;
+}
+
+/**
+ * Issue a fresh invite code for the tenant's owner — the platform-side answer
+ * to "I forgot my password" (tasks.md F5). Reuses the ordinary invite flow
+ * (SPEC §5.12): the owner enters their phone + this code on /login and sets a
+ * NEW password themselves; the super-admin never learns it. Their current
+ * password keeps working until the code is redeemed, so a mistaken press
+ * locks nobody out.
+ */
+export async function resetOwnerInviteAction(
+  _prev: OwnerResetState,
+  formData: FormData,
+): Promise<OwnerResetState> {
+  requireSuperadmin();
+
+  const tenantId = String(formData.get('tenantId') ?? '');
+  if (!tenantId) return { error: 'Tenant topilmadi.' };
+
+  const owner = await findOwnerForReset(tenantId);
+  if (!owner) {
+    return { error: 'Telefonli faol owner topilmadi.' };
+  }
+
+  const code = generateInviteCode(randomBytes);
+  await replaceInvite({
+    tenantId,
+    adminUserId: owner.id,
+    phone: owner.phone,
+    code,
+    expiresAt: inviteExpiry(),
+    createdBy: null,
+  });
+
+  return {
+    ok: { code: formatInviteCode(code), phone: owner.phone, name: owner.fullName },
+  };
 }

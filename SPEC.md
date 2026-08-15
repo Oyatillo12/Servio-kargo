@@ -98,11 +98,22 @@ Card assembled from tenant settings, in this order:
    wrote in settings). Omit any block whose source field is empty.
 
 ### 3.6 Free-text lookup
-Any plain message whose normalized form is 8–20 alphanumerics → status card:
-code, current status (emoji + label), last event date, batch line
-`🚚 Reys: {batch_name} · Taxminan: {eta DD.MM.YYYY}` when the track belongs
-to a batch that is not yet in TASHKENT_WAREHOUSE or later, weight/price if
-set, photo if exists. Otherwise → short help text plus the `📦 / 💰 / ℹ️`
+Any plain message whose normalized form is 8–20 alphanumerics → status card.
+What the card contains depends on WHO is asking (F1, 2026-08-15 — same
+data rule as the public Mini App lookup, 10.2):
+
+- **The track's owner** (registered customer whose `customer_id` matches) or
+  **active staff** (3.8): full card — code, current status (emoji + label),
+  last event date, batch line `🚚 Reys: {batch_name} · Taxminan:
+  {eta DD.MM.YYYY}` when the track belongs to a batch that is not yet in
+  TASHKENT_WAREHOUSE or later, weight/price if set, photo if exists.
+- **Anyone else** (another customer, an unregistered user, an unclaimed
+  track): status + last event date + batch line ONLY — never weight, price,
+  photo or owner. A registered customer also gets the hint that sending the
+  code via `➕` claims it (3.2). Weight and price are commercial data
+  between the company and that customer; a code is not a secret capability.
+
+Otherwise → short help text plus the `📦 / 💰 / ℹ️`
 shortcut row (3.11): a customer who wrote something the bot did not understand
 is the least likely to go hunting through the reply keyboard.
 
@@ -544,12 +555,27 @@ two copies would drift the moment one side is edited.
 ## 6. Super-admin (`/sa`, guarded by SUPERADMIN_TOKEN env)
 
 Tenants table: nomi, bot, treklar soni, mijozlar soni, yaratilgan sana,
-holat. Actions per row: re-set webhook, disable/enable. Create form: company
+holat. Actions per row: re-set webhook, plan toggle, owner password reset,
+disable/enable (disable/enable ships with tasks.md J1). Create form: company
 name, bot token, code prefix (2–4 latin letters), currency (UZS/USD) + kurs
 if USD, default tariff (name + price per kg), pickup address, working hours,
 contact phone, first admin phone + password.
-On create: Telegram `getMe` validation → set webhook → create tenant +
-default tariff + owner.
+On create: Telegram `getMe` validation → create tenant + default tariff +
+owner → set webhook (the webhook URL carries the tenant id, so the row must
+exist first, F3; on webhook failure the tenant stays and the row's "Webhook"
+button is the idempotent retry).
+
+Webhooks (F3): URL is `/webhook/t/{tenantId}`; every update carries
+`X-Telegram-Bot-Api-Secret-Token` = HMAC-SHA256(SESSION_SECRET,
+`telegram-webhook:{tenantId}`), verified by the bot server in constant time.
+The bot token NEVER appears in a URL. The legacy `/webhook/{botToken}` path
+is transitional (see tasks.md F3-b) and warns on every hit.
+
+Owner password reset (F5): "Parol tiklash" issues a fresh invite code for the
+tenant's earliest active owner via the ordinary invite flow (5.12) — the
+owner redeems it on /login with their phone and sets a NEW password
+themselves; the super-admin never learns it, and the old password keeps
+working until the code is redeemed.
 
 ## 7. Business rules & edge cases
 

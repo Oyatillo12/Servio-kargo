@@ -148,6 +148,8 @@ export const uz: Strings = {
     return lines.join('\n');
   },
   lookupNotFound: (code) => `🔍 ${code} — bunday trek topilmadi.`,
+  lookupClaimHint:
+    "Bu trek sizga biriktirilmagan. O'zingizniki bo'lsa, ➕ Trek qo'shish orqali yuboring.",
 
   // --- §3.9 calculator (§4.5) ---
   calcStepTariff: '🧮 1/2 · Tarifni tanlang',

@@ -31,8 +31,11 @@ BEFORE implementing any feature. If CLAUDE.md and SPEC.md conflict, stop and ask
 1. **Multi-tenant from day one.** Every domain table has `tenant_id`. Every query MUST
    be scoped by tenant. Never write an unscoped query. One codebase, many companies.
 2. **One codebase, many bots.** Each tenant has its own Telegram bot token (from
-   BotFather). The bot app routes webhooks by path `/webhook/:botToken` and resolves
-   the tenant from the token. Adding a tenant = inserting a row + setting a webhook.
+   BotFather). The bot app routes webhooks by path `/webhook/t/:tenantId` and
+   authenticates each update with the `X-Telegram-Bot-Api-Secret-Token` header,
+   derived per tenant from SESSION_SECRET (`@kargotrack/shared/webhook`) — the
+   token itself must NEVER appear in a URL (it lands in proxy access logs;
+   tasks.md F3). Adding a tenant = inserting a row + setting a webhook.
    Zero code changes per client.
 3. **Telegram rate limits are real:** ~30 msgs/sec global, 1 msg/sec per chat.
    ALL outbound notifications go through the pg-boss queue with throttling and

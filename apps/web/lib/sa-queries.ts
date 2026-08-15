@@ -7,7 +7,7 @@
 
 import 'server-only';
 
-import { count, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import {
@@ -103,6 +103,35 @@ export async function getTenantToken(
   return row ?? null;
 }
 
+/**
+ * The tenant owner a password-reset invite goes to (tasks.md F5): the earliest
+ * ACTIVE owner who has a phone — with several owners, the original one; a
+ * bot-only owner row (no phone) cannot redeem a code and is skipped.
+ */
+export async function findOwnerForReset(
+  tenantId: string,
+): Promise<{ id: string; phone: string; fullName: string | null } | null> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      id: adminUsers.id,
+      phone: adminUsers.phone,
+      fullName: adminUsers.fullName,
+    })
+    .from(adminUsers)
+    .where(
+      and(
+        eq(adminUsers.tenantId, tenantId),
+        eq(adminUsers.role, 'owner'),
+        eq(adminUsers.active, true),
+        isNotNull(adminUsers.phone),
+      ),
+    )
+    .orderBy(asc(adminUsers.createdAt))
+    .limit(1);
+  return row ? { ...row, phone: row.phone! } : null;
+}
+
 export interface CreateTenantInput {
   name: string;
   codePrefix: string;
@@ -128,7 +157,8 @@ const DEFAULT_SETTINGS: TenantSettings = {
 
 /**
  * Create the tenant and its first `owner` admin atomically (SPEC §6). Returns
- * the new tenant id. Callers must have already validated + set the webhook.
+ * the new tenant id. Callers must have already validated the token (getMe);
+ * the webhook is set AFTER creation, because its URL carries this id (F3).
  */
 export async function createTenantWithOwner(
   input: CreateTenantInput,

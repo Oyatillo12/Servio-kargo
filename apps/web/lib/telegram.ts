@@ -1,14 +1,18 @@
 /**
  * Minimal Telegram Bot API client used ONLY by the super-admin onboarding flow
  * (SPEC §6): validate a BotFather token via `getMe` and point the bot's webhook
- * at this platform. The running bot server resolves tenants by the token in the
- * webhook path (CLAUDE.md rule 2), so no `secret_token` is needed here.
+ * at this platform. The webhook path carries the TENANT ID, not the bot token
+ * (tasks.md F3) — a token in the URL landed in every proxy access log — and
+ * Telegram authenticates with a per-tenant `secret_token` derived from
+ * SESSION_SECRET, which the bot server verifies on every update.
  *
  * Every call is bounded by a timeout and returns a discriminated result instead
  * of throwing, so the server action can render a friendly Uzbek error.
  */
 
 import 'server-only';
+
+import { webhookSecretFor } from '@kargotrack/shared/webhook';
 
 const API_BASE = 'https://api.telegram.org';
 const TIMEOUT_MS = 10_000;
@@ -82,16 +86,24 @@ export function getWebhookInfo(
 }
 
 /**
- * Point the bot's webhook at `${base}/webhook/${token}` (CLAUDE.md rule 2).
- * `base` must be the bot server's public HTTPS origin (WEBHOOK_BASE_URL).
+ * Point the bot's webhook at `${base}/webhook/t/${tenantId}` with a derived
+ * `secret_token` (tasks.md F3). `base` must be the bot server's public HTTPS
+ * origin (WEBHOOK_BASE_URL). Requires SESSION_SECRET — the same key the bot
+ * server derives the expected header value from.
  */
 export async function setWebhook(
   token: string,
   base: string,
+  tenantId: string,
 ): Promise<TgResult<true>> {
-  const url = `${base.replace(/\/+$/, '')}/webhook/${token}`;
+  const platformKey = process.env.SESSION_SECRET;
+  if (!platformKey) {
+    return { ok: false, error: 'SESSION_SECRET sozlanmagan' };
+  }
+  const url = `${base.replace(/\/+$/, '')}/webhook/t/${tenantId}`;
   const res = await tgCall<boolean>(token, 'setWebhook', {
     url,
+    secret_token: webhookSecretFor(platformKey, tenantId),
     // Only the update types the bot handles (SPEC §3): messages + callbacks.
     allowed_updates: ['message', 'callback_query'],
     drop_pending_updates: true,

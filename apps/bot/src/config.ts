@@ -20,6 +20,13 @@ export interface BotConfig {
   pollingToken?: string;
   /** Root directory for warehouse photos (SPEC §3.8 / §7.9). */
   uploadsDir: string;
+  /**
+   * Platform key the per-tenant webhook `secret_token` is derived from
+   * (tasks.md F3) — the same SESSION_SECRET the web app signs cookies with;
+   * both containers read it from the one .env. Unset (dev polling) disables
+   * the tenant-id webhook route.
+   */
+  webhookSecretKey?: string;
 }
 
 function boolEnv(value: string | undefined): boolean {
@@ -52,5 +59,6 @@ export function loadConfig(): BotConfig {
     polling: boolEnv(process.env.BOT_POLLING),
     pollingToken,
     uploadsDir: process.env.UPLOADS_DIR?.trim() || '/data/uploads',
+    webhookSecretKey: process.env.SESSION_SECRET?.trim() || undefined,
   };
 }

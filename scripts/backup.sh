@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Nightly Postgres backup. Dumps the database with pg_dump inside the running
-# postgres container and keeps the last 14 daily dumps. Wire up via cron (see
-# docs/DEPLOY.md). Safe to run any time; read-only against the DB.
+# Nightly backup: Postgres dump + the /data/uploads archive (tasks.md F4 —
+# warehouse photos are the evidence in every damage dispute; losing them is
+# the one unrecoverable failure). Keeps the last 14 of each. Wire up via cron
+# (see docs/DEPLOY.md). Safe to run any time; read-only against the data.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."                     # repo root (holds .env)
@@ -25,7 +26,20 @@ if [ ! -s "$OUT" ]; then
   exit 1
 fi
 
+# Warehouse photos (F4). `docker cp` streams the directory as a tar archive,
+# so nothing extra is needed inside the container image.
+UPLOADS_OUT="$BACKUP_DIR/uploads_${STAMP}.tar.gz"
+echo "==> Archiving uploads to $UPLOADS_OUT"
+docker cp serviokargo-bot:/data/uploads - | gzip > "$UPLOADS_OUT"
+
+if [ ! -s "$UPLOADS_OUT" ]; then
+  echo "ERROR: uploads archive is empty — docker cp failed." >&2
+  rm -f "$UPLOADS_OUT"
+  exit 1
+fi
+
 echo "==> Pruning backups older than 14 days"
 find "$BACKUP_DIR" -name 'kargotrack_*.sql.gz' -type f -mtime +14 -delete
+find "$BACKUP_DIR" -name 'uploads_*.tar.gz' -type f -mtime +14 -delete
 
-echo "==> Backup complete: $OUT"
+echo "==> Backup complete: $OUT + $UPLOADS_OUT"

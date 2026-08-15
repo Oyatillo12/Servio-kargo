@@ -52,7 +52,7 @@ function photoPathOf(ctx: KargoContext, track: Track): string | undefined {
 export async function renderTrackCard(
   ctx: KargoContext,
   track: Track,
-  opts: { fromPage?: number } = {},
+  opts: { fromPage?: number; limited?: boolean } = {},
 ): Promise<{ text: string; keyboard: InlineKeyboard }> {
   const s = ctx.s;
   const meta = STATUS_META[track.currentStatus];
@@ -72,6 +72,10 @@ export async function renderTrackCard(
     }
   }
 
+  // §3.6 (F1): a limited card — for anyone who is not the track's owner and
+  // not staff — carries status-class data only. Weight, price and the photo
+  // are commercial data between the company and THAT customer; a track code
+  // is not a secret capability.
   const text = s.lookupCard({
     code: track.codeOriginal,
     statusEmoji: meta.emoji,
@@ -79,12 +83,20 @@ export async function renderTrackCard(
     date: formatDate(lastAt),
     batchName,
     batchEta,
-    kg: track.weightGrams != null ? formatKg(track.weightGrams) : undefined,
-    som: track.priceTiyin != null ? formatSom(track.priceTiyin) : undefined,
+    kg:
+      !opts.limited && track.weightGrams != null
+        ? formatKg(track.weightGrams)
+        : undefined,
+    som:
+      !opts.limited && track.priceTiyin != null
+        ? formatSom(track.priceTiyin)
+        : undefined,
   });
 
-  const keyboard = trackCardKeyboard(s, track.id, opts.fromPage);
-  if (photoPathOf(ctx, track)) {
+  const keyboard = opts.limited
+    ? new InlineKeyboard()
+    : trackCardKeyboard(s, track.id, opts.fromPage);
+  if (!opts.limited && photoPathOf(ctx, track)) {
     keyboard.row().text(s.nav.photo, `photo:${track.id}`);
   }
 
@@ -139,5 +151,24 @@ export async function handleLookup(
     return;
   }
 
-  await sendTrackCard(ctx, track);
+  // §3.6 (F1): the full card — weight, price, photo — only for the track's
+  // owner or active staff. Everyone else (another customer, an unregistered
+  // user, an unclaimed track) gets the status-only card; a registered
+  // customer also learns how to claim a track that is actually theirs.
+  const isOwner =
+    ctx.customer != null && track.customerId === ctx.customer.id;
+  const isStaff = ctx.staff?.active === true;
+  if (isOwner || isStaff) {
+    await sendTrackCard(ctx, track);
+    return;
+  }
+
+  const { text: cardText } = await renderTrackCard(ctx, track, {
+    limited: true,
+  });
+  const withHint =
+    ctx.customer != null && track.customerId == null
+      ? `${cardText}\n\n${s.lookupClaimHint}`
+      : cardText;
+  await ctx.reply(withHint);
 }

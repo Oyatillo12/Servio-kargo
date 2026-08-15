@@ -189,7 +189,8 @@ export async function replaceInvite(input: {
   phone: string;
   code: string;
   expiresAt: Date;
-  createdBy: string;
+  /** Null when the platform super-admin issues the code (owner reset, F5). */
+  createdBy: string | null;
 }): Promise<void> {
   const db = getDb();
   await db.transaction(async (tx) => {

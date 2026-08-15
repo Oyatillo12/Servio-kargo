@@ -277,7 +277,7 @@ export async function reconnectWebhookAction(): Promise<WebhookState> {
     return { error: (await getTranslations('settings'))('noWebhookBase') };
   }
 
-  const res = await setWebhook(tenant.botToken, base);
+  const res = await setWebhook(tenant.botToken, base, tenant.id);
   if (!res.ok) return { error: res.error };
 
   revalidatePath('/settings');

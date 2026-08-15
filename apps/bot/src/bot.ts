@@ -10,6 +10,7 @@ import { t } from '@kargotrack/shared';
 
 import type { KargoContext, SessionData } from './context';
 import { registerHandlers } from './handlers';
+import { inboundLimiter } from './inboundLimiter';
 import { logger } from './logger';
 import { getCustomerByTg, getStaffByTg, getTenantById } from './queries';
 import { captureError } from './sentry';
@@ -17,6 +18,21 @@ import { createSessionStorage } from './sessionStorage';
 
 export function createBot(tenantId: string, token: string): Bot<KargoContext> {
   const bot = new Bot<KargoContext>(token);
+
+  // Inbound throttle (tasks.md F2) — FIRST, before the session middleware,
+  // because shedding load after the DB round-trips would defeat the point.
+  // Dropped silently: a "slow down" reply would itself be outbound spam. A
+  // throttled callback query is left unanswered on purpose — its button
+  // spins until Telegram times out; that is the flood guard working, not a
+  // bug to fix with an answerCallbackQuery (which would be outbound traffic).
+  bot.use(async (ctx, next) => {
+    const chatId = ctx.chat?.id ?? ctx.from?.id;
+    if (chatId != null && !inboundLimiter.allow(tenantId, chatId)) {
+      logger.debug({ tenantId, chatId }, 'inbound update throttled');
+      return;
+    }
+    await next();
+  });
 
   // Session state lives in Postgres (AUDIT.md T16) so a deploy doesn't kick
   // customers out of half-finished flows mid-conversation.

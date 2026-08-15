@@ -167,6 +167,12 @@ export interface Strings {
   // --- §3.6 free-text lookup ---
   lookupCard(v: LookupCardVars): string;
   lookupNotFound(code: string): string;
+  /**
+   * Line under a limited card shown to a REGISTERED customer who looked up a
+   * track that isn't theirs (F1): how to claim it if it is actually theirs.
+   * Weight/price/photo are never shown on someone else's track.
+   */
+  lookupClaimHint: string;
 
   // --- §3.9 calculator (§4.5) ---
   /** `1/2 · …` step prefix shown above the tariff picker (§3.11). */
