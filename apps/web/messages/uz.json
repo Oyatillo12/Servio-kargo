@@ -313,7 +313,12 @@
     "actorViaBot": "bot",
     "actorCustomer": "Mijoz",
     "actorSystem": "Tizim",
-    "actorUnknown": "O'chirilgan xodim"
+    "actorUnknown": "O'chirilgan xodim",
+    "eyebrow": "Trek",
+    "tabGeneral": "Umumiy",
+    "tabPhotos": "Suratlar",
+    "tabHistory": "Tarix",
+    "tabMessages": "Xabarlar"
   },
   "weigh": {
     "pageTitle": "Tarozi rejimi",
@@ -451,7 +456,12 @@
     "stornoDone": "To'lov bekor qilindi",
     "tracksTitle": "Treklar",
     "noTracks": "Treklar yo'q.",
-    "sendReminder": "Eslatma yuborish"
+    "sendReminder": "Eslatma yuborish",
+    "eyebrow": "Mijoz",
+    "tabGeneral": "Umumiy",
+    "tabTracks": "Treklar",
+    "tabPayments": "To'lovlar",
+    "tabMessages": "Xabarlar"
   },
   "messageLog": {
     "title": "Yuborilgan xabarlar",
@@ -536,7 +546,10 @@
     "noMembers": "Bu reysda trek yo'q.",
     "invalidFields": "Reys maydonlarini tekshiring.",
     "invalidStatus": "Statusni tekshiring.",
-    "notFound": "Reys topilmadi."
+    "notFound": "Reys topilmadi.",
+    "eyebrow": "Reys",
+    "tabGeneral": "Umumiy",
+    "tabTracks": "Treklar"
   },
   "broadcast": {
     "pageTitle": "Xabarnoma",

@@ -313,7 +313,12 @@
     "actorViaBot": "бот",
     "actorCustomer": "Клиент",
     "actorSystem": "Система",
-    "actorUnknown": "Удалённый сотрудник"
+    "actorUnknown": "Удалённый сотрудник",
+    "eyebrow": "Трек",
+    "tabGeneral": "Общее",
+    "tabPhotos": "Фото",
+    "tabHistory": "История",
+    "tabMessages": "Сообщения"
   },
   "weigh": {
     "pageTitle": "Режим весов",
@@ -451,7 +456,12 @@
     "stornoDone": "Платёж отменён",
     "tracksTitle": "Треки",
     "noTracks": "Треков нет.",
-    "sendReminder": "Отправить напоминание"
+    "sendReminder": "Отправить напоминание",
+    "eyebrow": "Клиент",
+    "tabGeneral": "Общее",
+    "tabTracks": "Треки",
+    "tabPayments": "Платежи",
+    "tabMessages": "Сообщения"
   },
   "messageLog": {
     "title": "Отправленные сообщения",
@@ -536,7 +546,10 @@
     "noMembers": "В этом рейсе нет треков.",
     "invalidFields": "Проверьте поля рейса.",
     "invalidStatus": "Проверьте статус.",
-    "notFound": "Рейс не найден."
+    "notFound": "Рейс не найден.",
+    "eyebrow": "Рейс",
+    "tabGeneral": "Общее",
+    "tabTracks": "Треки"
   },
   "broadcast": {
     "pageTitle": "Рассылка",

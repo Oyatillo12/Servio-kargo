@@ -71,3 +71,41 @@ export function CardsSkeleton({
     </div>
   );
 }
+
+/**
+ * The record screens' shell while it loads (SPEC 5.0): back link, identity row,
+ * optional rail, the tab strip, then the first tab's two columns. It mirrors
+ * `DetailShell` closely enough that nothing jumps when the data lands — the
+ * old skeleton drew a 448px stack of cards and then snapped to a tabbed
+ * two-column page, which read as the screen loading twice.
+ */
+export function DetailSkeleton({ rail = false }: { rail?: boolean }) {
+  return (
+    <div>
+      <Skeleton className="h-4 w-20" />
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <div>
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="mt-1.5 h-6 w-44" />
+        </div>
+        <Skeleton className="h-5 w-28" />
+      </div>
+      {rail ? <Skeleton className="mt-3 h-[72px] w-full rounded-lg" /> : null}
+      <div className="mt-3 flex gap-4 border-b border-rule pb-2 pt-1.5">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <div className="mt-4 flex flex-col gap-3 md:grid md:grid-cols-3 md:items-start md:gap-5">
+        <div className="flex flex-col gap-3 md:col-span-2">
+          <Skeleton className="h-40 w-full rounded-lg" />
+          <Skeleton className="h-28 w-full rounded-lg" />
+        </div>
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-control w-full rounded-md" />
+        </div>
+      </div>
+    </div>
+  );
+}
