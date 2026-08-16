@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 
 import { formatSom, formatUsd } from '@kargotrack/shared';
 
+import { PageHeader } from '@/components/layout/page-header';
 import { PanelSection, SectionStack } from '@/components/ui/panel-section';
 import { requireCapability } from '@/lib/auth';
 import { listTariffs } from '@/lib/queries';
@@ -59,9 +60,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <h1 className="mb-3 text-title font-semibold text-foreground md:mb-4">
-        {t('pageTitle')}
-      </h1>
+      <PageHeader title={t('pageTitle')} className="md:mb-4" />
 
       {/* Six columns: the 4/2 spans below reproduce the design's 1.5fr / 1fr
           split, and every block is a direct grid item so the two columns fill

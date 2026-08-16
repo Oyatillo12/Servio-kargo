@@ -43,7 +43,7 @@ export default async function HandoverPage({
 
   if (!customerId.success) {
     return (
-      <div className="mx-auto max-w-md space-y-3">
+      <div className="mx-auto max-w-4xl space-y-3">
         <h1 className="text-title font-semibold text-foreground">
           {t('pageTitle')}
         </h1>
@@ -94,7 +94,7 @@ export default async function HandoverPage({
   const methodLabels = strings(locale).paymentMethod;
 
   return (
-    <div className="mx-auto max-w-md space-y-3">
+    <div className="mx-auto max-w-4xl space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h1 className="min-w-0 truncate text-title font-semibold text-foreground">
           {t('pageTitle')}

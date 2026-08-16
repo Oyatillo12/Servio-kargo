@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 
+import { PageHeader } from '@/components/layout/page-header';
 import { PanelSection, SectionStack } from '@/components/ui/panel-section';
 import { requireCapability } from '@/lib/auth';
 import { listTeam } from '@/lib/queries';
@@ -26,12 +27,11 @@ export default async function TeamPage() {
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-3 md:mb-4">
-        <h1 className="text-title font-semibold text-foreground">
-          {t('pageTitle')}
-        </h1>
-        <InviteMemberButton />
-      </div>
+      <PageHeader
+        title={t('pageTitle')}
+        right={<InviteMemberButton />}
+        className="md:mb-4"
+      />
 
       <SectionStack>
         <PanelSection

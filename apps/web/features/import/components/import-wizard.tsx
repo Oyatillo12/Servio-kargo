@@ -68,7 +68,7 @@ function Stepper({ step, labels }: { step: Step; labels: string[] }) {
                   'mx-1.5 flex-1 border-t-2',
                   n <= step
                     ? 'border-solid border-primary'
-                    : 'border-dotted border-input',
+                    : 'border-dashed border-rule',
                 )}
               />
             ) : null}
@@ -78,7 +78,7 @@ function Stepper({ step, labels }: { step: Step; labels: string[] }) {
             >
               <span
                 className={cn(
-                  'flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold',
+                  'flex h-6 w-6 items-center justify-center rounded-sm font-mono text-micro font-bold',
                   active && 'bg-primary text-white',
                   done &&
                     'border-[1.5px] border-success bg-[var(--st-ready-bg)] text-success',

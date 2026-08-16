@@ -132,126 +132,133 @@ export function HandoverForm({
   const hasPayment = canTakePayment && amountSom > 0;
 
   return (
-    <div className="space-y-3">
-      <SectionCard title={t('tracksTitle')}>
-        {tracks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('noTracks')}</p>
-        ) : (
-          <ul>
-            {tracks.map((tr) => (
-              <li
-                key={tr.id}
-                className="border-t border-rule-soft first:border-0"
-              >
-                <label className="flex cursor-pointer items-center gap-3 py-2.5">
-                  <Checkbox
-                    checked={selected.has(tr.id)}
-                    onCheckedChange={() => toggle(tr.id)}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-mono text-small font-semibold text-foreground">
-                      {tr.codeOriginal}
-                    </span>
-                    <span className="mt-0.5 block font-mono text-micro text-muted-foreground">
-                      {tr.weightGrams != null
-                        ? `${formatKg(tr.weightGrams)} ${tCommon('kg')}`
-                        : tCommon('dash')}
-                    </span>
-                  </span>
-                  <span className="flex flex-none items-center gap-2">
-                    {tr.priceTiyin != null ? (
-                      <span className="whitespace-nowrap font-mono text-micro text-ink-2">
-                        {formatSom(tr.priceTiyin)} {tCommon('som')}
+    // The counter, laid out the way the counter works: what is being handed
+    // over on the left, what is owed for it on the right, both in view at once
+    // on a desk browser. Stacked on a phone, where the till follows the pile.
+    <div className="flex flex-col gap-3 lg:grid lg:grid-cols-5 lg:items-start lg:gap-5">
+      <div className="lg:col-span-3">
+        <SectionCard title={t('tracksTitle')}>
+          {tracks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('noTracks')}</p>
+          ) : (
+            <ul>
+              {tracks.map((tr) => (
+                <li
+                  key={tr.id}
+                  className="border-t border-rule-soft first:border-0"
+                >
+                  <label className="flex cursor-pointer items-center gap-3 py-2.5">
+                    <Checkbox
+                      checked={selected.has(tr.id)}
+                      onCheckedChange={() => toggle(tr.id)}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-mono text-small font-semibold text-foreground">
+                        {tr.codeOriginal}
                       </span>
-                    ) : (
-                      <AlertTriangle
-                        className="h-4 w-4 text-warning"
-                        aria-label={t('noPrice')}
-                      />
-                    )}
-                    <StatusBadge status={tr.currentStatus} />
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
+                      <span className="mt-0.5 block font-mono text-micro text-muted-foreground">
+                        {tr.weightGrams != null
+                          ? `${formatKg(tr.weightGrams)} ${tCommon('kg')}`
+                          : tCommon('dash')}
+                      </span>
+                    </span>
+                    <span className="flex flex-none items-center gap-2">
+                      {tr.priceTiyin != null ? (
+                        <span className="whitespace-nowrap font-mono text-micro text-ink-2">
+                          {formatSom(tr.priceTiyin)} {tCommon('som')}
+                        </span>
+                      ) : (
+                        <AlertTriangle
+                          className="h-4 w-4 text-warning"
+                          aria-label={t('noPrice')}
+                        />
+                      )}
+                      <StatusBadge status={tr.currentStatus} />
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
+      </div>
 
       {tracks.length > 0 ? (
-        <SectionCard>
-          <div className="flex items-center justify-between text-small">
-            <span className="text-muted-foreground">
-              {t('selectedTotal', { count: selected.size })}
-            </span>
-            <span className="font-mono font-semibold">
-              {formatSom(totalTiyin)} {tCommon('som')}
-            </span>
-          </div>
-          {unpriced > 0 ? (
-            <p className="mt-1.5 flex items-center gap-1.5 text-micro text-warning">
-              <AlertTriangle className="h-3.5 w-3.5 flex-none" aria-hidden />
-              {t('unpricedWarning', { count: unpriced })}
-            </p>
-          ) : null}
-
-          {canTakePayment ? (
-            <div className="mt-3 space-y-3">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="handover-amount">{t('amount')}</Label>
-                <Input
-                  id="handover-amount"
-                  inputMode="numeric"
-                  value={amount}
-                  onChange={(e) => {
-                    setAmount(e.target.value);
-                    setAmountTouched(true);
-                  }}
-                  className="font-mono"
-                />
-                <p className="text-micro text-muted-foreground">
-                  {t('amountHint')}
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label>{t('method')}</Label>
-                <Select
-                  value={method}
-                  onValueChange={(v) => setMethod(v as typeof method)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {METHODS.map((m) => (
-                      <SelectItem key={m} value={m}>
-                        {methodLabels[m]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="lg:sticky lg:top-[68px] lg:col-span-2">
+          <SectionCard>
+            <div className="flex items-center justify-between text-small">
+              <span className="text-muted-foreground">
+                {t('selectedTotal', { count: selected.size })}
+              </span>
+              <span className="font-mono font-semibold">
+                {formatSom(totalTiyin)} {tCommon('som')}
+              </span>
             </div>
-          ) : null}
+            {unpriced > 0 ? (
+              <p className="mt-1.5 flex items-center gap-1.5 text-micro text-warning">
+                <AlertTriangle className="h-3.5 w-3.5 flex-none" aria-hidden />
+                {t('unpricedWarning', { count: unpriced })}
+              </p>
+            ) : null}
 
-          <div className="mt-3 flex items-center justify-between border-t border-rule-soft pt-3 text-small">
-            <span className="text-muted-foreground">{t('balanceAfter')}</span>
-            <DebtCell tiyin={afterTiyin} />
-          </div>
+            {canTakePayment ? (
+              <div className="mt-3 space-y-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="handover-amount">{t('amount')}</Label>
+                  <Input
+                    id="handover-amount"
+                    inputMode="numeric"
+                    value={amount}
+                    onChange={(e) => {
+                      setAmount(e.target.value);
+                      setAmountTouched(true);
+                    }}
+                    className="font-mono"
+                  />
+                  <p className="text-micro text-muted-foreground">
+                    {t('amountHint')}
+                  </p>
+                </div>
 
-          <Button
-            size="lg"
-            className="mt-3 w-full"
-            disabled={isPending || selected.size === 0}
-            onClick={submit}
-          >
-            {isPending ? <Spinner /> : null}
-            {hasPayment
-              ? t('submitWithPayment', { count: selected.size })
-              : t('submitDeliverOnly', { count: selected.size })}
-          </Button>
-        </SectionCard>
+                <div className="flex flex-col gap-1.5">
+                  <Label>{t('method')}</Label>
+                  <Select
+                    value={method}
+                    onValueChange={(v) => setMethod(v as typeof method)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {METHODS.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {methodLabels[m]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-3 flex items-center justify-between border-t border-rule-soft pt-3 text-small">
+              <span className="text-muted-foreground">{t('balanceAfter')}</span>
+              <DebtCell tiyin={afterTiyin} />
+            </div>
+
+            <Button
+              size="lg"
+              className="mt-3 w-full"
+              disabled={isPending || selected.size === 0}
+              onClick={submit}
+            >
+              {isPending ? <Spinner /> : null}
+              {hasPayment
+                ? t('submitWithPayment', { count: selected.size })
+                : t('submitDeliverOnly', { count: selected.size })}
+            </Button>
+          </SectionCard>
+        </div>
       ) : null}
     </div>
   );

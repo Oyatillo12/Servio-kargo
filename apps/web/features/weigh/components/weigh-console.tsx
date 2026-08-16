@@ -208,9 +208,9 @@ export function WeighConsole({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
       {blockedReason ? (
-        <p className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning/10 px-3 py-2.5 text-small font-medium text-warning">
+        <p className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning/10 px-3 py-2.5 text-small font-medium text-warning lg:col-span-2">
           <AlertTriangle className="mt-px h-4 w-4 flex-none" aria-hidden />
           {blockedReason}
         </p>

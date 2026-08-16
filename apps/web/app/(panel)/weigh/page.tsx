@@ -65,7 +65,7 @@ export default async function WeighPage() {
         </Link>
       </header>
 
-      <div className="mx-auto w-full max-w-lg flex-1 px-3 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+      <div className="mx-auto w-full max-w-5xl flex-1 px-3 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
         <WeighConsole
           initialRows={rows}
           canAssign={can(role, 'tracks.assign')}
