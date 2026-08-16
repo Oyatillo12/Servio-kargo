@@ -182,7 +182,9 @@
     "cargoFlowEmpty": "Trek qo'shing — yuk Xitoy → Toshkent yo'lida ko'rinadi",
     "cashByStaff": "Kassa — kim qabul qildi",
     "cashUnattributed": "Kim qabul qilgani noma’lum",
-    "cashPaymentCount": "{count, plural, other {# ta to'lov}}"
+    "cashPaymentCount": "{count, plural, other {# ta to'lov}}",
+    "blockedCustomers": "Botni bloklaganlar",
+    "blockedCustomersHint": "Xabar yetmaydi"
   },
   "tracks": {
     "pageTitle": "Treklar",
@@ -393,7 +395,12 @@
     "formDuplicate": "{clientCode} — {name} allaqachon bor. Shu mijozni tanlash uchun bosing.",
     "invalidPhone": "Telefon raqamini kiriting (kamida 4 ta belgi).",
     "malformedPhone": "Telefon raqami noto'g'ri.",
-    "phoneTaken": "Bu telefon allaqachon {clientCode} mijozida."
+    "phoneTaken": "Bu telefon allaqachon {clientCode} mijozida.",
+    "filterAll": "Barchasi",
+    "filterBlocked": "Bloklaganlar",
+    "blockedBadge": "Botni bloklagan",
+    "emptyBlockedTitle": "Bloklagan mijoz yo'q",
+    "emptyBlockedHint": "Hozircha hech kim botni bloklamagan — xabarnomalar yetib boryapti."
   },
   "customerDetail": {
     "pageTitle": "Mijoz",
@@ -518,11 +525,22 @@
     "recipients": "{count, plural, other {# ta mijozga}} yuboriladi",
     "confirmTitle": "Xabarnoma yuborish",
     "confirmBody": "{count, plural, other {# ta mijozga}} quyidagi xabar yuboriladi. Davom etamizmi?",
-    "sent": "{count, plural, other {# ta mijozga yuborildi}}",
     "historyTitle": "Yuborilganlar tarixi",
     "historyEmpty": "Hali xabarnoma yuborilmagan.",
-    "sentCount": "{count, plural, other {# ta yuborildi}}",
-    "tooLong": "Xabar matnini kiriting ({max} belgigacha)."
+    "tooLong": "Xabar matnini kiriting ({max} belgigacha).",
+    "queued": "{count, plural, other {# ta mijozga navbatga qo'yildi}}",
+    "testSend": "Menga test yubor",
+    "testQueued": "Sinov xabar navbatga qo'yildi — Telegramingizni tekshiring.",
+    "testNoTelegram": "Telegram akkauntingiz ulanmagan. Botga /start yuborib, xodim sifatida ulaning.",
+    "holdCountdown": "{seconds} soniyadan keyin {count, plural, other {# ta mijozga}} ketadi",
+    "holdSending": "{count, plural, other {# ta mijozga}} jo'natilmoqda",
+    "holdHint": "Hozir bekor qilsangiz — hech kim olmaydi.",
+    "stopHint": "Yuborilganlari qoladi, qolganini to'xtatish mumkin.",
+    "stop": "To'xtatish",
+    "cancelledInTime": "Bekor qilindi — hech kimga yetmadi.",
+    "stopped": "To'xtatildi. Qolgan xabarlar jo'natilmaydi.",
+    "sentProgress": "{sent} / {total} yuborildi",
+    "cancelledBadge": "Bekor qilindi"
   },
   "import": {
     "pageTitle": "Import",

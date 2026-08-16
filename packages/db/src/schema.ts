@@ -107,6 +107,16 @@ export const messageDeliveryStatus = pgEnum('message_delivery_status', [
   'failed',
 ]);
 
+/**
+ * Broadcast lifecycle (SPEC §7.11, D-008). There is no `sent` state: a fan-out
+ * is finished when `sent_count` reaches `recipient_count`, and inventing a
+ * terminal state would need somebody to notice the last delivery and write it.
+ */
+export const broadcastStatus = pgEnum('broadcast_status', [
+  'queued',
+  'cancelled',
+]);
+
 /** Tenant billing currency (SPEC §5.9 / §7.4). */
 export const currency = pgEnum('currency', ['UZS', 'USD']);
 
@@ -705,6 +715,22 @@ export const broadcasts = pgTable('broadcasts', {
     .references(() => tenants.id, { onDelete: 'cascade' }),
   text: text('text').notNull(),
   sentCount: integer('sent_count').notNull().default(0),
+  /**
+   * How many deliveries were queued (SPEC §7.11). Stored so the panel can show
+   * `{sent} / {recipients}` and know when a fan-out is finished — the customer
+   * list may have grown since, so it cannot be recounted later.
+   */
+  recipientCount: integer('recipient_count').notNull().default(0),
+  /**
+   * §7.11 (D-008): `cancelled` stops the fan-out. The worker re-reads this
+   * before every delivery, so it works inside the 60s hold window (nobody
+   * receives anything) and after it (the remainder is never sent).
+   */
+  status: broadcastStatus('status').notNull().default('queued'),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+  cancelledBy: uuid('cancelled_by').references(() => adminUsers.id, {
+    onDelete: 'set null',
+  }),
   /** Employee who pressed send — a broadcast reaches every customer at once. */
   createdBy: uuid('created_by').references(() => adminUsers.id, {
     onDelete: 'set null',

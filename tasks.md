@@ -292,22 +292,30 @@ boshlanishida SPEC.md tegishli bo'limi YOZILADI, keyin kod.
 
 ### K · Broadcast xavfsizligi (D-008; SPEC 5.8, 7.11, 7.17)
 
-- [ ] **K1 · "Menga test yubor"** — formada `📤 Menga test yubor`: matn
+- [x] **K1 · "Menga test yubor"** ✅ (2026-08-16) — formada `📤 Menga test yubor`: matn
       kirgan xodimning O'Z Telegramiga (`admin_users.tg_user_id`) ketadi,
       o'sha navbat va rate-limiter orqali (qoida 3). Telegram ulanmagan
       bo'lsa tugma o'chiq + ulash maslahati. Test tarixga ham,
       `message_log`ga ham yozilmaydi.
-- [ ] **K2 · Ushlab turish + to'xtatish** — fan-out 60s `startAfter` bilan
+- [x] **K2 · Ushlab turish + to'xtatish** ✅ (2026-08-16) — fan-out 60s `startAfter` bilan
       navbatga tushadi; `broadcasts.status` ('queued'|'cancelled') +
       `recipient_count`, `cancelled_at`, `cancelled_by`. Ishchi HAR
       xabardan oldin statusni o'qiydi — oyna ichida bekor qilish hech kimga
       yetkazmaydi, oynadan keyin qolganini to'xtatadi. pg-boss job id'lari
       saqlanmaydi (D-008). Bekor qilingan yetkazish `message_log`ga hech
       nima yozmaydi. Ekranda sanoq + `Bekor qilish` → `To'xtatish`.
-- [ ] **K3 · Blok ko'rinishi** — blok belgisi qoidasi SPEC 7.17 ga
+- [x] **K3 · Blok ko'rinishi** ✅ (2026-08-16) — blok belgisi qoidasi SPEC 7.17 ga
       ko'chirildi (oxirgi `notify` `dropped`). Dashboardda 🚫 karta +
       /customers'da `Bloklaganlar` filtri (URL'da, qidiruv va sahifa bilan
       birga). Avtomatik chetlashtirish YO'Q (D-008).
+      **Halol chegara:** UI va DB oqimi testsiz (React/DB test infra yo'q —
+      G4/H4 bilan bir xil); sof qoidalar testlangan (`canStopBroadcast`,
+      ushlab turish sanog'i, eski job'ni test deb o'qimaslik). Migratsiya
+      0020 additive va eski qatorlarni backfill qiladi (toza bazada +
+      backfill semantikasi tekshirildi). Qo'lda: test yuborish (Telegram
+      ulangan/ulanmagan), 60s ichida bekor (hech kim olmasligi), oynadan
+      keyin to'xtatish (qolgani ketmasligi), bloklaganlar kartasi va
+      filtri.
 
 ### L · QR klient-karta (Cargou pariteti)
 

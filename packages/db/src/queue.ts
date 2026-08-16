@@ -20,6 +20,7 @@ import { randomUUID } from 'node:crypto';
 import PgBoss from 'pg-boss';
 
 import {
+  BROADCAST_HOLD_SECONDS,
   BROADCAST_QUEUE,
   BULK_CHUNK,
   NOTIFY_QUEUE,
@@ -339,16 +340,36 @@ export function scheduleReminderSweep(): Promise<void> {
 export async function enqueueBroadcasts(jobs: BroadcastJob[]): Promise<void> {
   if (jobs.length === 0) return;
   const boss = await getBoss();
+  // §7.11 (D-008): nothing leaves for the first minute, so cancelling inside
+  // the hold window reaches everybody — because nobody has been reached yet.
+  // One timestamp for the whole fan-out: chunk N must not start a minute after
+  // chunk 1, or the window would mean something different per recipient.
+  const startAfter = new Date(Date.now() + BROADCAST_HOLD_SECONDS * 1000);
   for (const chunk of chunked(jobs, BULK_CHUNK)) {
     await boss.insert(
       chunk.map((data) => ({
         name: BROADCAST_QUEUE,
         data,
+        startAfter,
         retryLimit: RETRY_LIMIT,
         retryBackoff: RETRY_BACKOFF,
       })),
     );
   }
+}
+
+/**
+ * Enqueue the K1 test delivery (§5.8): one message to the employee's own chat,
+ * with no hold — there is nothing to cancel and the point is to see it now.
+ * It rides the same queue purely so it passes the rate limiter (rule 3).
+ */
+export function enqueueBroadcastTest(job: BroadcastJob): Promise<string | null> {
+  return getBoss().then((boss) =>
+    boss.send(BROADCAST_QUEUE, job, {
+      retryLimit: RETRY_LIMIT,
+      retryBackoff: RETRY_BACKOFF,
+    }),
+  );
 }
 
 export type BroadcastJobHandler = JobHandler<BroadcastJob>;

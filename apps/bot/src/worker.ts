@@ -26,6 +26,7 @@ import {
   computeDebtTiyin,
   formatKg,
   formatSom,
+  isBroadcastTest,
   statusNotification,
   storedChargeableWeight,
   STATUS_META,
@@ -45,8 +46,10 @@ import { captureError } from './sentry';
 import {
   getNotifyContext,
   getSendContext,
+  getTenantById,
   getTicketDeliveryContext,
   incrementBroadcastSent,
+  isBroadcastLive,
   insertMessageOutcome,
   listCustomerPayments,
   listCustomerTracks,
@@ -486,6 +489,47 @@ async function handleBroadcastJob(
   job: BroadcastJob,
   meta: JobMeta,
 ): Promise<void> {
+  // K1: a test carries a chat id instead of a customer. It counts toward
+  // nothing — no sent_count, no message_log — because it is the employee
+  // reading their own draft, not a message to a customer (§5.8).
+  if (isBroadcastTest(job)) {
+    const tenant = await getTenantById(job.tenantId);
+    if (!tenant) {
+      logger.warn({ job }, 'broadcast test: tenant gone, dropping');
+      return;
+    }
+    await limiter.acquire(tenant.botToken, job.testChatId);
+    try {
+      await apiFor(tenant.botToken).sendMessage(job.testChatId, job.text);
+    } catch (err) {
+      if (isPermanentSendError(err)) {
+        // The employee has not started the bot, or blocked it. Nothing to
+        // retry and nobody else affected — the panel already warned them.
+        logger.warn(
+          { err: err instanceof GrammyError ? err.description : err },
+          'broadcast test: permanent send error, dropping',
+        );
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  // §7.11 (D-008): re-read the row before every delivery. Inside the hold
+  // window this means a cancel reached nobody; after it, the remainder stops
+  // where it stands.
+  if (!(await isBroadcastLive(job.tenantId, job.broadcastId))) {
+    // No message_log row on purpose: this was not dropped and not failed, it
+    // never happened — logging it would inflate the undelivered count with
+    // messages nobody sent.
+    logger.info(
+      { broadcastId: job.broadcastId },
+      'broadcast: cancelled, skipping delivery',
+    );
+    return;
+  }
+
   const ctx = await getSendContext(job.tenantId, job.customerId);
   if (!ctx) {
     logger.warn({ job }, 'broadcast: tenant gone, dropping');

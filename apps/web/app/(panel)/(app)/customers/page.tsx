@@ -21,18 +21,22 @@ export async function generateMetadata() {
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: { q?: string; page?: string };
+  searchParams: { q?: string; page?: string; blocked?: string };
 }) {
   const { tenant, role } = await requireCapability('customers.view');
   const t = await getTranslations('customers');
   const tCommon = await getTranslations('common');
 
   const q = searchParams.q?.trim() ?? '';
+  // §7.17 (K3): the blocked filter is a URL flag like the search, so a
+  // dashboard card can link straight into it and the view survives a reload.
+  const onlyBlocked = searchParams.blocked === '1';
   const requestedPage = Math.max(1, Number(searchParams.page) || 1);
 
   const { rows: customers, total } = await listCustomersWithDebt({
     tenantId: tenant.id,
     q,
+    onlyBlocked,
     sort: 'code',
     limit: CUSTOMERS_PAGE_SIZE,
     offset: (requestedPage - 1) * CUSTOMERS_PAGE_SIZE,
@@ -46,7 +50,18 @@ export default async function CustomersPage({
   const pageHref = (target: number) => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
+    if (onlyBlocked) params.set('blocked', '1');
     if (target > 1) params.set('page', String(target));
+    const qs = params.toString();
+    return qs ? `/customers?${qs}` : '/customers';
+  };
+
+  // Toggling the filter drops the page: page 4 of "everyone" is rarely page 4
+  // of "blocked", and landing on an empty page reads as "nobody is blocked".
+  const filterHref = (blocked: boolean) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (blocked) params.set('blocked', '1');
     const qs = params.toString();
     return qs ? `/customers?${qs}` : '/customers';
   };
@@ -68,7 +83,7 @@ export default async function CustomersPage({
         }
       />
 
-      <div className="mb-4 flex">
+      <div className="mb-3 flex">
         <SearchField
           path="/customers"
           value={q}
@@ -77,10 +92,41 @@ export default async function CustomersPage({
         />
       </div>
 
+      <div className="mb-4 flex gap-2">
+        <Link
+          href={filterHref(false)}
+          aria-current={onlyBlocked ? undefined : 'page'}
+          className={
+            onlyBlocked
+              ? 'rounded-full border border-input px-3 py-1.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-secondary'
+              : 'rounded-full bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-foreground'
+          }
+        >
+          {t('filterAll')}
+        </Link>
+        <Link
+          href={filterHref(true)}
+          aria-current={onlyBlocked ? 'page' : undefined}
+          className={
+            onlyBlocked
+              ? 'rounded-full bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-foreground'
+              : 'rounded-full border border-input px-3 py-1.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-secondary'
+          }
+        >
+          🚫 {t('filterBlocked')}
+        </Link>
+      </div>
+
       {customers.length === 0 ? (
         <EmptyState
-          title={t('emptyTitle')}
-          hint={q ? t('emptyHintSearch') : t('emptyHint')}
+          title={onlyBlocked ? t('emptyBlockedTitle') : t('emptyTitle')}
+          hint={
+            onlyBlocked
+              ? t('emptyBlockedHint')
+              : q
+                ? t('emptyHintSearch')
+                : t('emptyHint')
+          }
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-white">
@@ -92,6 +138,11 @@ export default async function CustomersPage({
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">
+                  {c.botBlocked ? (
+                    <span title={t('blockedBadge')} aria-label={t('blockedBadge')}>
+                      🚫{' '}
+                    </span>
+                  ) : null}
                   {c.fullName ?? tCommon('noName')}{' '}
                   <span className="font-mono text-[12px] font-medium text-muted-foreground">
                     {c.clientCode}

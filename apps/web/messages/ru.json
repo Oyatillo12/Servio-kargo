@@ -182,7 +182,9 @@
     "cargoFlowEmpty": "Добавьте трек — груз появится на линии Китай → Ташкент",
     "cashByStaff": "Касса — кто принял",
     "cashUnattributed": "Кто принял — неизвестно",
-    "cashPaymentCount": "{count, plural, one {# оплата} few {# оплаты} many {# оплат} other {# оплаты}}"
+    "cashPaymentCount": "{count, plural, one {# оплата} few {# оплаты} many {# оплат} other {# оплаты}}",
+    "blockedCustomers": "Заблокировали бота",
+    "blockedCustomersHint": "Сообщения не доходят"
   },
   "tracks": {
     "pageTitle": "Треки",
@@ -393,7 +395,12 @@
     "formDuplicate": "{clientCode} — {name} уже существует. Нажмите, чтобы выбрать его.",
     "invalidPhone": "Укажите номер телефона (минимум 4 символа).",
     "malformedPhone": "Неверный номер телефона.",
-    "phoneTaken": "Этот телефон уже принадлежит клиенту {clientCode}."
+    "phoneTaken": "Этот телефон уже принадлежит клиенту {clientCode}.",
+    "filterAll": "Все",
+    "filterBlocked": "Заблокировали",
+    "blockedBadge": "Заблокировал бота",
+    "emptyBlockedTitle": "Заблокировавших нет",
+    "emptyBlockedHint": "Пока никто не заблокировал бота — рассылки доходят."
   },
   "customerDetail": {
     "pageTitle": "Клиент",
@@ -518,11 +525,22 @@
     "recipients": "получат {count, plural, one {# клиент} few {# клиента} many {# клиентов} other {# клиента}}",
     "confirmTitle": "Отправить рассылку",
     "confirmBody": "Следующее сообщение получат {count, plural, one {# клиент} few {# клиента} many {# клиентов} other {# клиента}}. Продолжить?",
-    "sent": "{count, plural, one {отправлено # клиенту} few {отправлено # клиентам} many {отправлено # клиентам} other {отправлено # клиентам}}",
     "historyTitle": "История отправок",
     "historyEmpty": "Рассылок ещё не было.",
-    "sentCount": "{count, plural, one {отправлено #} few {отправлено #} many {отправлено #} other {отправлено #}}",
-    "tooLong": "Введите текст сообщения (до {max} символов)."
+    "tooLong": "Введите текст сообщения (до {max} символов).",
+    "queued": "{count, plural, one {в очереди для # клиента} few {в очереди для # клиентов} many {в очереди для # клиентов} other {в очереди для # клиентов}}",
+    "testSend": "Отправить тест мне",
+    "testQueued": "Тестовое сообщение в очереди — проверьте Telegram.",
+    "testNoTelegram": "Ваш Telegram не подключён. Отправьте боту /start и подключитесь как сотрудник.",
+    "holdCountdown": "Уйдёт {count, plural, one {# клиенту} few {# клиентам} many {# клиентам} other {# клиентам}} через {seconds} сек.",
+    "holdSending": "Отправляется {count, plural, one {# клиенту} few {# клиентам} many {# клиентам} other {# клиентам}}",
+    "holdHint": "Если отменить сейчас — не получит никто.",
+    "stopHint": "Отправленное останется, остальное можно остановить.",
+    "stop": "Остановить",
+    "cancelledInTime": "Отменено — никто не получил.",
+    "stopped": "Остановлено. Остальные сообщения не уйдут.",
+    "sentProgress": "отправлено {sent} / {total}",
+    "cancelledBadge": "Отменено"
   },
   "import": {
     "pageTitle": "Импорт",

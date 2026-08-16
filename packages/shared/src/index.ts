@@ -109,7 +109,14 @@ export { parseKgToGrams } from './services/calc';
 export {
   BROADCAST_QUEUE,
   BROADCAST_MAX_CHARS,
+  BROADCAST_HOLD_SECONDS,
+  isBroadcastTest,
+  broadcastHoldRemainingMs,
+  canStopBroadcast,
   type BroadcastJob,
+  type BroadcastFanoutJob,
+  type BroadcastTestJob,
+  type BroadcastStatus,
 } from './services/broadcast';
 export {
   REMINDER_QUEUE,

@@ -1,11 +1,12 @@
 import { getTranslations } from 'next-intl/server';
 
-import { formatDateTime } from '@kargotrack/shared';
+import { canStopBroadcast, formatDateTime } from '@kargotrack/shared';
 
 import { requireCapability } from '@/lib/auth';
 import { listBroadcasts, listCustomerIdsWithTelegram } from '@/lib/queries';
 import { PageHeader } from '@/components/layout/page-header';
 import { BroadcastForm } from '@/features/broadcast/components/broadcast-form';
+import { StopBroadcastButton } from '@/features/broadcast/components/stop-broadcast-button';
 
 export async function generateMetadata() {
   const t = await getTranslations('broadcast');
@@ -19,7 +20,7 @@ function preview(text: string): string {
 }
 
 export default async function BroadcastPage() {
-  const { tenant } = await requireCapability('broadcast.send');
+  const { tenant, admin } = await requireCapability('broadcast.send');
   const t = await getTranslations('broadcast');
 
   const [recipientIds, history] = await Promise.all([
@@ -31,7 +32,10 @@ export default async function BroadcastPage() {
     <div className="mx-auto max-w-md space-y-4">
       <PageHeader title={t('pageTitle')} className="mb-0" />
 
-      <BroadcastForm recipientCount={recipientIds.length} />
+      <BroadcastForm
+        recipientCount={recipientIds.length}
+        canTest={admin.tgUserId != null}
+      />
 
       <div>
         <h2 className="mb-2 text-[13.5px] font-semibold text-foreground">
@@ -54,13 +58,30 @@ export default async function BroadcastPage() {
                   <span className="text-[11.5px] text-muted-foreground">
                     {formatDateTime(b.createdAt)}
                   </span>
+                  {/* §5.8: progress, not just a delivered count — "2 980 of
+                      3 000" is what tells an admin it is still going. */}
                   <span className="shrink-0 text-[11.5px] font-semibold text-primary">
-                    {t('sentCount', { count: b.sentCount })}
+                    {t('sentProgress', {
+                      sent: b.sentCount,
+                      total: b.recipientCount,
+                    })}
                   </span>
                 </div>
                 <p className="mt-1 text-[13px] text-foreground">
                   {preview(b.text)}
                 </p>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  {b.status === 'cancelled' ? (
+                    <span className="rounded border border-[#b3261e]/30 px-1.5 py-px text-[11px] font-semibold text-[#b3261e]">
+                      {t('cancelledBadge')}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  {canStopBroadcast(b) ? (
+                    <StopBroadcastButton broadcastId={b.id} />
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

@@ -12,6 +12,7 @@ import { enqueueReminder } from '@kargotrack/db/queue';
 import {
   adminUsers,
   customers,
+  messageLog,
   payments,
   tracks,
   type Customer,
@@ -254,6 +255,8 @@ export interface CustomerRow {
   lang: Lang;
   /** Whether the customer has ever opened the bot (SPEC §7.12 linking). */
   hasTelegram: boolean;
+  /** Their last status notification was permanently dropped (SPEC §7.17). */
+  botBlocked: boolean;
   createdAt: Date;
 }
 
@@ -266,6 +269,8 @@ export interface CustomerListArgs {
   q?: string;
   /** Keep only customers whose net debt is > 0 (the /debtors screen, §5.6). */
   onlyDebtors?: boolean;
+  /** Keep only customers whose bot looks blocked (SPEC §7.17, tasks.md K3). */
+  onlyBlocked?: boolean;
   /** `code` = client code ascending (/customers); `debt` = largest first (/debtors). */
   sort?: 'code' | 'debt';
   /** Page size. Omit for every matching row (Excel export, "remind all"). */
@@ -290,6 +295,7 @@ interface CustomerListSqlRow {
   created_at: string | Date;
   track_count: number;
   debt_tiyin: string;
+  bot_blocked: boolean;
   total_count: number;
 }
 
@@ -329,7 +335,16 @@ export async function listCustomersWithDebt(
               or ${customers.clientCode} ilike ${like})`
     : sql``;
 
-  const debtorsOnly = args.onlyDebtors ? sql`where debt_tiyin > 0` : sql``;
+  // Two independent filters over the assembled rows; composed here so adding a
+  // third does not mean rewriting the WHERE by hand each time.
+  const outerConds = [
+    ...(args.onlyDebtors ? [sql`debt_tiyin > 0`] : []),
+    ...(args.onlyBlocked ? [sql`bot_blocked`] : []),
+  ];
+  const outerWhere =
+    outerConds.length > 0
+      ? sql`where ${sql.join(outerConds, sql` and `)}`
+      : sql``;
 
   // client_code breaks ties: it is unique per tenant, so two customers with the
   // same debt keep a stable order and pagination cannot repeat or skip a row.
@@ -358,6 +373,18 @@ export async function listCustomersWithDebt(
          and ${tracks.deletedAt} is null
          and ${tracks.customerId} is not null
        group by ${tracks.customerId}
+    ), blocked as (
+      -- 7.17: the LAST notify outcome per customer. distinct on gives one row
+      -- each; dropped there is the block inference, and it clears itself as
+      -- soon as a later notification succeeds.
+      select distinct on (${messageLog.customerId})
+             ${messageLog.customerId} as customer_id,
+             ${messageLog.status} as status
+        from ${messageLog}
+       where ${messageLog.tenantId} = ${args.tenantId}
+         and ${messageLog.kind} = 'notify'
+         and ${messageLog.customerId} is not null
+       order by ${messageLog.customerId}, ${messageLog.createdAt} desc
     ), paid as (
       select ${payments.customerId} as customer_id,
              sum(${payments.amountTiyin}) as amount
@@ -373,17 +400,19 @@ export async function listCustomersWithDebt(
              ${customers.tgUserId} as tg_user_id,
              ${customers.createdAt} as created_at,
              coalesce(counted.n, 0)::int as track_count,
-             (coalesce(owed.amount, 0) - coalesce(paid.amount, 0))::bigint as debt_tiyin
+             (coalesce(owed.amount, 0) - coalesce(paid.amount, 0))::bigint as debt_tiyin,
+             (blocked.status = 'dropped') as bot_blocked
         from ${customers}
         left join owed on owed.customer_id = ${customers.id}
         left join counted on counted.customer_id = ${customers.id}
         left join paid on paid.customer_id = ${customers.id}
+        left join blocked on blocked.customer_id = ${customers.id}
        where ${customers.tenantId} = ${args.tenantId}
          ${search}
     )
     select *, (count(*) over ())::int as total_count
       from base
-      ${debtorsOnly}
+      ${outerWhere}
       ${order}
       ${limit} ${offset}
   `)) as unknown as CustomerListSqlRow[];
@@ -397,6 +426,7 @@ export async function listCustomersWithDebt(
       phone: r.phone,
       lang: r.lang,
       hasTelegram: r.tg_user_id != null,
+      botBlocked: r.bot_blocked === true,
       createdAt: new Date(r.created_at),
       trackCount: r.track_count,
       debtTiyin: Number(r.debt_tiyin),
@@ -669,4 +699,29 @@ export async function queueReminder(
   customerId: string,
 ): Promise<void> {
   await enqueueReminder({ tenantId, customerId, reason: 'manual' });
+}
+
+/**
+ * How many customers look like they blocked the bot (SPEC §7.17, tasks.md K3).
+ *
+ * Same inference as the list's `bot_blocked` column and `isCustomerBotBlocked`:
+ * the LAST `notify` outcome per customer is `dropped`. Counted in one pass so
+ * the dashboard card costs a single aggregate, and deliberately NOT used to
+ * exclude anyone from a broadcast (D-008) — it only tells a human where to look.
+ */
+export async function countBlockedCustomers(tenantId: string): Promise<number> {
+  const rows = (await getDb().execute(sql`
+    with last_notify as (
+      select distinct on (${messageLog.customerId})
+             ${messageLog.customerId} as customer_id,
+             ${messageLog.status} as status
+        from ${messageLog}
+       where ${messageLog.tenantId} = ${tenantId}
+         and ${messageLog.kind} = 'notify'
+         and ${messageLog.customerId} is not null
+       order by ${messageLog.customerId}, ${messageLog.createdAt} desc
+    )
+    select count(*)::int as n from last_notify where status = 'dropped'
+  `)) as unknown as Array<{ n: number }>;
+  return Number(rows[0]?.n ?? 0);
 }

@@ -110,3 +110,26 @@ export async function incrementBroadcastSent(
       and(eq(broadcasts.tenantId, tenantId), eq(broadcasts.id, broadcastId)),
     );
 }
+
+/**
+ * Is this broadcast still allowed to send (SPEC §7.11, D-008)?
+ *
+ * Read before EVERY delivery, which is what makes "stop" work mid-flight as
+ * well as inside the hold window. Deliberately one small SELECT rather than
+ * pg-boss job cancellation: 3 000 stored job ids would be fragile and could
+ * not stop a fan-out already in progress. A missing row (tenant or broadcast
+ * deleted) also reads as "do not send".
+ */
+export async function isBroadcastLive(
+  tenantId: string,
+  broadcastId: string,
+): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ status: broadcasts.status })
+    .from(broadcasts)
+    .where(
+      and(eq(broadcasts.tenantId, tenantId), eq(broadcasts.id, broadcastId)),
+    )
+    .limit(1);
+  return row?.status === 'queued';
+}
