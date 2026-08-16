@@ -52,6 +52,8 @@ export async function createTariff(args: {
   tenantId: string;
   name: string;
   pricePerKgMinor: number;
+  /** kg per m³ (§7.16) — the volumetric coefficient this tariff prices with. */
+  volumetricCoef: number;
   isDefault: boolean;
   active: boolean;
 }): Promise<void> {
@@ -75,6 +77,7 @@ export async function createTariff(args: {
       tenantId: args.tenantId,
       name: args.name,
       pricePerKgMinor: args.pricePerKgMinor,
+      volumetricCoef: args.volumetricCoef,
       isDefault: plan.isDefault,
       active: plan.active,
     });
@@ -87,10 +90,17 @@ export async function updateTariff(args: {
   tariffId: string;
   name: string;
   pricePerKgMinor: number;
+  volumetricCoef: number;
 }): Promise<void> {
   await getDb()
     .update(tariffs)
-    .set({ name: args.name, pricePerKgMinor: args.pricePerKgMinor })
+    .set({
+      name: args.name,
+      pricePerKgMinor: args.pricePerKgMinor,
+      // §7.16: takes effect on the NEXT pricing write. Tracks already priced
+      // keep their frozen volumetric_grams — see the module note there.
+      volumetricCoef: args.volumetricCoef,
+    })
     .where(
       and(eq(tariffs.tenantId, args.tenantId), eq(tariffs.id, args.tariffId)),
     );

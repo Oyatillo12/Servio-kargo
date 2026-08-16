@@ -8,7 +8,9 @@ import {
   can,
   isValidTrackCode,
   normalizeCode,
+  parseDimensionCm,
   parseKgToGrams,
+  readDimensions,
   MARKA_MAX_LENGTH,
 } from '@kargotrack/shared';
 
@@ -16,7 +18,7 @@ import { authorize } from '@/lib/auth';
 import { applyPanelWeighing, type WeighedRow } from '@/lib/queries';
 
 /** Which field the console should re-focus after a rejection. */
-export type WeighField = 'code' | 'weight' | 'marka';
+export type WeighField = 'code' | 'weight' | 'marka' | 'dims';
 
 export interface WeighState {
   row?: WeighedRow;
@@ -33,6 +35,10 @@ const schema = z.object({
   // Same cap the bot's parser uses, so a marka that is too long to look up is
   // too long on both surfaces.
   marka: z.string().trim().max(MARKA_MAX_LENGTH).nullable().optional(),
+  // §7.16 sides in cm — optional, and only meaningful all three together.
+  lengthCm: z.string().trim().max(8).optional(),
+  widthCm: z.string().trim().max(8).optional(),
+  heightCm: z.string().trim().max(8).optional(),
 });
 
 /**
@@ -47,6 +53,9 @@ export async function weighAction(input: {
   code: string;
   weight: string;
   marka?: string | null;
+  lengthCm?: string;
+  widthCm?: string;
+  heightCm?: string;
 }): Promise<WeighState> {
   const t = await getTranslations('weigh');
 
@@ -79,6 +88,30 @@ export async function weighAction(input: {
     return { error: (await getTranslations('auth'))('forbidden'), field: 'marka' };
   }
 
+  // §7.16: all three sides or none. Typing two and hitting Enter is a slip
+  // worth naming — silently ignoring them would price the box by weight and
+  // nobody would find out until the customer disputes the bill.
+  const sides = [
+    parsed.data.lengthCm ?? '',
+    parsed.data.widthCm ?? '',
+    parsed.data.heightCm ?? '',
+  ];
+  const typedSides = sides.filter((s) => s !== '');
+  if (typedSides.length > 0 && typedSides.length < 3) {
+    return { error: t('invalidDimsPartial'), field: 'dims' };
+  }
+  let dimensions = null;
+  if (typedSides.length === 3) {
+    dimensions = readDimensions(
+      parseDimensionCm(sides[0]!),
+      parseDimensionCm(sides[1]!),
+      parseDimensionCm(sides[2]!),
+    );
+    if (dimensions == null) {
+      return { error: t('invalidDims'), field: 'dims' };
+    }
+  }
+
   const result = await applyPanelWeighing({
     tenantId: tenant.id,
     currency: tenant.currency,
@@ -87,6 +120,7 @@ export async function weighAction(input: {
     codeOriginal,
     weightGrams,
     marka,
+    dimensions,
     createdBy: admin.id,
   });
 

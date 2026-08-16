@@ -54,6 +54,7 @@ export default async function SettingsPage() {
     editValue: isUsd
       ? String(tf.pricePerKgMinor / 100)
       : String(Math.round(tf.pricePerKgMinor / 100)),
+    volumetricCoef: String(tf.volumetricCoef),
   }));
 
   return (

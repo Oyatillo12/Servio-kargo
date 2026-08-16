@@ -11,6 +11,7 @@ import {
   formatSom,
   formatUsd,
   isAssignEventMeta,
+  storedChargeableWeight,
   type Lang,
   type TrackStatus,
 } from '@kargotrack/shared';
@@ -199,6 +200,20 @@ export default async function TrackDetailPage({
       ? String(Math.round(track.priceTiyin / 100))
       : '';
 
+  // §7.16: read the FROZEN volumetric column, never a recomputation — a tariff
+  // whose coefficient changed since must not restate what this parcel paid for.
+  const charged = storedChargeableWeight(
+    track.weightGrams,
+    track.volumetricGrams,
+  );
+  const chargeableText =
+    charged?.basis === 'volumetric'
+      ? t('chargeableVolumetric', {
+          kg: formatKg(charged.grams),
+          actual: formatKg(track.weightGrams ?? 0),
+        })
+      : undefined;
+
   return (
     <div className="mx-auto max-w-md space-y-3">
       <Link
@@ -253,6 +268,12 @@ export default async function TrackDetailPage({
           initialManualPriceSom={initialManualPriceSom}
           priceText={priceText}
           priceUsdText={priceUsdText}
+          initialDimensions={{
+            lengthCm: track.lengthCm != null ? String(track.lengthCm) : '',
+            widthCm: track.widthCm != null ? String(track.widthCm) : '',
+            heightCm: track.heightCm != null ? String(track.heightCm) : '',
+          }}
+          chargeableText={chargeableText}
         />
       </SectionCard>
 

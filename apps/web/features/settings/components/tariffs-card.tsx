@@ -39,6 +39,8 @@ export interface TariffView {
   priceUnit: string;
   /** Editable raw price (so'm for UZS, dollars for USD). */
   editValue: string;
+  /** Volumetric coefficient in kg/m³ as typed text (§7.16). */
+  volumetricCoef: string;
 }
 
 /**
@@ -206,9 +208,10 @@ export function TariffsCard({
         unitLabel={unitLabel}
         busy={busy}
         showDefault
-        onSubmit={(name, price, isDefault) =>
+        onSubmit={(name, price, isDefault, volumetricCoef) =>
           run(
-            () => createTariffAction({ name, price, isDefault }),
+            () =>
+              createTariffAction({ name, price, isDefault, volumetricCoef }),
             t('tariffAdded'),
           )
         }
@@ -222,6 +225,7 @@ export function TariffsCard({
         busy={busy}
         initialName={editing?.name ?? ''}
         initialPrice={editing?.editValue ?? ''}
+        initialCoef={editing?.volumetricCoef ?? ''}
         canDelete={editing != null && !editing.isDefault}
         onDelete={() => {
           const id = editing?.id;
@@ -229,11 +233,12 @@ export function TariffsCard({
           setEditing(null);
           run(() => deleteTariffAction(id), t('tariffDeleted'));
         }}
-        onSubmit={(name, price) => {
+        onSubmit={(name, price, _isDefault, volumetricCoef) => {
           const id = editing?.id;
           if (!id) return;
           run(
-            () => updateTariffAction({ tariffId: id, name, price }),
+            () =>
+              updateTariffAction({ tariffId: id, name, price, volumetricCoef }),
             t('tariffSaved'),
           );
         }}
@@ -252,6 +257,7 @@ function TariffDialog({
   canDelete = false,
   initialName = '',
   initialPrice = '',
+  initialCoef = '',
   onDelete,
   onSubmit,
 }: {
@@ -264,8 +270,14 @@ function TariffDialog({
   canDelete?: boolean;
   initialName?: string;
   initialPrice?: string;
+  initialCoef?: string;
   onDelete?: () => void;
-  onSubmit: (name: string, price: string, isDefault: boolean) => void;
+  onSubmit: (
+    name: string,
+    price: string,
+    isDefault: boolean,
+    volumetricCoef: string,
+  ) => void;
 }) {
   const t = useTranslations('settings');
   const tCommon = useTranslations('common');
@@ -273,14 +285,16 @@ function TariffDialog({
   const [name, setName] = useState(initialName);
   const [price, setPrice] = useState(initialPrice);
   const [isDefault, setIsDefault] = useState(false);
+  const [coef, setCoef] = useState(initialCoef);
 
   // Re-seed fields whenever the dialog (re)opens for a different tariff.
   const [seed, setSeed] = useState<string>('');
-  const key = `${initialName}|${initialPrice}|${open}`;
+  const key = `${initialName}|${initialPrice}|${initialCoef}|${open}`;
   if (open && key !== seed) {
     setSeed(key);
     setName(initialName);
     setPrice(initialPrice);
+    setCoef(initialCoef);
     setIsDefault(false);
   }
 
@@ -312,6 +326,23 @@ function TariffDialog({
               placeholder="55 000"
               className="font-mono"
             />
+          </div>
+          {/* §7.16: only bites parcels whose sides were entered, which is why
+              the hint says so — an operator who never measures a box should
+              not have to wonder what this number is doing to their prices. */}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="tf-coef">{t('tariffCoef')}</Label>
+            <Input
+              id="tf-coef"
+              inputMode="numeric"
+              value={coef}
+              onChange={(e) => setCoef(e.target.value)}
+              placeholder="167"
+              className="font-mono"
+            />
+            <p className="text-[11.5px] text-muted-foreground">
+              {t('tariffCoefHint')}
+            </p>
           </div>
           {showDefault ? (
             <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
@@ -350,7 +381,7 @@ function TariffDialog({
           <Button
             className="flex-1"
             onClick={() => {
-              onSubmit(name, price, isDefault);
+              onSubmit(name, price, isDefault, coef);
               onOpenChange(false);
             }}
             disabled={busy || !name.trim()}

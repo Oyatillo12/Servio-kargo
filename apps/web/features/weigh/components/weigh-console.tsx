@@ -64,6 +64,16 @@ export function WeighConsole({
   const [markaLocked, setMarkaLocked] = useState(false);
   const [rows, setRows] = useState<WeighedRow[]>(initialRows);
 
+  /**
+   * Dimensions (§7.16) stay behind a toggle, closed by default. The scanner
+   * flow is this screen's reason to exist: while the block is closed there are
+   * no extra fields in the tab order and Enter on the weight still saves. An
+   * operator who never measures a box pays nothing for the feature.
+   */
+  const [dimsOpen, setDimsOpen] = useState(false);
+  const [dims, setDims] = useState({ lengthCm: '', widthCm: '', heightCm: '' });
+  const lengthRef = useRef<HTMLInputElement>(null);
+
   const [scanning, setScanning] = useState(false);
   /**
    * Whether this device can scan, resolved AFTER mount: `BarcodeDetector` and
@@ -81,6 +91,7 @@ export function WeighConsole({
     code: codeRef,
     weight: weightRef,
     marka: markaRef,
+    dims: lengthRef,
   };
 
   /** A scanned code behaves exactly like a scanned-by-USB one: on to the weight. */
@@ -99,6 +110,7 @@ export function WeighConsole({
         code,
         weight,
         marka: canAssign ? marka : null,
+        ...(dimsOpen ? dims : {}),
       });
 
       if (res.error || !res.row) {
@@ -114,6 +126,9 @@ export function WeighConsole({
       setCode('');
       setWeight('');
       if (!markaLocked) setMarka('');
+      // Sides belong to the box that just left the desk — never carried over,
+      // unlike the marka, whose whole point is a run of one customer's boxes.
+      setDims({ lengthCm: '', widthCm: '', heightCm: '' });
       codeRef.current?.focus();
     });
   }
@@ -249,6 +264,80 @@ export function WeighConsole({
             </span>
           </div>
         </div>
+
+        {/* §7.16 dimensions — a toggle, not a row of fields: see `dimsOpen`. */}
+        {dimsOpen ? (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="weigh-len">
+                {t('dimsLabel')}{' '}
+                <span className="font-normal text-muted-foreground">
+                  · {tCommon('optional')}
+                </span>
+              </Label>
+              <button
+                type="button"
+                onClick={() => {
+                  setDimsOpen(false);
+                  setDims({ lengthCm: '', widthCm: '', heightCm: '' });
+                }}
+                className="rounded-md px-1.5 py-1 text-[11.5px] font-medium text-muted-foreground hover:bg-secondary"
+              >
+                {tCommon('cancel')}
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {(['lengthCm', 'widthCm', 'heightCm'] as const).map((side, i) => (
+                <div
+                  key={side}
+                  className="flex min-w-0 flex-1 items-center gap-1.5"
+                >
+                  {i > 0 ? (
+                    <span className="flex-none text-[15px] text-muted-foreground">
+                      ×
+                    </span>
+                  ) : null}
+                  <input
+                    id={i === 0 ? 'weigh-len' : undefined}
+                    ref={i === 0 ? lengthRef : undefined}
+                    value={dims[side]}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    enterKeyHint="done"
+                    placeholder={['50', '40', '30'][i]}
+                    aria-label={
+                      [t('dimLength'), t('dimWidth'), t('dimHeight')][i]
+                    }
+                    onChange={(e) =>
+                      setDims((d) => ({ ...d, [side]: e.target.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submit();
+                      }
+                    }}
+                    className="h-12 min-w-0 flex-1 rounded-lg border border-input bg-white px-3 font-mono text-[16px] font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              ))}
+              <span className="flex-none text-[13px] text-muted-foreground">
+                {tCommon('cm')}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setDimsOpen(true);
+              setTimeout(() => lengthRef.current?.focus(), 0);
+            }}
+            className="self-start rounded-md px-1 py-1 text-[13px] font-medium text-primary hover:bg-secondary"
+          >
+            + {t('dimsAdd')}
+          </button>
+        )}
 
         {canAssign ? (
           <div className="flex flex-col gap-1.5">
@@ -457,6 +546,15 @@ function WeighRow({
         <span className="font-mono text-muted-foreground">
           {formatKg(row.weightGrams)} {tCommon('kg')}
         </span>
+
+        {/* §7.16: the price came from the volume, and this is the number the
+            customer will ask about — so the operator sees it while the box is
+            still on the desk, not after the call. */}
+        {row.basis === 'volumetric' ? (
+          <Tag className="bg-accent text-primary">
+            {t('tagVolumetric', { kg: formatKg(row.chargeableGrams) })}
+          </Tag>
+        ) : null}
 
         {row.owner ? (
           <span className="rounded bg-accent px-1.5 py-px font-mono font-semibold text-primary">

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { z } from 'zod';
 
-import { parseSomToTiyin } from '@kargotrack/shared';
+import { parseDimensionCm, parseSomToTiyin } from '@kargotrack/shared';
 
 import { authorize, requireAdmin } from '@/lib/auth';
 import {
@@ -18,13 +18,17 @@ export interface WeightState {
   ok?: boolean;
 }
 
-// Weight in kg up to 2 decimals (SPEC §5.3); tariff + manual override (§7.4).
+// Weight in kg up to 2 decimals (SPEC §5.3); tariff + manual override (§7.4);
+// optional sides in cm (§7.16).
 const schema = z.object({
   trackId: z.string().uuid(),
   weight: z.string(),
   tariffId: z.string().uuid().nullable().optional(),
   priceManual: z.boolean().optional(),
   manualPrice: z.string().optional(),
+  lengthCm: z.string().max(8).optional(),
+  widthCm: z.string().max(8).optional(),
+  heightCm: z.string().max(8).optional(),
 });
 
 /**
@@ -38,6 +42,10 @@ export async function setWeightAction(input: {
   tariffId: string | null;
   priceManual: boolean;
   manualPrice: string;
+  /** Sides in cm; empty strings clear them — this is the edit surface (§7.16). */
+  lengthCm?: string;
+  widthCm?: string;
+  heightCm?: string;
 }): Promise<WeightState> {
   const t = await getTranslations('trackDetail');
 
@@ -74,6 +82,23 @@ export async function setWeightAction(input: {
     }
   }
 
+  // §7.16: all three sides or none. A partly-filled row is a mistake worth
+  // reporting rather than silently dropping — the price would look wrong later
+  // and nobody would know which field was ignored.
+  const sides = [
+    parsed.data.lengthCm ?? '',
+    parsed.data.widthCm ?? '',
+    parsed.data.heightCm ?? '',
+  ];
+  const typed = sides.filter((s) => s.trim() !== '');
+  if (typed.length > 0 && typed.length < 3) {
+    return { error: t('invalidDimensionsPartial') };
+  }
+  const parsedSides = typed.length === 3 ? sides.map(parseDimensionCm) : [];
+  if (typed.length === 3 && parsedSides.some((v) => v == null)) {
+    return { error: t('invalidDimensions') };
+  }
+
   const err = await setTrackPricing({
     tenantId: tenant.id,
     trackId: parsed.data.trackId,
@@ -81,6 +106,9 @@ export async function setWeightAction(input: {
     tariffId: parsed.data.tariffId ?? null,
     priceManual,
     manualPriceTiyin,
+    lengthCm: parsedSides[0] ?? null,
+    widthCm: parsedSides[1] ?? null,
+    heightCm: parsedSides[2] ?? null,
   });
   if (err === 'NO_TARIFF') return { error: t('noTariffConfigured') };
   if (err === 'NO_RATE') return { error: t('noUsdRate') };

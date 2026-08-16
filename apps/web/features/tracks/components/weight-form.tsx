@@ -38,6 +38,8 @@ export function WeightForm({
   initialManualPriceSom,
   priceText,
   priceUsdText,
+  initialDimensions,
+  chargeableText,
 }: {
   trackId: string;
   defaultWeight: string;
@@ -47,6 +49,13 @@ export function WeightForm({
   initialManualPriceSom: string;
   priceText: string;
   priceUsdText?: string;
+  /** Stored sides in cm as text, empty when the parcel was never measured. */
+  initialDimensions: { lengthCm: string; widthCm: string; heightCm: string };
+  /**
+   * "Hisob vazni: 8.0 kg (hajmiy)" — rendered only when volume set the price
+   * (§7.16). The server formats it, since the frozen figure lives there.
+   */
+  chargeableText?: string;
 }) {
   const t = useTranslations('trackDetail');
   const tCommon = useTranslations('common');
@@ -59,6 +68,7 @@ export function WeightForm({
   );
   const [manual, setManual] = useState(initialManual);
   const [manualPrice, setManualPrice] = useState(initialManualPriceSom);
+  const [dims, setDims] = useState(initialDimensions);
 
   function save() {
     startSave(async () => {
@@ -68,6 +78,9 @@ export function WeightForm({
         tariffId: tariffId || null,
         priceManual: manual,
         manualPrice,
+        lengthCm: dims.lengthCm,
+        widthCm: dims.widthCm,
+        heightCm: dims.heightCm,
       });
       if (res.error) {
         toast.error(res.error);
@@ -101,6 +114,52 @@ export function WeightForm({
         <span className="border-l border-border bg-[#f7f8fa] px-3.5 py-2.5 text-[13px] text-muted-foreground">
           {tCommon('kg')}
         </span>
+      </div>
+
+      {/* Dimensions (§7.16) — optional, and empty on the overwhelming majority
+          of parcels, so they sit under the weight rather than beside it. */}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="dim-l">{t('dimensions')}</Label>
+        <div className="flex items-center gap-1.5">
+          {(['lengthCm', 'widthCm', 'heightCm'] as const).map((side, i) => (
+            <div key={side} className="flex min-w-0 flex-1 items-center gap-1.5">
+              {i > 0 ? (
+                <span className="flex-none text-[13px] text-muted-foreground">
+                  ×
+                </span>
+              ) : null}
+              <input
+                id={i === 0 ? 'dim-l' : undefined}
+                inputMode="numeric"
+                value={dims[side]}
+                onChange={(e) =>
+                  setDims((d) => ({ ...d, [side]: e.target.value }))
+                }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    save();
+                  }
+                }}
+                placeholder={['50', '40', '30'][i]}
+                aria-label={[t('dimLength'), t('dimWidth'), t('dimHeight')][i]}
+                className="min-w-0 flex-1 rounded-lg border border-input bg-white px-2.5 py-2 font-mono text-[15px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          ))}
+          <span className="flex-none text-[13px] text-muted-foreground">
+            {tCommon('cm')}
+          </span>
+        </div>
+        {chargeableText ? (
+          <p className="text-[11.5px] font-medium text-primary">
+            {chargeableText}
+          </p>
+        ) : (
+          <p className="text-[11.5px] text-muted-foreground">
+            {t('dimensionsHint')}
+          </p>
+        )}
       </div>
 
       {/* Tariff */}

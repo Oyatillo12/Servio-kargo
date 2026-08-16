@@ -4,7 +4,11 @@ import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { z } from 'zod';
 
-import { parseSomToTiyin, parseUsdToCents } from '@kargotrack/shared';
+import {
+  DEFAULT_VOLUMETRIC_COEF,
+  parseSomToTiyin,
+  parseUsdToCents,
+} from '@kargotrack/shared';
 import type { TenantSettings } from '@kargotrack/db/schema';
 
 import { authorize } from '@/lib/auth';
@@ -138,10 +142,25 @@ function parseTariffMinor(currency: 'UZS' | 'USD', price: string): number | null
   return currency === 'USD' ? parseUsdToCents(price) : parseSomToTiyin(price);
 }
 
+/**
+ * Parse the volumetric coefficient in kg/m³ (§7.16). Whole kilograms, bounded
+ * generously: 167 is the air standard, road tariffs run to ~333, and anything
+ * past 1000 would mean a cubic metre weighs a tonne — a typo, not a tariff.
+ * An empty field means "leave it at the default", not zero.
+ */
+function parseVolumetricCoef(input: string | undefined): number | null {
+  if (input == null || input.trim() === '') return DEFAULT_VOLUMETRIC_COEF;
+  const value = Number(input.trim().replace(',', '.'));
+  if (!Number.isFinite(value)) return null;
+  const coef = Math.round(value);
+  return coef >= 1 && coef <= 1000 ? coef : null;
+}
+
 export async function createTariffAction(input: {
   name: string;
   price: string;
   isDefault: boolean;
+  volumetricCoef?: string;
 }): Promise<TariffActionState> {
   const auth = await authorize('settings.manage');
   if (!auth.ok) return { error: auth.error };
@@ -154,10 +173,14 @@ export async function createTariffAction(input: {
   const minor = parseTariffMinor(tenant.currency, input.price);
   if (minor == null) return { error: t('tariffPriceInvalid') };
 
+  const volumetricCoef = parseVolumetricCoef(input.volumetricCoef);
+  if (volumetricCoef == null) return { error: t('tariffCoefInvalid') };
+
   await createTariff({
     tenantId: tenant.id,
     name,
     pricePerKgMinor: minor,
+    volumetricCoef,
     isDefault: input.isDefault,
     active: true,
   });
@@ -169,6 +192,7 @@ export async function updateTariffAction(input: {
   tariffId: string;
   name: string;
   price: string;
+  volumetricCoef?: string;
 }): Promise<TariffActionState> {
   const auth = await authorize('settings.manage');
   if (!auth.ok) return { error: auth.error };
@@ -185,11 +209,15 @@ export async function updateTariffAction(input: {
   const minor = parseTariffMinor(tenant.currency, input.price);
   if (minor == null) return { error: t('tariffPriceInvalid') };
 
+  const volumetricCoef = parseVolumetricCoef(input.volumetricCoef);
+  if (volumetricCoef == null) return { error: t('tariffCoefInvalid') };
+
   await updateTariff({
     tenantId: tenant.id,
     tariffId: id.data,
     name,
     pricePerKgMinor: minor,
+    volumetricCoef,
   });
   revalidatePath('/settings');
   return { ok: true };
