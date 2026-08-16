@@ -409,7 +409,13 @@
     "blockedBadge": "Botni bloklagan",
     "emptyBlockedTitle": "Bloklagan mijoz yo'q",
     "emptyBlockedHint": "Hozircha hech kim botni bloklamagan — xabarnomalar yetib boryapti.",
-    "pickerScan": "QR skanerlash"
+    "pickerScan": "QR skanerlash",
+    "filterLabel": "Holat bo'yicha filtr",
+    "colCode": "Kod",
+    "colName": "Ism",
+    "colPhone": "Telefon",
+    "colTracks": "Treklar",
+    "colDebt": "Qarz"
   },
   "customerDetail": {
     "pageTitle": "Mijoz",
@@ -494,7 +500,11 @@
     "reminderSent": "Eslatma yuborildi",
     "remindersSent": "{count, plural, other {# ta eslatma yuborildi}}",
     "advance": "Avans: {amount} so'm",
-    "noDebt": "qarz yo'q"
+    "noDebt": "qarz yo'q",
+    "colCustomer": "Mijoz",
+    "colTracks": "Treklar",
+    "colDebt": "Qarz",
+    "colAction": "Amal"
   },
   "batches": {
     "pageTitle": "Reyslar",

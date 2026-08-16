@@ -9,6 +9,15 @@ import { ExportButton } from '@/components/shared/export-button';
 import { Pagination } from '@/components/shared/pagination';
 import { ReminderButton } from '@/components/shared/reminder-button';
 import { PageHeader } from '@/components/layout/page-header';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  tableHeadRowClass,
+} from '@/components/ui/table';
 import { requireCapability } from '@/lib/auth';
 import {
   CUSTOMERS_PAGE_SIZE,
@@ -65,23 +74,25 @@ export default async function DebtorsPage({
         right={<ExportButton href="/api/export/customers?debtors=1" />}
       />
 
+      {/* The tenant's total, whole-tenant even while the list below is paged.
+          One line on a desk browser — figure, who owes it, what to do about
+          it — and stacked on a phone, where the figure comes first because it
+          is the only part an owner opens this screen to see. */}
       {debtorCount > 0 ? (
-        <div className="mb-4 rounded-lg border border-destructive/25 bg-[var(--st-lost-bg)] p-3.5">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-micro text-muted-foreground">
-              {t('totalDebt')}
-            </span>
-            <span className="text-micro text-muted-foreground">
-              {t('debtorCount', { count: debtorCount })}
-            </span>
+        <div className="mb-4 flex flex-col gap-3 rounded-lg border border-destructive/25 bg-[var(--st-lost-bg)] p-4 md:flex-row md:items-center md:gap-5">
+          <div className="min-w-0">
+            <p className="eyebrow">{t('totalDebt')}</p>
+            <p className="whitespace-nowrap font-mono text-display font-bold leading-tight tabular-nums text-destructive">
+              {formatSom(totalTiyin)}
+              <span className="ms-1.5 font-sans text-small font-medium text-ink-2">
+                {tCommon('som')}
+              </span>
+            </p>
           </div>
-          <p className="mt-1 whitespace-nowrap font-mono text-title font-bold leading-tight tabular-nums text-destructive">
-            {formatSom(totalTiyin)}
-            <span className="ml-1 text-micro font-medium text-muted-foreground">
-              {tCommon('som')}
-            </span>
+          <p className="text-small text-ink-2 md:ms-auto">
+            {t('debtorCount', { count: debtorCount })}
           </p>
-          <div className="mt-3">
+          <div className="flex-none">
             <BulkReminder
               count={debtorCount}
               totalDebtText={`${formatSom(totalTiyin)} ${tCommon('som')}`}
@@ -101,36 +112,82 @@ export default async function DebtorsPage({
           hint={t('emptyHint')}
         />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
-          {debtors.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center justify-between gap-3 border-b border-rule-soft px-4 py-3 last:border-0"
-            >
-              <Link
-                href={`/customers/${c.id}`}
-                className="min-w-0 flex-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <>
+          <div className="-mx-4 border-y border-rule bg-surface md:hidden">
+            {debtors.map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between gap-3 border-b border-rule-soft px-4 py-3 last:border-0"
               >
-                <p className="truncate text-sm font-semibold text-foreground">
-                  {c.fullName ?? tCommon('noName')}{' '}
-                  <span className="font-mono text-micro font-medium text-muted-foreground">
-                    {c.clientCode}
-                  </span>
-                </p>
-                <p className="text-micro text-muted-foreground">
-                  {t('trackCount', { count: c.trackCount })}
-                </p>
-              </Link>
-              <div className="flex flex-none items-center gap-2.5">
-                <DebtCell tiyin={c.debtTiyin} />
-                <ReminderButton
-                  action={sendReminderAction.bind(null, c.id)}
-                  size="sm"
-                />
+                <Link
+                  href={`/customers/${c.id}`}
+                  className="min-w-0 flex-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <p className="truncate text-body font-semibold text-foreground">
+                    {c.fullName ?? tCommon('noName')}{' '}
+                    <span className="font-mono text-micro font-medium text-faint">
+                      {c.clientCode}
+                    </span>
+                  </p>
+                  <p className="text-micro text-faint">
+                    {t('trackCount', { count: c.trackCount })}
+                  </p>
+                </Link>
+                <div className="flex flex-none items-center gap-2.5">
+                  <DebtCell tiyin={c.debtTiyin} />
+                  <ReminderButton
+                    action={sendReminderAction.bind(null, c.id)}
+                    size="sm"
+                  />
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <tr className={tableHeadRowClass}>
+                  <TableHead>{t('colCustomer')}</TableHead>
+                  <TableHead className="text-right">{t('colTracks')}</TableHead>
+                  <TableHead className="text-right">{t('colDebt')}</TableHead>
+                  <TableHead className="text-right">{t('colAction')}</TableHead>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {debtors.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="px-4">
+                      <Link
+                        href={`/customers/${c.id}`}
+                        className="underline-offset-2 hover:underline"
+                      >
+                        <span className="font-semibold text-foreground">
+                          {c.fullName ?? tCommon('noName')}
+                        </span>{' '}
+                        <span className="font-mono text-micro text-faint">
+                          {c.clientCode}
+                        </span>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums text-ink-2">
+                      {c.trackCount}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DebtCell tiyin={c.debtTiyin} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <ReminderButton
+                        action={sendReminderAction.bind(null, c.id)}
+                        size="xs"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       <Pagination page={page} pages={pages} buildHref={pageHref} />

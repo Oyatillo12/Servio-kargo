@@ -409,7 +409,13 @@
     "blockedBadge": "Заблокировал бота",
     "emptyBlockedTitle": "Заблокировавших нет",
     "emptyBlockedHint": "Пока никто не заблокировал бота — рассылки доходят.",
-    "pickerScan": "Сканировать QR"
+    "pickerScan": "Сканировать QR",
+    "filterLabel": "Фильтр по состоянию",
+    "colCode": "Код",
+    "colName": "Имя",
+    "colPhone": "Телефон",
+    "colTracks": "Треки",
+    "colDebt": "Долг"
   },
   "customerDetail": {
     "pageTitle": "Клиент",
@@ -494,7 +500,11 @@
     "reminderSent": "Напоминание отправлено",
     "remindersSent": "{count, plural, one {отправлено # напоминание} few {отправлено # напоминания} many {отправлено # напоминаний} other {отправлено # напоминания}}",
     "advance": "Аванс: {amount} сум",
-    "noDebt": "долга нет"
+    "noDebt": "долга нет",
+    "colCustomer": "Клиент",
+    "colTracks": "Треки",
+    "colDebt": "Долг",
+    "colAction": "Действие"
   },
   "batches": {
     "pageTitle": "Рейсы",

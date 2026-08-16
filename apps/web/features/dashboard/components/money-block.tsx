@@ -35,14 +35,14 @@ export function MoneyBlock({
 
   const debtBody = (
     <>
-      <p className="text-small text-muted-foreground">{t('debt')}</p>
+      <p className="eyebrow">{t('debt')}</p>
       <p
         className={cn(
           // `formatSom` groups with a plain space, which is a legal break
           // point — a 9-digit total must never split across two lines.
-          'mt-1 whitespace-nowrap font-semibold leading-[1.1] tracking-[-0.01em]',
+          'mt-1 whitespace-nowrap font-mono font-semibold leading-[1.1] tabular-nums',
           hasDebt
-            ? 'text-[28px] font-bold text-destructive'
+            ? 'text-display font-bold text-destructive'
             : 'text-display font-bold text-foreground',
         )}
       >
@@ -78,7 +78,7 @@ export function MoneyBlock({
         </span>
         <span
           className={cn(
-            'flex-none text-lead font-semibold',
+            'flex-none font-mono text-lead font-semibold tabular-nums',
             revenueTiyin > 0 ? 'text-foreground' : 'text-faint',
           )}
         >
@@ -90,7 +90,7 @@ export function MoneyBlock({
       {hasDebt ? (
         <Link
           href="/debtors"
-          className="block px-4 pb-4 pt-3.5 transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          className="block px-4 pb-4 pt-3.5 transition-colors hover:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
           {debtBody}
         </Link>

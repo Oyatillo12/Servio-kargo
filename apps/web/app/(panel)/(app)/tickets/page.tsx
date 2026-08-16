@@ -12,7 +12,7 @@ import {
 import { EmptyState } from '@/components/shared/empty-state';
 import { FilterChips } from '@/components/shared/filter-chips';
 import { Pagination } from '@/components/shared/pagination';
-import { SectionCard } from '@/components/ui/section-card';
+import { PageHeader } from '@/components/layout/page-header';
 import { requireCapability } from '@/lib/auth';
 import {
   listTickets,
@@ -57,15 +57,10 @@ export default async function TicketsPage({
   };
 
   return (
+    /* A conversation list is read, not scanned in columns, so it keeps a
+       reading measure on a desk browser instead of stretching to the shell. */
     <div className="mx-auto max-w-3xl space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-title font-semibold text-foreground">
-          {t('pageTitle')}
-        </h1>
-        <span className="font-mono text-sm text-muted-foreground">
-          {result.total}
-        </span>
-      </div>
+      <PageHeader title={t('pageTitle')} count={result.total} className="mb-0" />
 
       <FilterChips
         label={t('filterLabel')}
@@ -85,7 +80,7 @@ export default async function TicketsPage({
       {result.rows.length === 0 ? (
         <EmptyState title={t('empty')} />
       ) : (
-        <SectionCard flush>
+        <div className="-mx-4 border-y border-rule bg-surface md:mx-0 md:rounded-lg md:border">
           <ul>
             {result.rows.map((row) => {
               const cat = TICKET_CATEGORY_META[row.category];
@@ -132,7 +127,7 @@ export default async function TicketsPage({
               );
             })}
           </ul>
-        </SectionCard>
+        </div>
       )}
 
       <Pagination
