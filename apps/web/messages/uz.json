@@ -66,6 +66,8 @@
     "openBot": "Botni ochish",
     "notEnabledTitle": "Kabinet ulanmagan",
     "notEnabledBody": "Bu imkoniyat hozircha faol emas. Kargo kompaniyangizga murojaat qiling.",
+    "disabledTitle": "Xizmat vaqtincha ishlamayapti",
+    "disabledBody": "Iltimos, kargo kompaniyasi bilan bog'laning.",
     "homeGreeting": "Salom, {name}!",
     "comingSoon": "Tez orada",
     "navTracks": "Treklarim",
@@ -152,7 +154,8 @@
     "signingIn": "Kirilmoqda…",
     "invalidCredentials": "Telefon yoki parol noto'g'ri",
     "tooManyAttempts": "Urinishlar juda ko'p. 15 daqiqadan keyin qayta urinib ko'ring.",
-    "forbidden": "Buning uchun ruxsatingiz yo'q. Administratoringizga murojaat qiling."
+    "forbidden": "Buning uchun ruxsatingiz yo'q. Administratoringizga murojaat qiling.",
+    "tenantDisabled": "Kompaniya hisobi vaqtincha o'chirilgan — o'zgartirish kiritib bo'lmaydi."
   },
   "dashboard": {
     "pageTitle": "Bosh sahifa",
@@ -872,5 +875,16 @@
     "inviteInvalid": "Kod yoki telefon raqam noto'g'ri",
     "inviteExpired": "Kod muddati tugagan — administratoringizdan yangisini so'rang",
     "inviteUsed": "Bu kod allaqachon ishlatilgan"
+  },
+  "billing": {
+    "lockedTitle": "Xizmat vaqtincha to'xtatilgan",
+    "lockedOwner": "Obuna muddati tugagani uchun panel yopildi. Ma'lumotlaringiz — treklar, mijozlar, to'lovlar, fotolar — joyida turibdi va to'lovdan keyin darhol ochiladi.",
+    "lockedStaff": "Kompaniya hisobi vaqtincha o'chirilgan. Iltimos, kompaniya rahbariga murojaat qiling.",
+    "lockedPaidUntil": "To'lov muddati: {date}",
+    "lockedContact": "Bog'lanish",
+    "bannerDue": "To'lov muddati {date} da tugaydi — {days} kun qoldi.",
+    "bannerDueToday": "To'lov muddati bugun ({date}) tugaydi.",
+    "bannerGrace": "To'lov muddati {date} da tugadi — xizmat {days} kundan keyin to'xtaydi.",
+    "bannerGraceToday": "To'lov muddati {date} da tugadi — xizmat bugundan keyin to'xtaydi."
   }
 }

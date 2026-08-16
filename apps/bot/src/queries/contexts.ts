@@ -179,3 +179,31 @@ export async function pruneImportRunItems(maxAgeDays: number): Promise<number> {
 
 /** How long an import run keeps its undo evidence (SPEC §7.18). */
 export const IMPORT_ITEMS_MAX_AGE_DAYS = 7;
+
+/**
+ * Auto-disable every tenant whose grace period has run out (SPEC §7.19,
+ * D-011), returning the ones it closed. `cutoff` comes from
+ * `billingCutoffDate` so this filter and `billingState` can never disagree
+ * about who is expired.
+ *
+ * Deliberately NOT tenant-scoped — this is the tenant sweep itself, the one
+ * place in the system that reasons across tenants (CLAUDE.md rule 1 governs
+ * domain queries; `tenants` is the platform's own table). Idempotent by
+ * construction: it only ever clears a flag, so running it twice is a no-op,
+ * which is exactly why the warning could be left as a computed banner.
+ */
+export async function disableExpiredTenants(
+  cutoff: string,
+): Promise<Array<{ id: string; name: string }>> {
+  return getDb()
+    .update(tenants)
+    .set({ active: false })
+    .where(
+      and(
+        eq(tenants.active, true),
+        isNotNull(tenants.paidUntil),
+        lt(tenants.paidUntil, cutoff),
+      ),
+    )
+    .returning({ id: tenants.id, name: tenants.name });
+}

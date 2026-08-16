@@ -7,6 +7,7 @@ import { can } from '@kargotrack/shared';
 import { requireAdmin } from '@/lib/auth';
 import { countDebtors } from '@/lib/queries';
 import { AppHeader } from '@/components/layout/app-header';
+import { BillingBanner } from '@/components/layout/billing-banner';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
@@ -43,6 +44,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         identity={admin.fullName ?? admin.phone ?? ''}
         role={role}
       />
+
+      {/* §5.17: the subscription warning, above everything and undismissable */}
+      <BillingBanner paidUntil={tenant.paidUntil} />
 
       <SidebarProvider
         defaultOpen={sidebarOpen}

@@ -23,6 +23,7 @@ import {
   type JobMeta,
 } from '@kargotrack/db/queue';
 import {
+  billingCutoffDate,
   computeDebtTiyin,
   formatKg,
   formatSom,
@@ -44,6 +45,7 @@ import { getConfig } from './config';
 import { logger } from './logger';
 import { captureError } from './sentry';
 import {
+  disableExpiredTenants,
   getNotifyContext,
   getSendContext,
   getTenantById,
@@ -104,6 +106,19 @@ async function logOutcome(o: MessageOutcome): Promise<void> {
   }
 }
 
+/**
+ * The tenant-state gate on the send path (SPEC §7.19, D-011). A tenant closed
+ * since a job was queued says nothing more to its customers — notification,
+ * reminder, broadcast or ticket reply alike. Nothing is written to
+ * `message_log`: a message never sent is not a delivery outcome (§7.11's rule),
+ * and re-enabling the tenant must not leave a trail of phantom failures.
+ */
+function tenantSends(tenant: { id: string; active: boolean }, kind: string): boolean {
+  if (tenant.active) return true;
+  logger.info({ tenantId: tenant.id, kind }, 'send: tenant disabled, dropping');
+  return false;
+}
+
 async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
   // One round trip for tenant + track + customer + batch (AUDIT.md T3).
   const ctx = await getNotifyContext(job.tenantId, job.trackId, job.customerId);
@@ -112,6 +127,7 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
     return;
   }
   const { tenant, track, customer, batch } = ctx;
+  if (!tenantSends(tenant, 'notify')) return;
 
   // Skip soft-deleted or missing tracks (SPEC §7.8: hidden from notifications).
   if (!track || track.deletedAt) {
@@ -273,6 +289,7 @@ async function handleTicketJob(job: TicketJob, meta: JobMeta): Promise<void> {
     return;
   }
   const { tenant, ticket, customer, message } = ctx;
+  if (!tenantSends(tenant, 'ticket')) return;
 
   if (job.kind === 'reply' && !message) {
     logger.warn({ job }, 'ticket: message gone, dropping');
@@ -372,6 +389,7 @@ async function handleReminderJob(
     return;
   }
   const { tenant, customer } = ctx;
+  if (!tenantSends(tenant, 'reminder')) return;
 
   if (!customer?.tgUserId) {
     logger.warn({ customerId: job.customerId }, 'reminder: no telegram id, dropping');
@@ -462,10 +480,23 @@ async function handleReminderJob(
  * re-run of the same hour a no-op, so a debtor is messaged at most once per week.
  */
 async function handleSweepJob(): Promise<void> {
-  const { weekday, hour, dateKey } = tashkentSchedule(new Date());
+  const now = new Date();
+
+  // §7.19 (D-011): close the tenants whose grace period ran out — FIRST, so a
+  // tenant that expires this hour does not also get a week's reminders queued.
+  const closed = await disableExpiredTenants(billingCutoffDate(now));
+  if (closed.length > 0) {
+    logger.warn(
+      { tenants: closed.map((t) => t.name) },
+      'sweep: disabled tenants past grace',
+    );
+  }
+
+  const { weekday, hour, dateKey } = tashkentSchedule(now);
   const tenants = await listTenants();
 
   for (const tenant of tenants) {
+    if (!tenant.active) continue;
     const reminders = tenant.settings?.reminders;
     if (!reminders?.weekly_enabled) continue;
     if (reminders.weekday !== weekday || reminders.hour !== hour) continue;
@@ -563,6 +594,7 @@ async function handleBroadcastJob(
     return;
   }
   const { tenant, customer } = ctx;
+  if (!tenantSends(tenant, 'broadcast')) return;
 
   if (!customer?.tgUserId) {
     logger.warn(

@@ -19,6 +19,8 @@ import {
   createTenantWithOwner,
   findOwnerForReset,
   getTenantToken,
+  setTenantActive,
+  setTenantPaidUntil,
   setTenantPlan,
   tenantTokenExists,
 } from '@/lib/sa-queries';
@@ -257,6 +259,78 @@ export async function setPlanAction(
       parsed.data.plan,
     );
   }
+
+  revalidatePath('/sa');
+  return { ok: true };
+}
+
+// --- Tenant state + billing-lite row actions (J1/J2 — D-011) ---------------
+
+export interface TenantStateState {
+  ok?: boolean;
+  error?: string;
+}
+
+const activeSchema = z.object({
+  tenantId: z.string().uuid(),
+  active: z.enum(['true', 'false']),
+});
+
+/**
+ * Open or close a tenant (SPEC §7.19). The webhook is left alone on purpose:
+ * the bot answers "temporarily unavailable" from its own middleware, so
+ * re-enabling is one flag and not a Telegram round trip.
+ */
+export async function setTenantActiveAction(
+  _prev: TenantStateState,
+  formData: FormData,
+): Promise<TenantStateState> {
+  requireSuperadmin();
+
+  const parsed = activeSchema.safeParse({
+    tenantId: formData.get('tenantId'),
+    active: formData.get('active'),
+  });
+  if (!parsed.success) return { error: 'Tenant topilmadi.' };
+
+  const changed = await setTenantActive(
+    parsed.data.tenantId,
+    parsed.data.active === 'true',
+  );
+  if (!changed) return { error: 'Tenant topilmadi.' };
+
+  revalidatePath('/sa');
+  return { ok: true };
+}
+
+const paidUntilSchema = z.object({
+  tenantId: z.string().uuid(),
+  // An empty field clears the date = "billing not set for this tenant".
+  paidUntil: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .or(z.literal('')),
+});
+
+/** Set the paid-through date (J2). Does not open or close the tenant. */
+export async function setPaidUntilAction(
+  _prev: TenantStateState,
+  formData: FormData,
+): Promise<TenantStateState> {
+  requireSuperadmin();
+
+  const parsed = paidUntilSchema.safeParse({
+    tenantId: formData.get('tenantId'),
+    paidUntil: formData.get('paidUntil'),
+  });
+  if (!parsed.success) return { error: "Sana noto'g'ri." };
+
+  const changed = await setTenantPaidUntil(
+    parsed.data.tenantId,
+    parsed.data.paidUntil || null,
+  );
+  if (!changed) return { error: 'Tenant topilmadi.' };
 
   revalidatePath('/sa');
   return { ok: true };

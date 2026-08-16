@@ -69,10 +69,28 @@ export async function getSessionAdmin(): Promise<AdminContext | null> {
   return { admin, tenant, role: toAdminRole(admin.role) };
 }
 
-/** Guard: return the admin context or redirect to /login. */
-export async function requireAdmin(): Promise<AdminContext> {
+export interface RequireAdminOptions {
+  /**
+   * Let a disabled tenant through. Only the lock screen itself and logout pass
+   * this — everything else belongs behind the gate.
+   */
+  allowInactive?: boolean;
+}
+
+/**
+ * Guard: return the admin context or redirect to /login.
+ *
+ * A disabled tenant (SPEC §7.19, D-011) keeps its session and its login, but
+ * every page lands on `/locked`: an owner must be able to see that the data is
+ * still there. This is one of the four choke points for `tenants.active` —
+ * the others are `authorize` below, the TWA session and the bot middleware.
+ */
+export async function requireAdmin(
+  options: RequireAdminOptions = {},
+): Promise<AdminContext> {
   const ctx = await getSessionAdmin();
   if (!ctx) redirect('/login');
+  if (!ctx.tenant.active && !options.allowInactive) redirect('/locked');
   return ctx;
 }
 
@@ -106,7 +124,15 @@ export type AuthorizeResult =
 export async function authorize(
   capability: Capability,
 ): Promise<AuthorizeResult> {
-  const ctx = await requireAdmin();
+  // Read the context without the /locked redirect, then refuse in words: an
+  // action is answered with a toast, not a navigation. A disabled tenant is
+  // stopped here and not merely at the lock screen, because the screen is UI
+  // and this is where the write actually happens (rule 9, SPEC §7.19).
+  const ctx = await requireAdmin({ allowInactive: true });
+  if (!ctx.tenant.active) {
+    const t = await getTranslations('auth');
+    return { ok: false, error: t('tenantDisabled') };
+  }
   if (!can(ctx.role, capability)) {
     const t = await getTranslations('auth');
     return { ok: false, error: t('forbidden') };

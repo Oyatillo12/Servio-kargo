@@ -24,6 +24,8 @@ export type TwaGate =
   | { state: 'unauthenticated'; tenant: TwaTenant }
   /** Tenant exists but is on basic — show the "not enabled" screen. */
   | { state: 'not_premium'; tenant: TwaTenant }
+  /** Tenant is disabled (SPEC §7.19) — show the "temporarily off" screen. */
+  | { state: 'disabled'; tenant: TwaTenant }
   /** Unknown tenant id in the path. */
   | { state: 'not_found' };
 
@@ -33,6 +35,8 @@ export const getTwaContext = cache(_getTwaContext);
 async function _getTwaContext(tenantId: string): Promise<TwaGate> {
   const tenant = await getTwaTenant(tenantId);
   if (!tenant) return { state: 'not_found' };
+  // Before the plan check: a disabled tenant is closed whatever it pays for.
+  if (!tenant.active) return { state: 'disabled', tenant };
   if (!planIncludes(tenant.plan, 'miniapp')) {
     return { state: 'not_premium', tenant };
   }

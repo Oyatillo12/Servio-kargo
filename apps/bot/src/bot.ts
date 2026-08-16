@@ -69,6 +69,21 @@ export function createBot(tenantId: string, token: string): Bot<KargoContext> {
     ctx.lang = customer?.lang ?? ctx.session.lang ?? 'uz';
     ctx.s = t(ctx.lang);
 
+    // Disabled tenant (SPEC §7.19, D-011): the bot answers instead of going
+    // silent. The webhook is deliberately NOT deleted — a deleted webhook
+    // cannot explain itself and queues a day of updates on Telegram's side.
+    // Placed after the language is resolved so the notice is in the customer's
+    // own language, and a button press gets a toast rather than a new message
+    // (an old keyboard must not let anyone fill their own chat).
+    if (!tenant.active) {
+      if (ctx.callbackQuery) {
+        await ctx.answerCallbackQuery({ text: ctx.s.serviceDisabled });
+      } else if (ctx.chat) {
+        await ctx.reply(ctx.s.serviceDisabled);
+      }
+      return;
+    }
+
     await next();
   });
 

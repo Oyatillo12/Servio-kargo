@@ -38,7 +38,9 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const tenant = await getTwaTenant(parsed.data.tenantId);
-  if (!tenant || !planIncludes(tenant.plan, 'miniapp')) {
+  // A disabled tenant (SPEC §7.19) issues no new session: the cabinet's own
+  // screen explains it, and this endpoint is what would hand out the cookie.
+  if (!tenant || !tenant.active || !planIncludes(tenant.plan, 'miniapp')) {
     return NextResponse.json({ ok: false }, { status: 404 });
   }
 

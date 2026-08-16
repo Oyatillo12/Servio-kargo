@@ -20,6 +20,8 @@ export const uz: Strings = {
   helpFallback:
     "Tushunmadim 🤔\nTrek kodini yuboring yoki quyidagi tugmalardan birini tanlang.",
   errorGeneric: "Xatolik yuz berdi, birozdan so'ng qayta urinib ko'ring.",
+  serviceDisabled:
+    "⏸ Xizmat vaqtincha ishlamayapti.\nIltimos, kargo kompaniyasi bilan bog'laning.",
 
   // --- §3.1 menu labels ---
   menuAddTrack: "➕ Trek qo'shish",

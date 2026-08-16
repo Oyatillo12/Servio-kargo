@@ -227,6 +227,16 @@ export {
   type ImportUndoRowPlan,
   type ImportUndoState,
 } from './services/importRun';
+// Tenant state + billing-lite (SPEC §7.19, D-011)
+export {
+  BILLING_GRACE_DAYS,
+  BILLING_WARN_DAYS,
+  billingCutoffDate,
+  billingNeedsBanner,
+  billingState,
+  type BillingState,
+  type BillingStatus,
+} from './services/billing';
 export {
   NOTIFY_QUEUE,
   notifyDedupeKey,

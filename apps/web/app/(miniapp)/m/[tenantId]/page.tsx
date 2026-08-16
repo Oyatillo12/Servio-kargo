@@ -29,12 +29,17 @@ export default async function TwaHomePage({
 
   if (gate.state === 'not_found') notFound();
 
-  if (gate.state === 'not_premium') {
+  if (gate.state === 'not_premium' || gate.state === 'disabled') {
     const t = await getTranslations({ locale: 'uz', namespace: 'twa' });
+    const disabled = gate.state === 'disabled';
     return (
       <div className="twa-rise flex min-h-[70vh] flex-col items-center justify-center gap-2 text-center">
-        <p className="text-[17px] font-extrabold">{t('notEnabledTitle')}</p>
-        <p className="twa-hint text-sm leading-relaxed">{t('notEnabledBody')}</p>
+        <p className="text-[17px] font-extrabold">
+          {t(disabled ? 'disabledTitle' : 'notEnabledTitle')}
+        </p>
+        <p className="twa-hint text-sm leading-relaxed">
+          {t(disabled ? 'disabledBody' : 'notEnabledBody')}
+        </p>
       </div>
     );
   }

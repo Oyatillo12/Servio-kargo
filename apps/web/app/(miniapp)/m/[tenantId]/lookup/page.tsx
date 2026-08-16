@@ -39,11 +39,16 @@ export default async function TwaLookupPage({
   const lang: Lang = gate.state === 'ok' ? gate.customer.lang : 'uz';
   const t = await getTranslations({ locale: lang, namespace: 'twa' });
 
-  if (gate.state === 'not_premium') {
+  if (gate.state === 'not_premium' || gate.state === 'disabled') {
+    const disabled = gate.state === 'disabled';
     return (
       <div className="twa-rise flex min-h-[70vh] flex-col items-center justify-center gap-2 text-center">
-        <p className="text-[17px] font-extrabold">{t('notEnabledTitle')}</p>
-        <p className="twa-hint text-sm leading-relaxed">{t('notEnabledBody')}</p>
+        <p className="text-[17px] font-extrabold">
+          {t(disabled ? 'disabledTitle' : 'notEnabledTitle')}
+        </p>
+        <p className="twa-hint text-sm leading-relaxed">
+          {t(disabled ? 'disabledBody' : 'notEnabledBody')}
+        </p>
       </div>
     );
   }

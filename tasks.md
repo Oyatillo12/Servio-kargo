@@ -389,12 +389,12 @@ o'chirilgan bot o'zini tushuntira olishi kerak; (b) owner'ga bot
 ogohlantirishi O'RNIGA faqat panel banner + /sa'dagi "muddati tugayapti"
 ro'yxati (egasi tanlovi).
 
-- [ ] **J1 · Tenant disable** — `tenants.active`; to'rtta choke point:
+- [x] **J1 · Tenant disable** ✅ — `tenants.active`; to'rtta choke point:
       panel sessiyasi (`lib/auth.ts` → `/locked`), `authorize()` (qoida 9 —
       Server Action POST), TWA sessiyasi, bot middleware'i
       (`service_disabled`, callback'ka toast). Ishchi jo'natishdan oldin
       tenant tirikligini tekshiradi (K/M naqshi). /sa'da toggle.
-- [ ] **J2 · Billing-lite** — `paid_until` date + /sa'da qo'yish;
+- [x] **J2 · Billing-lite** ✅ — `paid_until` date + /sa'da qo'yish;
       `billingState` sof funksiya (Tashkent kuni, `none|ok|due-soon|grace|
       expired`); panelda banner (7 kun qolganda amber, grace'da qizil);
       grace 7 kun, keyin soatlik sweep avto-o'chiradi; /sa'da "muddati
@@ -402,7 +402,11 @@ ro'yxati (egasi tanlovi).
 
 **Halol chegara.** Banner + avto-o'chirish = panelga kirmagan owner
 ogohlantirishsiz o'chib qolishi mumkin (D-011 da ochiq yozilgan). Yumshatish
-— /sa ro'yxati, ya'ni qo'ng'iroqni odam qiladi.
+— /sa ro'yxati, ya'ni qo'ng'iroqni odam qiladi. Testlangan qism —
+`billingState`/`billingCutoffDate` (16 test); sweep'ning SQL chegarasi
+(oxirgi grace kuni tegilmaydi, undan keyingisi o'chadi, `NULL` tegilmaydi)
+toza Postgres 16 da alohida tekshirildi. UI va choke point'lar testsiz —
+DB-backed va komponent testi bu repoda hali yo'q (ongli chegara).
 
 **Deploy'dan keyin qo'lda:** /sa'da tenant'ni o'chirish → o'sha tenant botiga
 yozish (javob keladi, karta ochilmaydi) → panelga kirish (login o'tadi,

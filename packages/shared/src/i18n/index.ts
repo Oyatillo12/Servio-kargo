@@ -102,6 +102,8 @@ export interface Strings {
   noTracks: string;
   helpFallback: string;
   errorGeneric: string;
+  /** §4.1/§7.19 — the only answer a disabled tenant's bot gives (D-011). */
+  serviceDisabled: string;
 
   // --- §3.1 main menu labels (reply keyboard) ---
   menuAddTrack: string;

@@ -182,6 +182,11 @@ export const tenants = pgTable('tenants', {
   currency: currency('currency').notNull().default('UZS'),
   usdRateTiyin: bigint('usd_rate_tiyin', { mode: 'number' }),
   plan: tenantPlan('plan').notNull().default('basic'),
+  // SaaS state (SPEC §7.19, tasks.md J — D-011). `active` is a door, not a
+  // delete: a disabled tenant keeps its token, tracks, photos and debts.
+  // `paid_until` NULL = billing not set — never warns, never auto-disables.
+  active: boolean('active').notNull().default(true),
+  paidUntil: date('paid_until'),
   pickupAddress: text('pickup_address'),
   workingHours: text('working_hours'),
   contactPhone: text('contact_phone'),

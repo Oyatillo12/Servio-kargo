@@ -27,6 +27,10 @@ export interface SaTenantRow {
   botUsername: string | null;
   codePrefix: string;
   plan: TenantPlanValue;
+  /** SPEC §7.19 — the door, independent of `plan`. */
+  active: boolean;
+  /** `YYYY-MM-DD`, or null when billing is not set for this tenant. */
+  paidUntil: string | null;
   trackCount: number;
   customerCount: number;
   createdAt: Date;
@@ -59,6 +63,8 @@ export async function listTenantsForSa(): Promise<SaTenantRow[]> {
     botUsername: t.botUsername,
     codePrefix: t.codePrefix,
     plan: t.plan,
+    active: t.active,
+    paidUntil: t.paidUntil,
     trackCount: tMap.get(t.id) ?? 0,
     customerCount: cMap.get(t.id) ?? 0,
     createdAt: t.createdAt,
@@ -74,6 +80,42 @@ export async function setTenantPlan(
   const rows = await db
     .update(tenants)
     .set({ plan })
+    .where(eq(tenants.id, tenantId))
+    .returning({ id: tenants.id });
+  return rows.length > 0;
+}
+
+/**
+ * Open or close a tenant's door (SPEC §7.19, tasks.md J1). Deliberately does
+ * NOT touch `paid_until`: turning the service back on and paying for it are
+ * two separate acts, and conflating them would silently grant a free month.
+ */
+export async function setTenantActive(
+  tenantId: string,
+  active: boolean,
+): Promise<boolean> {
+  const db = getDb();
+  const rows = await db
+    .update(tenants)
+    .set({ active })
+    .where(eq(tenants.id, tenantId))
+    .returning({ id: tenants.id });
+  return rows.length > 0;
+}
+
+/**
+ * Set (or clear) the paid-through date (tasks.md J2). Clearing it means
+ * "billing not set" — no banner, no auto-disable — and never re-opens a
+ * tenant that is already closed.
+ */
+export async function setTenantPaidUntil(
+  tenantId: string,
+  paidUntil: string | null,
+): Promise<boolean> {
+  const db = getDb();
+  const rows = await db
+    .update(tenants)
+    .set({ paidUntil })
     .where(eq(tenants.id, tenantId))
     .returning({ id: tenants.id });
   return rows.length > 0;

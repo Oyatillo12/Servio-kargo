@@ -34,6 +34,8 @@ export interface TwaTenant {
   id: string;
   name: string;
   plan: TenantPlan;
+  /** `tenants.active` — false closes the cabinet as well (SPEC §7.19). */
+  active: boolean;
   /** Needed server-side to validate initData; NEVER sent to the client. */
   botToken: string;
   botUsername: string | null;
@@ -57,6 +59,7 @@ export async function getTwaTenant(
       id: tenants.id,
       name: tenants.name,
       plan: tenants.plan,
+      active: tenants.active,
       botToken: tenants.botToken,
       botUsername: tenants.botUsername,
       currency: tenants.currency,
