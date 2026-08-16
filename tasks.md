@@ -416,6 +416,41 @@ amber) → kechagi sanaga qo'yish (banner qizil, /sa ro'yxatida).
 
 ---
 
+## N — Redesign: TERMINAL dizayn tizimi (D-012; SPEC 5.0, 4 emoji, 10.4)
+
+Uchta og'riq (D-012): detail sahifalar desktopda `max-w-md` telefon ustuni;
+o'sha sahifalar 8 kartalik uzun skroll; uchta bir-biriga qarama-qarshi token
+to'plami. Yuzalar: panel + auth, Mini App, bot (emoji/klaviatura/TWA
+yo'naltirish). Landing ataylab tashqarida.
+
+**Faqat ko'rinish.** Hech bir `can()`/`authorize()`, query yoki Server Action
+o'zgarmaydi — redesign ruxsat xaritasiga ham, biznes qoidalariga (SPEC 7) ham
+tegmaydi. Har bosqich oxirida `pnpm typecheck && lint && test`.
+
+- [ ] **N1 · Tokenlar + shriftlar + `/design`** — `globals.css` bitta token
+      manbasiga; Oswald + Golos Text + JetBrains Mono; `.theme-landing`
+      himoyalanadi; adaptiv tipografika/zichlik shkalasi; dev-only `/design`
+      sahifasi (uz/ru, kirill, `oʻ/gʻ` render tekshiruvi, urg'u vs
+      ogohlantirish ziddiyati).
+- [ ] **N2 · Primitivlar** — `components/ui` to'plami yangi tizimga; yangi
+      `Tabs` (URL-param), `SegmentedControl`, `StatTile`, `DataList`.
+- [ ] **N3 · Shell** — header, sidebar, bottom-nav, page-header, billing
+      banner, brand mark. `/` skaner fokusi va oqimdagi tab bar saqlanadi.
+- [ ] **N4 · Ro'yxatlar** — tracks, customers, debtors, batches, tickets:
+      desktopda zich jadval, mobilda karta qator; filtr/chip/pagination/bulk.
+- [ ] **N5 · Detail shablon** — bitta `DetailShell` + tab'lar (SPEC 5.0);
+      tracks/[id], customers/[id], batches/[id] unga o'tadi.
+- [ ] **N6 · Uzun formalar** — import wizard, settings (+team), broadcast,
+      handover, weigh konsoli.
+- [ ] **N7 · Auth ekranlari** — login (parol + taklif kodi), invite, locked,
+      /sa.
+- [ ] **N8 · Mini App** — `twa.css` umumiy identitetga ulanadi; sirt Telegram
+      temasidan (SPEC 10.4); 9 ta ekran.
+- [ ] **N9 · Bot** — emoji intizomi (SPEC 4), `keyboards.ts` tugma tartibi va
+      menyu ierarxiyasi, uzun flow'lar o'rniga TWA deep-link tugmalari.
+
+---
+
 ## C — Onlayn to'lov (premium) — SHAKLI P6 javobiga bog'liq
 
 Muhim prinsip: pul HAR DOIM tenant'ning O'Z hisobiga tushadi — platforma
