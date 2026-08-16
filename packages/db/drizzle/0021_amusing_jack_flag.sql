@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "message_log_notify_idx" ON "message_log" USING btree ("tenant_id","kind","customer_id","created_at");

@@ -834,6 +834,15 @@ export const messageLog = pgTable(
   (t) => [
     // The customer page reads "last N messages to this person".
     index('message_log_customer_idx').on(t.tenantId, t.customerId, t.createdAt),
+    // §7.17: the "who blocked the bot" scan is a DISTINCT ON over the last
+    // notify per customer, and it runs on every dashboard load. Without this
+    // it re-reads every notification the tenant ever sent.
+    index('message_log_notify_idx').on(
+      t.tenantId,
+      t.kind,
+      t.customerId,
+      t.createdAt,
+    ),
   ],
 );
 

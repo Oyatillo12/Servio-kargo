@@ -4,7 +4,7 @@
 
 import 'server-only';
 
-import { and, desc, eq, isNotNull } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import { enqueueBroadcasts, enqueueBroadcastTest } from '@kargotrack/db/queue';
@@ -95,6 +95,11 @@ export async function cancelBroadcast(args: {
         eq(broadcasts.tenantId, args.tenantId),
         eq(broadcasts.id, args.broadcastId),
         eq(broadcasts.status, 'queued'),
+        // There is no terminal state (§7.11), so "queued" alone would let a
+        // fan-out that already reached everybody be stamped `cancelled` — a
+        // history row reading "5 / 5 sent · Cancelled". Stopping something
+        // that has finished is a no-op, and the record must say so.
+        sql`${broadcasts.sentCount} < ${broadcasts.recipientCount}`,
       ),
     )
     .returning({ id: broadcasts.id });

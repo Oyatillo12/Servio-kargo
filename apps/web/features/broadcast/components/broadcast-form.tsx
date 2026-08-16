@@ -7,8 +7,8 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import {
-  BROADCAST_HOLD_SECONDS,
   BROADCAST_MAX_CHARS,
+  broadcastHoldRemainingMs,
 } from '@kargotrack/shared';
 
 import { Button } from '@/components/ui/button';
@@ -52,14 +52,25 @@ export function BroadcastForm({
    * `secondsLeft` counts the hold window down; at zero the control stops
    * meaning "nobody got it" and starts meaning "the rest won't go".
    */
-  const [held, setHeld] = useState<{ id: string; count: number } | null>(null);
+  const [held, setHeld] = useState<{
+    id: string;
+    count: number;
+    queuedAt: Date;
+  } | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
+  // Recomputed from the queued-at instant on every tick rather than counting
+  // down a local number: sixty setTimeouts drift, and this countdown is a
+  // promise about when the message becomes unrecallable.
   useEffect(() => {
-    if (!held || secondsLeft <= 0) return;
-    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [held, secondsLeft]);
+    if (!held) return;
+    const tick = () => {
+      setSecondsLeft(Math.ceil(broadcastHoldRemainingMs(held.queuedAt) / 1000));
+    };
+    tick();
+    const timer = setInterval(tick, 500);
+    return () => clearInterval(timer);
+  }, [held]);
 
   const trimmed = text.trim();
   const canSend = trimmed.length > 0 && recipientCount > 0;
@@ -76,8 +87,11 @@ export function BroadcastForm({
       setText('');
       setOpen(false);
       if (res.broadcastId) {
-        setHeld({ id: res.broadcastId, count: res.count ?? 0 });
-        setSecondsLeft(BROADCAST_HOLD_SECONDS);
+        setHeld({
+          id: res.broadcastId,
+          count: res.count ?? 0,
+          queuedAt: new Date(),
+        });
       }
       router.refresh();
     });
