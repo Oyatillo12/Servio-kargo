@@ -34,7 +34,7 @@ export default async function TwaHomePage({
     const disabled = gate.state === 'disabled';
     return (
       <div className="twa-rise flex min-h-[70vh] flex-col items-center justify-center gap-2 text-center">
-        <p className="text-[17px] font-extrabold">
+        <p className="text-lead font-extrabold">
           {t(disabled ? 'disabledTitle' : 'notEnabledTitle')}
         </p>
         <p className="twa-hint text-sm leading-relaxed">
@@ -62,9 +62,9 @@ export default async function TwaHomePage({
     <div className="space-y-3">
       {/* Identity */}
       <header className="twa-rise">
-        <p className="twa-hint text-[12.5px]">{tenant.name}</p>
+        <p className="twa-hint text-micro">{tenant.name}</p>
         <div className="mt-0.5 flex items-center justify-between gap-3">
-          <h1 className="min-w-0 truncate text-[20px] font-extrabold leading-tight">
+          <h1 className="min-w-0 truncate text-title font-extrabold leading-tight">
             {t('homeGreeting', {
               name: customer.fullName ?? customer.clientCode,
             })}
@@ -93,16 +93,16 @@ export default async function TwaHomePage({
                 <p className="font-mono text-[30px] font-bold leading-none tabular-nums">
                   {summary.activeCount}
                 </p>
-                <p className="mt-1 text-[12.5px] opacity-80">{t('statActive')}</p>
+                <p className="mt-1 text-micro opacity-80">{t('statActive')}</p>
                 {summary.readyCount > 0 ? (
                   <p
-                    className="mt-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold"
+                    className="mt-2 inline-block rounded-full px-2 py-0.5 text-micro font-bold"
                     style={{ background: 'rgba(255,255,255,.18)' }}
                   >
                     {summary.readyCount} · {t('statReady')}
                   </p>
                 ) : null}
-                <p className="mt-2.5 text-[14px] font-semibold">
+                <p className="mt-2.5 text-body font-semibold">
                   {t('navTracks')} ›
                 </p>
               </div>
@@ -123,14 +123,14 @@ export default async function TwaHomePage({
               />
               <div>
                 <p
-                  className="truncate font-mono text-[17px] font-bold tabular-nums leading-tight"
+                  className="truncate font-mono text-lead font-bold tabular-nums leading-tight"
                   style={debtShown ? { color: 'var(--twa-error)' } : undefined}
                 >
                   {debtShown
                     ? `${formatSom(summary.debtTiyin)} ${tCommon('som')}`
                     : t('financeSettled')}
                 </p>
-                <p className="twa-hint mt-0.5 text-[12px] font-medium">
+                <p className="twa-hint mt-0.5 text-micro font-medium">
                   {t('navFinance')}
                 </p>
               </div>
@@ -149,7 +149,7 @@ export default async function TwaHomePage({
                 style={{ color: 'var(--twa-success)' }}
                 aria-hidden
               />
-              <p className="text-[13.5px] font-bold leading-tight">
+              <p className="text-small font-bold leading-tight">
                 {t('navAdd')}
               </p>
             </Link>
@@ -167,7 +167,7 @@ export default async function TwaHomePage({
                 style={{ color: 'var(--twa-info)' }}
                 aria-hidden
               />
-              <p className="text-[13.5px] font-bold leading-tight">
+              <p className="text-small font-bold leading-tight">
                 {t('navAddress')}
               </p>
             </Link>
@@ -182,7 +182,7 @@ export default async function TwaHomePage({
                 style={{ color: 'var(--twa-brand-ink)' }}
                 aria-hidden
               />
-              <p className="text-[13.5px] font-bold leading-tight">
+              <p className="text-small font-bold leading-tight">
                 {t('navCalc')}
               </p>
             </Link>
@@ -196,7 +196,7 @@ export default async function TwaHomePage({
                 className="twa-card twa-press flex items-center gap-2.5 rounded-2xl px-3.5 py-3"
               >
                 <Search className="twa-hint h-[18px] w-[18px] flex-none" aria-hidden />
-                <span className="truncate text-[13px] font-semibold">
+                <span className="truncate text-small font-semibold">
                   {t('navLookup')}
                 </span>
               </Link>
@@ -205,7 +205,7 @@ export default async function TwaHomePage({
                 className="twa-card twa-press flex items-center gap-2.5 rounded-2xl px-3.5 py-3"
               >
                 <Info className="twa-hint h-[18px] w-[18px] flex-none" aria-hidden />
-                <span className="truncate text-[13px] font-semibold">
+                <span className="truncate text-small font-semibold">
                   {t('navInfo')}
                 </span>
               </Link>
@@ -216,7 +216,7 @@ export default async function TwaHomePage({
                 className="twa-card twa-press col-span-2 flex items-center gap-2.5 rounded-2xl px-3.5 py-3"
               >
                 <QrCode className="twa-hint h-[18px] w-[18px] flex-none" aria-hidden />
-                <span className="truncate text-[13px] font-semibold">
+                <span className="truncate text-small font-semibold">
                   {t('navCard')}
                 </span>
               </Link>

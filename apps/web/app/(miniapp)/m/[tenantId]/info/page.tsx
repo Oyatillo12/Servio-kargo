@@ -45,7 +45,7 @@ export default async function TwaInfoPage({
       {/* Tariffs */}
       {tariffs.length > 0 ? (
         <div className="twa-card twa-rise px-4 py-3.5">
-          <p className="text-[13px] font-bold">{t('infoTariffs')}</p>
+          <p className="text-small font-bold">{t('infoTariffs')}</p>
           <ul className="twa-divider mt-1">
             {tariffs.map((tf) => (
               <li
@@ -53,10 +53,10 @@ export default async function TwaInfoPage({
                 className="flex items-baseline justify-between gap-3 py-2"
                 style={{ borderColor: 'var(--twa-border)' }}
               >
-                <span className="min-w-0 truncate text-[13.5px]">
+                <span className="min-w-0 truncate text-small">
                   {tf.name}
                 </span>
-                <span className="flex-none font-mono text-[13.5px] font-semibold tabular-nums">
+                <span className="flex-none font-mono text-small font-semibold tabular-nums">
                   {isUsd
                     ? `${formatUsd(tf.pricePerKgMinor)}/kg`
                     : `${formatSom(tf.pricePerKgMinor)} ${tCommon('som')}/kg`}
@@ -65,7 +65,7 @@ export default async function TwaInfoPage({
             ))}
           </ul>
           {isUsd && tenant.usdRateTiyin != null ? (
-            <p className="twa-hint mt-1 text-[12px]">
+            <p className="twa-hint mt-1 text-micro">
               {t('infoRate', { rate: formatSom(tenant.usdRateTiyin) })}
             </p>
           ) : null}
@@ -90,8 +90,8 @@ export default async function TwaInfoPage({
                   aria-hidden
                 />
                 <div className="min-w-0">
-                  <p className="twa-hint text-[11.5px]">{label}</p>
-                  <p className="text-[13.5px] leading-snug">{value}</p>
+                  <p className="twa-hint text-micro">{label}</p>
+                  <p className="text-small leading-snug">{value}</p>
                 </div>
               </li>
             ))}
@@ -109,9 +109,9 @@ export default async function TwaInfoPage({
                     aria-hidden
                   />
                   <div className="min-w-0">
-                    <p className="twa-hint text-[11.5px]">{t('infoPhone')}</p>
+                    <p className="twa-hint text-micro">{t('infoPhone')}</p>
                     <p
-                      className="font-mono text-[13.5px] font-semibold"
+                      className="font-mono text-small font-semibold"
                       style={{ color: 'var(--twa-brand-ink)' }}
                     >
                       {tenant.contactPhone}
@@ -130,7 +130,7 @@ export default async function TwaInfoPage({
           className="twa-card twa-rise px-4 py-3.5"
           style={{ '--twa-i': 2 } as React.CSSProperties}
         >
-          <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed">
+          <p className="whitespace-pre-wrap text-small leading-relaxed">
             {tenant.infoText}
           </p>
         </div>

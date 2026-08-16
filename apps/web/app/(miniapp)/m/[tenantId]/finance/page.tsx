@@ -54,7 +54,7 @@ export default async function TwaFinancePage({
       backLabel={t('backHome')}
     >
       <div className="twa-card twa-rise px-4 py-5 text-center">
-        <p className="twa-hint text-[12.5px]">{balance.label}</p>
+        <p className="twa-hint text-micro">{balance.label}</p>
         <p
           className="mt-1 font-mono text-[30px] font-bold tabular-nums leading-none"
           style={{ color: balance.color }}
@@ -71,7 +71,7 @@ export default async function TwaFinancePage({
         className="twa-card twa-rise px-4 py-3.5"
         style={{ '--twa-i': 1 } as React.CSSProperties}
       >
-        <p className="text-[13px] font-bold">{t('paymentsHistory')}</p>
+        <p className="text-small font-bold">{t('paymentsHistory')}</p>
         {payments.length === 0 ? (
           <p className="twa-hint mt-2 text-sm">{t('noPayments')}</p>
         ) : (
@@ -88,16 +88,16 @@ export default async function TwaFinancePage({
                   style={{ borderColor: 'var(--twa-border)' }}
                 >
                   <div className="min-w-0">
-                    <p className="text-[13px] font-semibold">
+                    <p className="text-small font-semibold">
                       {isStorno ? t('paymentReversed') : methodLabel[p.method]}
                     </p>
-                    <p className="twa-hint mt-0.5 font-mono text-[11.5px]">
+                    <p className="twa-hint mt-0.5 font-mono text-micro">
                       {formatDate(p.createdAt)}
                       {!isStorno && p.note ? ` · ${p.note}` : ''}
                     </p>
                   </div>
                   <span
-                    className="flex-none font-mono text-[13.5px] font-semibold tabular-nums"
+                    className="flex-none font-mono text-small font-semibold tabular-nums"
                     style={{
                       color: isStorno
                         ? 'var(--twa-error)'

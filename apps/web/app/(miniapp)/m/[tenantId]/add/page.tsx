@@ -23,7 +23,7 @@ export default async function TwaAddPage({
       backHref={`/m/${tenant.id}`}
       backLabel={t('backHome')}
     >
-      <p className="twa-hint twa-rise text-[13px] leading-relaxed">
+      <p className="twa-hint twa-rise text-small leading-relaxed">
         {t('addHint')}
       </p>
       <AddTracksForm tenantId={tenant.id} />

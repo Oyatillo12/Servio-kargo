@@ -43,7 +43,7 @@ export default async function TwaLookupPage({
     const disabled = gate.state === 'disabled';
     return (
       <div className="twa-rise flex min-h-[70vh] flex-col items-center justify-center gap-2 text-center">
-        <p className="text-[17px] font-extrabold">
+        <p className="text-lead font-extrabold">
           {t(disabled ? 'disabledTitle' : 'notEnabledTitle')}
         </p>
         <p className="twa-hint text-sm leading-relaxed">
@@ -140,7 +140,7 @@ export default async function TwaLookupPage({
       ) : result.kind === 'found' ? (
         <div className="twa-card twa-rise px-4 py-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="min-w-0 break-all font-mono text-[13.5px] font-semibold">
+            <span className="min-w-0 break-all font-mono text-small font-semibold">
               {raw}
             </span>
             <StatusPill status={result.status} lang={lang} className="flex-none" />
@@ -149,7 +149,7 @@ export default async function TwaLookupPage({
             <Pipeline status={result.status} />
           </div>
           <p
-            className="twa-hint mt-3 border-t pt-2.5 font-mono text-[11.5px]"
+            className="twa-hint mt-3 border-t pt-2.5 font-mono text-micro"
             style={{ borderColor: 'var(--twa-border)' }}
           >
             {t('lookupLastUpdate')} {formatDateTime(result.lastEventAt)}

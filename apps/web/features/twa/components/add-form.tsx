@@ -39,13 +39,13 @@ function ResultGroup({
   return (
     <div className="twa-card twa-rise px-4 py-3">
       <p
-        className="flex items-center gap-1.5 text-[13px] font-bold"
+        className="flex items-center gap-1.5 text-small font-bold"
         style={{ color }}
       >
         <Icon className="h-4 w-4 flex-none" aria-hidden />
         {title}
       </p>
-      <p className="mt-1 break-all font-mono text-[12.5px] leading-relaxed">
+      <p className="mt-1 break-all font-mono text-micro leading-relaxed">
         {codes.join('\n')}
       </p>
     </div>
@@ -68,7 +68,7 @@ export function AddTracksForm({ tenantId }: { tenantId: string }) {
           required
           maxLength={4000}
           placeholder={t('addPlaceholder')}
-          className="twa-input resize-none font-mono text-[13.5px] leading-relaxed"
+          className="twa-input resize-none font-mono text-small leading-relaxed"
           autoComplete="off"
           autoCapitalize="characters"
         />

@@ -58,7 +58,7 @@ export default async function TwaTrackDetailPage({
       {/* The parcel card: code, where it is on the road, the facts */}
       <div className="twa-card twa-rise px-4 py-4">
         <div className="flex items-start justify-between gap-3">
-          <span className="min-w-0 break-all font-mono text-[15px] font-bold leading-snug">
+          <span className="min-w-0 break-all font-mono text-body font-bold leading-snug">
             {detail.codeOriginal}
           </span>
           <CopyChip
@@ -72,7 +72,7 @@ export default async function TwaTrackDetailPage({
           <StatusPill status={detail.currentStatus} lang={customer.lang} />
           {detail.batchEta ? (
             <span
-              className="font-mono text-[12px] font-semibold"
+              className="font-mono text-micro font-semibold"
               style={{ color: 'var(--twa-copper)' }}
             >
               {t('etaShort')} {detail.batchEta}
@@ -95,7 +95,7 @@ export default async function TwaTrackDetailPage({
           >
             {detail.description != null ? (
               <div
-                className="flex justify-between gap-3 py-2 text-[13.5px]"
+                className="flex justify-between gap-3 py-2 text-small"
                 style={{ borderColor: 'var(--twa-border)' }}
               >
                 <dt className="twa-hint flex-none">{t('trackDescription')}</dt>
@@ -106,7 +106,7 @@ export default async function TwaTrackDetailPage({
             ) : null}
             {charged != null ? (
               <div
-                className="flex justify-between py-2 text-[13.5px]"
+                className="flex justify-between py-2 text-small"
                 style={{ borderColor: 'var(--twa-border)' }}
               >
                 {/* §7.16: when volume set the price, the customer sees both
@@ -119,7 +119,7 @@ export default async function TwaTrackDetailPage({
                 <dd className="text-right font-mono font-semibold tabular-nums">
                   {formatKg(charged.grams)} kg
                   {charged.basis === 'volumetric' ? (
-                    <span className="twa-hint ml-1.5 font-sans text-[12px] font-medium">
+                    <span className="twa-hint ml-1.5 font-sans text-micro font-medium">
                       {t('trackVolumetricNote', {
                         actual: formatKg(detail.weightGrams ?? 0),
                       })}
@@ -130,7 +130,7 @@ export default async function TwaTrackDetailPage({
             ) : null}
             {detail.priceTiyin != null ? (
               <div
-                className="flex justify-between py-2 text-[13.5px]"
+                className="flex justify-between py-2 text-small"
                 style={{ borderColor: 'var(--twa-border)' }}
               >
                 <dt className="twa-hint">{t('trackPrice')}</dt>
@@ -164,7 +164,7 @@ export default async function TwaTrackDetailPage({
         className="twa-card twa-rise px-4 py-3.5"
         style={{ '--twa-i': 2 } as React.CSSProperties}
       >
-        <p className="text-[13px] font-bold">{t('statusHistory')}</p>
+        <p className="text-small font-bold">{t('statusHistory')}</p>
         <ul className="twa-divider mt-1">
           {detail.events.length === 0 ? (
             <li className="twa-hint py-2 text-sm">—</li>
@@ -174,7 +174,7 @@ export default async function TwaTrackDetailPage({
               return (
                 <li
                   key={`${e.status}-${i}`}
-                  className="flex items-center justify-between gap-3 py-2.5 text-[12.5px]"
+                  className="flex items-center justify-between gap-3 py-2.5 text-micro"
                   style={{ borderColor: 'var(--twa-border)' }}
                 >
                   <span className="flex min-w-0 items-center gap-2">
@@ -193,7 +193,7 @@ export default async function TwaTrackDetailPage({
                       {STATUS_META[e.status][customer.lang]}
                     </span>
                   </span>
-                  <span className="twa-hint flex-none font-mono text-[11.5px]">
+                  <span className="twa-hint flex-none font-mono text-micro">
                     {formatDateTime(e.createdAt)}
                   </span>
                 </li>

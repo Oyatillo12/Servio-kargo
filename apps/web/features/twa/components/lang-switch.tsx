@@ -37,7 +37,7 @@ export function LangSwitch({
             haptic();
             startTransition(() => setTwaLangAction(tenantId, o.value));
           }}
-          className="twa-press flex-1 rounded-full px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-100"
+          className="twa-press flex-1 rounded-full px-3 py-1.5 text-micro font-semibold disabled:opacity-100"
           style={
             o.value === current
               ? { background: 'var(--twa-card)', color: 'var(--twa-text)' }

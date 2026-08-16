@@ -34,11 +34,11 @@ export default async function TwaAddressPage({
     >
       {address ? (
         <>
-          <p className="twa-hint twa-rise text-[13px] leading-relaxed">
+          <p className="twa-hint twa-rise text-small leading-relaxed">
             {t('addressHint')}
           </p>
           <pre
-            className="twa-card twa-rise whitespace-pre-wrap break-words px-4 py-4 font-mono text-[13px] leading-relaxed"
+            className="twa-card twa-rise whitespace-pre-wrap break-words px-4 py-4 font-mono text-small leading-relaxed"
             style={{ '--twa-i': 1 } as React.CSSProperties}
           >
             {address}

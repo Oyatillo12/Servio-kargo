@@ -92,7 +92,7 @@ export default async function TwaTracksPage({
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-1.5">
-                    <span className="truncate font-mono text-[13px] font-semibold">
+                    <span className="truncate font-mono text-small font-semibold">
                       {tr.codeOriginal}
                     </span>
                     {tr.hasPhoto ? (
@@ -112,7 +112,7 @@ export default async function TwaTracksPage({
                   <div className="w-16 flex-none">
                     <Pipeline status={tr.currentStatus} mini />
                   </div>
-                  <p className="twa-hint min-w-0 flex-1 truncate font-mono text-[11.5px]">
+                  <p className="twa-hint min-w-0 flex-1 truncate font-mono text-micro">
                     {formatDate(tr.createdAt)}
                     {/* §7.16: the kg here sits next to the price, so it has to
                         be the kg that price was built on — and say so. */}

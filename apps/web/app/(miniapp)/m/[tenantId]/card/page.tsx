@@ -54,7 +54,7 @@ export default async function TwaCardPage({
           />
         </div>
 
-        <p className="mt-4 font-mono text-[22px] font-bold tracking-wide">
+        <p className="mt-4 font-mono text-title font-bold tracking-wide">
           {customer.clientCode}
         </p>
         <div className="mt-2">
@@ -65,7 +65,7 @@ export default async function TwaCardPage({
           />
         </div>
 
-        <p className="twa-hint mt-4 text-center text-[12.5px] leading-relaxed">
+        <p className="twa-hint mt-4 text-center text-micro leading-relaxed">
           {t('cardHint')}
         </p>
       </div>
