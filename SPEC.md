@@ -435,7 +435,10 @@ two copies would drift the moment one side is edited.
   server-side; the browser never hands back a list of rows to write. Capped at
   10 000 rows and 12 columns per run.
 - **5.5 /customers** — search; columns: Kod, Ism, Telefon, Treklar, Qarz
-  (red if > 0). Header carries `⬇️ Excel` (5.11). Paged 20 per page like
+  (red if > 0). A `🚫 Bloklaganlar` filter chip narrows the list to customers
+  whose bot looks blocked (7.17) and carries in the URL beside the search and
+  the page, so the count in the header is the count of that filter.
+  Header carries `⬇️ Excel` (5.11). Paged 20 per page like
   /tracks, with search and page carried together in the URL; the header count
   is the total, not the page. Track count and debt are aggregated in SQL, not
   by reading the tenant's tracks and payments into memory.
@@ -461,7 +464,21 @@ two copies would drift the moment one side is edited.
   7.10, member tracks list.
 - **5.8 /broadcast (Xabarnoma)** — textarea (max 3500 chars) → preview +
   `{N} ta mijozga yuboriladi` → confirm → queue. Below: history of past
-  broadcasts (date, first 80 chars, sent count).
+  broadcasts (date, first 80 chars, `{sent} / {recipients}`, and a
+  `Bekor qilindi` badge on a stopped one).
+  - **`📤 Menga test yubor`** (tasks.md K1, D-008) sends the typed text to the
+    signed-in employee's OWN Telegram chat (`admin_users.tg_user_id`) through
+    the same queue and rate limiter every other message uses. Disabled with a
+    hint when that employee has not linked their Telegram in the bot — the
+    honest state, rather than a button that silently does nothing. A test is
+    not a broadcast: no `broadcasts` row, no `message_log` entry, no count.
+  - **The hold window** (K2, D-008): confirming does NOT send. The fan-out is
+    queued with a 60-second delay and the screen shows a countdown with
+    `Bekor qilish`. Inside the window, cancelling means **nobody received
+    anything**. After it, the same control becomes `To'xtatish`: what has gone
+    out has gone, the rest is never sent. Both write the same thing — see 7.11.
+  - Sending is `broadcast.send`; stopping one is the same capability (whoever
+    may fire it may stop it), and `broadcasts.cancelled_by` records who did.
 - **5.9 /settings** — grouped form:
   - **Tariflar**: CRUD list (nomi, narx per kg, `asosiy` radio = default,
     faol/nofaol). At least one active default tariff must always exist.
@@ -510,7 +527,10 @@ two copies would drift the moment one side is edited.
   (CHINA_WAREHOUSE events in period), 🇺🇿 Toshkentga kelgan, 🎉 Topshirilgan
   (count + jami kg + jami summa), 💰 Tushum (payments sum in period),
   👥 Yangi mijozlar, 🔴 Jami qarzdorlik (current total, not period-based)
-  + qarzdorlar soni. Last: one bar chart — daily tushum for the
+  + qarzdorlar soni. Beside the undelivered-messages card, 🚫 `Botni
+  bloklaganlar` — a current count (not period-scoped, 7.17) linking to the
+  /customers filter. Zero renders as a quiet zero, not a hidden card: "nobody
+  blocked us" is worth seeing before a broadcast. Last: one bar chart — daily tushum for the
   last 14 days. Read-only; single tenant-scoped aggregate queries, no N+1.
   Debtor count/total are one SQL aggregate over the 7.5 rule (never a full
   debtor list) — the same aggregate backs the nav badge, which runs on every
@@ -821,8 +841,37 @@ working until the code is redeemed.
   TASHKENT_WAREHOUSE. Individual tracks may still be moved independently
   afterwards.
 - **7.11 Broadcast:** goes to all tenant customers through the same throttled
-  queue; record kept in `broadcasts` with final sent count. No segmentation
-  in MVP.
+  queue; record kept in `broadcasts` with `recipient_count` (queued) and
+  `sent_count` (delivered). No segmentation in MVP.
+  - **Hold + stop (tasks.md K2, D-008):** every fan-out is queued with
+    `startAfter` 60 s, and `broadcasts.status` is `queued` or `cancelled`.
+    The worker re-reads that status before EVERY delivery and sends nothing
+    once it is `cancelled`. Cancelling inside the window therefore reaches
+    nobody, and cancelling later stops the remainder mid-flight — one
+    mechanism, two experiences.
+  - Cancellation is a single-row UPDATE, deliberately **not** pg-boss job
+    cancellation: keeping 3 000 job ids to cancel later is fragile, and
+    would not stop a fan-out already in progress. The cost is one small
+    SELECT per delivery, which is nothing next to a 25 msg/sec ceiling.
+  - A cancelled delivery writes **no `message_log` row**. It was not dropped
+    and not failed — it never happened, and counting it would inflate the
+    dashboard's undelivered figure with messages nobody sent.
+  - A **test send** (5.8) carries a chat id instead of a customer: no
+    `broadcasts` row, no log, no count. It still goes through the queue, so
+    it can never bypass the rate limiter (CLAUDE.md rule 3).
+  - **Blocked customers are never auto-excluded** (K3, D-008). The block flag
+    is an inference (7.17), the worker already drops an unreachable chat, and
+    a customer who unblocks must come back on their own. The panel shows them
+    so a human can decide; the queue keeps trying.
+
+- **7.17 "Blocked the bot" (tasks.md A3, K3):** a customer counts as blocked
+  when their LAST `message_log` row of kind `notify` is `dropped`. Only
+  `notify` (a reminder or broadcast may simply predate an unblock) and only
+  `dropped` (`failed` means retries ran out on a transient error, which says
+  nothing about a block). It is an inference, never a stored flag — the next
+  successful notification clears it by itself.
+  - Shown as a badge on the customer card, a `🚫 Bloklaganlar` filter on
+    /customers, and a dashboard count linking to that filter.
 - **7.12 Phone matching & customer linking:** the same number arrives spelled
   three ways — Telegram's `998901234567`, an admin's `+998 90 123-45-67`, an
   import's `901234567`. Store `customers.phone_normalized` = digits only, then

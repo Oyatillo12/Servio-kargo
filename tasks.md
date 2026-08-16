@@ -290,14 +290,24 @@ boshlanishida SPEC.md tegishli bo'limi YOZILADI, keyin kod.
       eski treklarni O'ZGARTIRMASLIGI, botda 3-qadamli kalkulyator va
       `⏭ O'tkazib yuborish`, mijoz kartasida hajmiy qator.
 
-### K · Broadcast xavfsizligi
+### K · Broadcast xavfsizligi (D-008; SPEC 5.8, 7.11, 7.17)
 
-- [ ] **K1 · "Menga test yubor"** — broadcast formasida o'z akkauntiga
-      sinov xabari.
-- [ ] **K2 · Kechiktirish + bekor qilish** — jo'natish 60s `startAfter`
-      bilan navbatga tushadi; shu oynada "Bekor qilish" pg-boss cancel.
-- [ ] **K3 · Blok ko'rinishi** — "N mijoz botni bloklagan" dashboardda +
-      mijozlar ro'yxatida filtr (message_log'dagi mavjud ma'lumotdan).
+- [ ] **K1 · "Menga test yubor"** — formada `📤 Menga test yubor`: matn
+      kirgan xodimning O'Z Telegramiga (`admin_users.tg_user_id`) ketadi,
+      o'sha navbat va rate-limiter orqali (qoida 3). Telegram ulanmagan
+      bo'lsa tugma o'chiq + ulash maslahati. Test tarixga ham,
+      `message_log`ga ham yozilmaydi.
+- [ ] **K2 · Ushlab turish + to'xtatish** — fan-out 60s `startAfter` bilan
+      navbatga tushadi; `broadcasts.status` ('queued'|'cancelled') +
+      `recipient_count`, `cancelled_at`, `cancelled_by`. Ishchi HAR
+      xabardan oldin statusni o'qiydi — oyna ichida bekor qilish hech kimga
+      yetkazmaydi, oynadan keyin qolganini to'xtatadi. pg-boss job id'lari
+      saqlanmaydi (D-008). Bekor qilingan yetkazish `message_log`ga hech
+      nima yozmaydi. Ekranda sanoq + `Bekor qilish` → `To'xtatish`.
+- [ ] **K3 · Blok ko'rinishi** — blok belgisi qoidasi SPEC 7.17 ga
+      ko'chirildi (oxirgi `notify` `dropped`). Dashboardda 🚫 karta +
+      /customers'da `Bloklaganlar` filtri (URL'da, qidiruv va sahifa bilan
+      birga). Avtomatik chetlashtirish YO'Q (D-008).
 
 ### L · QR klient-karta (Cargou pariteti)
 

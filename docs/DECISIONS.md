@@ -160,3 +160,49 @@ mijoz hajmiy vaznning O'ZINI ko'radimi.
   qayta tortilgan trek saqlangan o'lchamini ishlatadi, ya'ni ikki surfeys
   narxda kelishmovchilikka tushmaydi.
 - Zichlik-DIAPAZONLI tariflar hamon rejadan tashqarida (D-005).
+
+---
+
+## D-008 · Broadcast xavfsizligi (K-epic) — 2026-08-16 (egasi)
+
+**Kontekst.** Xabarnoma bitta tugma bilan 3000 mijozga ketadi va qaytarib
+bo'lmaydi: hozir forma → tasdiq → darhol har mijozga bitta pg-boss job.
+Xato matn, noto'g'ri narx, chala jumla — hammasi bir zumda tarqaladi.
+Bloklaganlar esa faqat bitta mijoz kartasida ko'rinadi, umumiy manzara yo'q.
+
+**Variantlar va qaror (egasi, 3/3 tavsiya bo'yicha).**
+
+1. **Ushlab turish oynasi + keyin ham to'xtatish.** Jo'natish 60 soniya
+   kechikadi (`startAfter`); shu oynada "Bekor qilish" — hech kimga xabar
+   ketmagan holda hammasi bekor bo'ladi. Oyna tugagach tugma "To'xtatish"ga
+   aylanadi: yuborilganlari qoladi, qolgani jo'natilmaydi.
+   Rad etilgan variantlar: (b) faqat 60s oyna — xatoni 61-soniyada
+   payqagan odamga hech nima qoldirmaydi; (c) kechiktirmasdan kuchli tasdiq
+   — tasdiq modali xato matnni to'xtatmaydi, uni faqat takrorlaydi.
+   **Texnik shakl:** bekor qilish `broadcasts.status` ustuni orqali, pg-boss
+   job id'larini saqlash orqali EMAS. Ishchi har xabardan oldin bitta qator
+   o'qiydi; 3000 job id'ini saqlab, keyin ularni cancel qilish mo'rt bo'lardi
+   va yarim yo'ldagi fan-out'ni to'xtata olmasdi.
+2. **"Menga test yubor" — kirgan xodimning o'z Telegramiga.**
+   `admin_users.tg_user_id` ulangan bo'lsa faol; ulanmagan bo'lsa tugma
+   o'chiq + botda ulash maslahati. Mijozga sinov yuborish rad etildi:
+   real mijoz sabab-siz "test" xabar olmasligi kerak. Test `broadcasts`
+   tarixiga ham, `message_log`ga ham YOZILMAYDI — u xabarnoma emas,
+   ko'rib olish. Lekin baribir NAVBAT orqali ketadi (CLAUDE.md qoida 3):
+   web tomondan to'g'ridan-to'g'ri yuborish rate-limiterni chetlab o'tardi.
+3. **Bloklaganlar ko'rsatiladi, avtomatik chetlashtirilmaydi.**
+   Dashboardda "N mijoz botni bloklagan", mijozlar ro'yxatida filtr.
+   Belgi — mavjud qoida (oxirgi **notify** `dropped`, A3). Avtomatik
+   chetlashtirish rad etildi: belgi taxmin, blokdan chiqqan mijoz o'zi
+   qaytishi kerak, aks holda uni qo'lda tiklamaguncha hech qachon xabar
+   olmaydi.
+
+**Oqibatlar.**
+- Har xabarnoma endi kamida 60 soniya kechikadi — "shoshilinch" xabarnoma
+  degan tushuncha yo'q, va bu ataylab.
+- Bekor qilingan xabarnoma `message_log`ga hech nima yozmaydi: aks holda
+  dashboarddagi "yetmagan xabarlar" hech kim jo'natmagan xabardan shishardi.
+- `broadcasts` jadvaliga progress uchun `recipient_count` qo'shiladi —
+  "2 980 / 3 000" ko'rsatish va "tugadimi" savoliga javob berish uchun.
+- Bloklaganlar navbatga baribir tushadi: Telegram limiti bo'yicha bu narx,
+  lekin blokdan chiqqan mijoz avtomatik qaytadi.
