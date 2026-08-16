@@ -29,3 +29,21 @@ export function nextClientCode(
   }
   return `${prefix}-${max + 1}`;
 }
+
+/**
+ * Does this scanned string look like a client code rather than a track code
+ * (SPEC §3.14, §5.14 — tasks.md L2)?
+ *
+ * One scanner at the weighing desk reads both: a parcel's barcode and a
+ * customer's QR card. Asking the operator to pick a mode is the wrong question
+ * when the shapes already differ — a client code is `PREFIX-1042` (2–4 letters,
+ * an optional dash, then digits), while a track code is 8–20 alphanumerics
+ * with digits and letters mixed throughout (§7.1).
+ *
+ * Deliberately narrow: anything that does not clearly match falls through to
+ * the track-code path, which is the safe default (a mistaken track code is
+ * rejected as "not found", a mistaken marka could attribute a parcel).
+ */
+export function looksLikeClientCode(value: string): boolean {
+  return /^[A-Za-z]{2,4}-?\d{1,10}$/.test(value.trim());
+}

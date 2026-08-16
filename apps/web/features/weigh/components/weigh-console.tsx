@@ -14,8 +14,15 @@ import {
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
-import { formatKg, formatSom, type MarkaOutcomeKind } from '@kargotrack/shared';
+import {
+  formatKg,
+  formatSom,
+  looksLikeClientCode,
+  type MarkaOutcomeKind,
+} from '@kargotrack/shared';
 
+import { canScan } from '@/components/shared/barcode';
+import { ScanSheet } from '@/components/shared/scan-sheet';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -23,8 +30,6 @@ import { cn } from '@/lib/utils';
 import type { WeighedRow } from '@/lib/queries/weighing';
 
 import { weighAction, type WeighField } from '../actions';
-import { canScan } from '../barcode';
-import { ScanSheet } from './scan-sheet';
 
 /** SPEC §8: warehouse photos are JPEG, max 10 MB — the same rule as the bot. */
 const MAX_PHOTO_MB = 10;
@@ -94,14 +99,29 @@ export function WeighConsole({
     dims: lengthRef,
   };
 
-  /** A scanned code behaves exactly like a scanned-by-USB one: on to the weight. */
-  const onDetected = useCallback((raw: string) => {
-    setCode(raw.trim());
-    setScanning(false);
-    // The sheet is unmounting; wait for the field to exist again before asking
-    // for focus, or the keyboard opens on nothing.
-    setTimeout(() => weightRef.current?.focus(), 0);
-  }, []);
+  /**
+   * A scanned parcel code behaves exactly like a scanned-by-USB one: on to the
+   * weight. A scanned CUSTOMER card (§3.14) is a different thing entirely, and
+   * the shape says which (L2, D-009) — asking the operator to pick a mode is
+   * the wrong question when the two never look alike.
+   */
+  const onDetected = useCallback(
+    (raw: string) => {
+      const value = raw.trim();
+      setScanning(false);
+      if (canAssign && looksLikeClientCode(value)) {
+        setMarka(value.toUpperCase());
+        // Straight to the weight: the box is on the scale, the marka is done.
+        setTimeout(() => weightRef.current?.focus(), 0);
+        return;
+      }
+      setCode(value);
+      // The sheet is unmounting; wait for the field to exist again before asking
+      // for focus, or the keyboard opens on nothing.
+      setTimeout(() => weightRef.current?.focus(), 0);
+    },
+    [canAssign],
+  );
 
   function submit() {
     if (pending) return;

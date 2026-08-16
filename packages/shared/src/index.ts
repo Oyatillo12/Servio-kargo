@@ -82,7 +82,11 @@ export {
   type BatchPropagationItem,
   type BatchPropagationPlan,
 } from './services/batches';
-export { nextClientCode, CLIENT_CODE_SEQ_BASE } from './services/clientCode';
+export {
+  nextClientCode,
+  looksLikeClientCode,
+  CLIENT_CODE_SEQ_BASE,
+} from './services/clientCode';
 export {
   computeDebtTiyin,
   describeDebt,

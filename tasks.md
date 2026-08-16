@@ -322,15 +322,22 @@ boshlanishida SPEC.md tegishli bo'limi YOZILADI, keyin kod.
 Qaror qabul qilindi (D-009): QR ichida **oddiy client_code** (imzolangan
 token emas) va `qrcode` kutubxonasi qo'shiladi.
 
-- [ ] **L1 · Mijoz QR'i** — botda `🪪 Mening kartam` (+ `/karta`): QR rasm,
+- [x] **L1 · Mijoz QR'i** ✅ (2026-08-16) — botda `🪪 Mening kartam` (+ `/karta`): QR rasm,
       izohda kod monospace bilan; Mini App'da `/card` ekrani (server tomonda
       chiziladi). Ro'yxatdan o'tmaganga — "avval /start".
-- [ ] **L2 · Skan** — skan tugmasi `CustomerPickerSheet` ichiga qo'shiladi,
+- [x] **L2 · Skan** ✅ (2026-08-16) — skan tugmasi `CustomerPickerSheet` ichiga qo'shiladi,
       ya'ni peshtaxta, biriktirish va trek detali birdan oladi; /weigh'da
       bitta skaner ikkalasini o'qiydi — shakli bo'yicha
       (`looksLikeClientCode`) trek kodi kod maydoniga, mijoz QR'i marka
       maydoniga tushadi. Skan infratuzilmasi `features/weigh` dan
-      `components/shared` ga ko'chadi (cross-feature).
+      `components/shared` ga ko'chdi (cross-feature).
+      **Halol chegara:** QR o'qish faqat real Android telefonda sinaladi
+      (W3 bilan bir xil sabab — Windows Chrome'da `BarcodeDetector` yo'q),
+      shuning uchun bu yerda faqat "tugma chizilmaydi" yo'li va shakl
+      ajratish qoidasi (`looksLikeClientCode`, testlar bilan) tekshirildi.
+      Qo'lda: botda 🪪 (rasm chiqishi), Mini App'da /card, peshtaxtada QR
+      skanerlab mijoz avto-tanlanishi, /weigh'da mijoz QR'i marka maydoniga
+      tushishi.
 
 ### M · Import himoyasi
 

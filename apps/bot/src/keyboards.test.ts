@@ -11,6 +11,7 @@ import {
   calcTariffsKeyboard,
   cancelKeyboard,
   helpFallbackKeyboard,
+  mainMenuKeyboard,
   myTracksKeyboard,
   trackCardKeyboard,
 } from './keyboards';
@@ -135,8 +136,35 @@ describe('bot commands', () => {
       'calc',
       'info',
       'manzil',
+      // §3.14: the client card is reachable as a command too — a customer at a
+      // counter should not have to hunt for a keyboard button.
+      'karta',
       'help',
     ]);
     expect(commands.every((c) => c.description.length > 0)).toBe(true);
+  });
+});
+
+describe('main menu (SPEC §3.1, §3.14)', () => {
+  /** Flatten the reply keyboard into the labels a customer actually sees. */
+  function labels(kb: ReturnType<typeof mainMenuKeyboard>): string[] {
+    return kb.keyboard.flat().map((b) => (typeof b === 'string' ? b : b.text));
+  }
+
+  it('carries the client card beside support, with language last', () => {
+    const rows = mainMenuKeyboard(s).keyboard;
+    expect(labels(mainMenuKeyboard(s))).toContain(s.menuCard);
+    // 2 columns × 5 rows once the card joined (§3.1): the language switch is
+    // the least-used button and ends up alone on the last row.
+    expect(rows).toHaveLength(5);
+    expect(rows[3]).toHaveLength(2);
+    expect(rows[4]).toHaveLength(1);
+  });
+
+  it('leads with the Mini App button only for a premium tenant', () => {
+    const withApp = mainMenuKeyboard(s, 'https://example.test/m/t1');
+    expect(withApp.keyboard).toHaveLength(6);
+    expect(labels(withApp)[0]).toBe(s.menuCabinet);
+    expect(labels(mainMenuKeyboard(s))).not.toContain(s.menuCabinet);
   });
 });

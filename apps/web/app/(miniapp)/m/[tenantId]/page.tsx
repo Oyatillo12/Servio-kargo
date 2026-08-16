@@ -7,6 +7,7 @@ import {
   MapPin,
   Package,
   PlusCircle,
+  QrCode,
   Search,
   Wallet,
 } from 'lucide-react';
@@ -201,6 +202,17 @@ export default async function TwaHomePage({
                 <Info className="twa-hint h-[18px] w-[18px] flex-none" aria-hidden />
                 <span className="truncate text-[13px] font-semibold">
                   {t('navInfo')}
+                </span>
+              </Link>
+              {/* §3.14: the card is opened AT the counter, so it sits in the
+                  utility strip rather than competing with the daily jobs. */}
+              <Link
+                href={`/m/${tenant.id}/card`}
+                className="twa-card twa-press col-span-2 flex items-center gap-2.5 rounded-2xl px-3.5 py-3"
+              >
+                <QrCode className="twa-hint h-[18px] w-[18px] flex-none" aria-hidden />
+                <span className="truncate text-[13px] font-semibold">
+                  {t('navCard')}
                 </span>
               </Link>
             </div>

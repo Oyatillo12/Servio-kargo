@@ -25,6 +25,7 @@ import {
   calcTariffCallback,
   showCalculator,
 } from './calculator';
+import { showClientCard } from './card';
 import { showChinaAddress } from './china';
 import { contactHandler, langCallback, startCommand } from './start';
 import {
@@ -57,6 +58,7 @@ export function registerHandlers(bot: Bot<KargoContext>): void {
   bot.command('calc', showCalculator);
   bot.command('info', showInfo);
   bot.command('manzil', showChinaAddress);
+  bot.command('karta', showClientCard);
   bot.command('help', showHelp);
 
   bot.callbackQuery(/^lang:(uz|ru)$/, langCallback);

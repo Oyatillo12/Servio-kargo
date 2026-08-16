@@ -134,7 +134,12 @@
     "infoPickup": "Olib ketish manzili",
     "infoHours": "Ish vaqti",
     "infoPhone": "Telefon",
-    "infoEmpty": "Ma'lumot hali kiritilmagan."
+    "infoEmpty": "Ma'lumot hali kiritilmagan.",
+    "navCard": "Mening kartam (QR)",
+    "cardTitle": "Mening kartam",
+    "cardQrAlt": "Mijoz kodi QR",
+    "cardCopy": "Kodni nusxalash",
+    "cardHint": "Omborda yoki peshtaxtada shu QR'ni ko'rsating — xodim skanerlaydi. QR o'qilmasa, kodni o'zini ayting."
   },
   "auth": {
     "pageTitle": "Kirish",
@@ -400,7 +405,8 @@
     "filterBlocked": "Bloklaganlar",
     "blockedBadge": "Botni bloklagan",
     "emptyBlockedTitle": "Bloklagan mijoz yo'q",
-    "emptyBlockedHint": "Hozircha hech kim botni bloklamagan — xabarnomalar yetib boryapti."
+    "emptyBlockedHint": "Hozircha hech kim botni bloklamagan — xabarnomalar yetib boryapti.",
+    "pickerScan": "QR skanerlash"
   },
   "customerDetail": {
     "pageTitle": "Mijoz",

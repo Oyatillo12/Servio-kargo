@@ -1,10 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
-import { Search, UserPlus } from 'lucide-react';
+import { ScanLine, Search, UserPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
+import { clientCodeKey } from '@kargotrack/shared';
+
+import { canScan } from '@/components/shared/barcode';
+import { ScanSheet } from '@/components/shared/scan-sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,6 +60,16 @@ export function CustomerPickerSheet({
   const [creating, setCreating] = useState(false);
   const requestId = useRef(0);
 
+  /**
+   * QR scan (§3.14, L2). Resolved after mount like the /weigh console does —
+   * `BarcodeDetector` and a secure context do not exist server-side, and a
+   * button that flickers away on hydration is worse than one that never
+   * appeared.
+   */
+  const [scanning, setScanning] = useState(false);
+  const [scanSupported, setScanSupported] = useState(false);
+  useEffect(() => setScanSupported(canScan()), []);
+
   const runSearch = useCallback(async (term: string) => {
     const id = ++requestId.current;
     setLoading(true);
@@ -75,8 +89,30 @@ export function CustomerPickerSheet({
     if (!open) return;
     setQ('');
     setCreating(false);
+    setScanning(false);
     void runSearch('');
   }, [open, runSearch]);
+
+  /**
+   * A scanned client card picks the customer outright when it resolves to
+   * exactly one — that is the entire point of holding a QR up at a counter.
+   * Anything else (no match, or a code that somehow matches several) falls back
+   * to filling the search box, so the employee sees what was scanned and can
+   * carry on by hand rather than being told "nothing happened".
+   */
+  const onScanned = useCallback(
+    async (raw: string) => {
+      const value = raw.trim();
+      setScanning(false);
+      setQ(value);
+      const rows = await searchCustomersAction(value);
+      setResults(rows);
+      const key = clientCodeKey(value);
+      const exact = rows.filter((r) => clientCodeKey(r.clientCode) === key);
+      if (exact.length === 1) onPick(exact[0]!);
+    },
+    [onPick],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -115,18 +151,33 @@ export function CustomerPickerSheet({
           />
         ) : (
           <>
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <Input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={t('pickerSearchPlaceholder')}
-                className="bg-[#f7f8fa] pl-9"
-                aria-label={t('pickerSearchLabel')}
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder={t('pickerSearchPlaceholder')}
+                  className="bg-[#f7f8fa] pl-9"
+                  aria-label={t('pickerSearchLabel')}
+                />
+              </div>
+              {/* §3.14: scan the customer's card instead of typing their code.
+                  No button at all where the device cannot scan (the §5.14
+                  rule), so nothing ever looks broken. */}
+              {scanSupported ? (
+                <button
+                  type="button"
+                  onClick={() => setScanning(true)}
+                  aria-label={t('pickerScan')}
+                  className="flex h-10 w-10 flex-none items-center justify-center rounded-lg border border-input bg-white text-primary active:bg-accent"
+                >
+                  <ScanLine className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                </button>
+              ) : null}
             </div>
 
             <div
@@ -187,6 +238,13 @@ export function CustomerPickerSheet({
             </Button>
           </>
         )}
+
+        {scanning ? (
+          <ScanSheet
+            onDetected={(raw) => void onScanned(raw)}
+            onClose={() => setScanning(false)}
+          />
+        ) : null}
       </SheetContent>
     </Sheet>
   );

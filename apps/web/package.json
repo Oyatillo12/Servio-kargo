@@ -31,6 +31,7 @@
     "lucide-react": "^1.25.0",
     "next": "^14.2.18",
     "next-intl": "^4.13.4",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "server-only": "^0.0.1",
@@ -43,6 +44,7 @@
   "devDependencies": {
     "@formatjs/icu-messageformat-parser": "^3.5.15",
     "@types/node": "^22.9.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",

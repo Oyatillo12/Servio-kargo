@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 
 import { Spinner } from '@/components/ui/spinner';
 
-import { createDetector } from '../barcode';
+import { createDetector } from './barcode';
 
 /**
  * Full-screen camera scanner (tasks.md W3).

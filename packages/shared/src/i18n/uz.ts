@@ -30,6 +30,7 @@ export const uz: Strings = {
   menuInfo: "ℹ️ Ma'lumot",
   menuLang: '🌐 Til / Язык',
   menuTicket: '✍️ Murojaat',
+  menuCard: '🪪 Mening kartam',
   // Premium only: the reply-keyboard entry into the Mini App (tasks.md B7).
   menuCabinet: '📱 Kabinet',
 
@@ -41,6 +42,7 @@ export const uz: Strings = {
     calc: 'Narx kalkulyatori',
     info: "Ma'lumot",
     manzil: 'Xitoy ombori manzili',
+    karta: 'Mening kartam (QR)',
     help: 'Bot qanday ishlaydi',
   },
 
@@ -209,6 +211,12 @@ export const uz: Strings = {
     `❗️ Har bir qutiga shu kodni yozdirishni unutmang: ${clientCode}`,
   chinaAddrMissing: (contactPhone) =>
     `Manzil hali kiritilmagan. Administrator bilan bog'laning: ${contactPhone}`,
+
+  // --- §3.14 client card ---
+  cardCaption: (clientCode) =>
+    `🪪 Sizning mijoz kodingiz: <code>${clientCode}</code>
+
+Omborda yoki peshtaxtada shu QR'ni ko'rsating — xodim skanerlaydi. QR o'qilmasa, kodni o'zini ayting.`,
 
   // --- §3.7 ---
   langSwitched: "Til o'zgartirildi ✅",

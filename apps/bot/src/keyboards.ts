@@ -25,6 +25,7 @@ export function botCommands(s: Strings): BotCommand[] {
     { command: 'calc', description: s.commands.calc },
     { command: 'info', description: s.commands.info },
     { command: 'manzil', description: s.commands.manzil },
+    { command: 'karta', description: s.commands.karta },
     { command: 'help', description: s.commands.help },
   ];
 }
@@ -42,7 +43,7 @@ export function phoneKeyboard(s: Strings): Keyboard {
 }
 
 /**
- * Main menu reply keyboard — 2 columns, 4 rows (SPEC §3.1). A premium
+ * Main menu reply keyboard — 2 columns, 5 rows (SPEC §3.1). A premium
  * tenant's keyboard leads with a Mini App button (SPEC §10.1, tasks.md B7);
  * pressing it opens the cabinet directly, no text update is sent, so the
  * text router never sees it.
@@ -60,7 +61,11 @@ export function mainMenuKeyboard(s: Strings, miniAppUrl?: string): Keyboard {
     .text(s.menuChinaAddress)
     .text(s.menuInfo)
     .row()
+    // §3.14: the card sits next to the support button because both are what a
+    // customer reaches for while standing at the counter.
+    .text(s.menuCard)
     .text(s.menuTicket)
+    .row()
     .text(s.menuLang)
     .resized();
 }

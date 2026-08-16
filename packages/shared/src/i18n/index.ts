@@ -113,6 +113,8 @@ export interface Strings {
   menuLang: string;
   /** §3.13 support-ticket entry. */
   menuTicket: string;
+  /** §3.14 client QR card entry. */
+  menuCard: string;
   /** Premium reply-keyboard entry into the Mini App (SPEC §10.1). */
   menuCabinet: string;
 
@@ -124,6 +126,7 @@ export interface Strings {
     calc: string;
     info: string;
     manzil: string;
+    karta: string;
     help: string;
   };
 
@@ -238,6 +241,14 @@ export interface Strings {
   chinaAddrHeader: string;
   chinaAddrFooter(clientCode: string): string;
   chinaAddrMissing(contactPhone: string): string;
+
+  // --- §3.14 client card (L1, D-009) ---
+  /**
+   * Caption under the QR image: the code in monospace plus what to do with it.
+   * The readable code matters as much as the QR — a scuffed print, a dead
+   * camera or a phone call all fall back to reading it out.
+   */
+  cardCaption(clientCode: string): string;
 
   // --- §3.7 language switch ---
   langSwitched: string;

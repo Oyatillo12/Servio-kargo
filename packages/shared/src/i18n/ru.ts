@@ -31,6 +31,7 @@ export const ru: Strings = {
   menuInfo: 'ℹ️ Информация',
   menuLang: '🌐 Til / Язык',
   menuTicket: '✍️ Обращение',
+  menuCard: '🪪 Моя карта',
   menuCabinet: '📱 Кабинет',
 
   // --- Telegram command-menu descriptions (setMyCommands) ---
@@ -41,6 +42,7 @@ export const ru: Strings = {
     calc: 'Калькулятор цены',
     info: 'Информация',
     manzil: 'Адрес склада в Китае',
+    karta: 'Моя карта (QR)',
     help: 'Как работает бот',
   },
 
@@ -210,6 +212,12 @@ export const ru: Strings = {
     `Адрес пока не указан. Свяжитесь с администратором: ${contactPhone}`,
 
   // --- §3.7 ---
+  // --- §3.14 client card ---
+  cardCaption: (clientCode) =>
+    `🪪 Ваш код клиента: <code>${clientCode}</code>
+
+Покажите этот QR на складе или на выдаче — сотрудник отсканирует. Если QR не читается, просто назовите код.`,
+
   langSwitched: 'Язык изменён ✅',
 
   // --- §3.8 staff mode (weighing + photo) / §4.5 staff strings ---

@@ -11,6 +11,7 @@ import type { KargoContext } from '../context';
 import { langKeyboard } from '../keyboards';
 import { askForTracks, handleAddTracks } from './addTrack';
 import { handleCalcDims, handleCalcWeight, showCalculator } from './calculator';
+import { showClientCard } from './card';
 import { showChinaAddress } from './china';
 import { matchMenuAction } from './common';
 import { handleLookup } from './lookup';
@@ -51,6 +52,8 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
         return showChinaAddress(ctx);
       case 'info':
         return showInfo(ctx);
+      case 'card':
+        return showClientCard(ctx);
       case 'ticket':
         return ticketMenuHandler(ctx);
       case 'lang':
