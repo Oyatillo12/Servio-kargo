@@ -86,7 +86,10 @@ export const ru: Strings = {
   // --- §3.3 my tracks ---
   myTracksHeader: '📦 Мои посылки:',
   myTracksTapHint: '👆 Нажмите на трек, чтобы открыть подробности.',
-  readyDetail: ({ kg, som }) => ` — ${kg} кг, ${som} so'm`,
+  readyDetail: ({ kg, actualKg, som }) =>
+    actualKg != null
+      ? ` — ${kg} кг (объёмный), ${som} so'm`
+      : ` — ${kg} кг, ${som} so'm`,
   pageIndicator: (page, pages) => `Страница ${page}/${pages}`,
 
   // --- §3.4 balance ---

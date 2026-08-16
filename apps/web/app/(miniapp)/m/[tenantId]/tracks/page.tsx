@@ -3,13 +3,28 @@ import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ImageIcon, PlusCircle } from 'lucide-react';
 
-import { formatDate, formatKg, formatSom } from '@kargotrack/shared';
+import {
+  formatDate,
+  formatKg,
+  formatSom,
+  storedChargeableWeight,
+} from '@kargotrack/shared';
 
 import { Pipeline } from '@/features/twa/components/pipeline';
 import { Screen } from '@/features/twa/components/screen';
 import { StatusPill } from '@/features/twa/components/status-pill';
 import { getTwaContext } from '@/lib/twa/auth';
-import { listTwaTracks } from '@/lib/twa/queries';
+import { listTwaTracks, type TwaTrackRow } from '@/lib/twa/queries';
+
+/**
+ * §7.16: what this row's price was built on, read from the frozen columns.
+ * Kept beside the list because the kg and the so'm share one line — showing the
+ * scale reading next to a volumetric price is the arithmetic that starts a
+ * dispute.
+ */
+function chargedOf(row: TwaTrackRow) {
+  return storedChargeableWeight(row.weightGrams, row.volumetricGrams);
+}
 
 export default async function TwaTracksPage({
   params,
@@ -63,7 +78,9 @@ export default async function TwaTracksPage({
         </div>
       ) : (
         <ul className="space-y-2">
-          {rows.map((tr, i) => (
+          {rows.map((tr, i) => {
+            const charged = chargedOf(tr);
+            return (
             <li
               key={tr.id}
               className="twa-rise"
@@ -97,8 +114,14 @@ export default async function TwaTracksPage({
                   </div>
                   <p className="twa-hint min-w-0 flex-1 truncate font-mono text-[11.5px]">
                     {formatDate(tr.createdAt)}
-                    {tr.weightGrams != null
-                      ? ` · ${formatKg(tr.weightGrams)} kg`
+                    {/* §7.16: the kg here sits next to the price, so it has to
+                        be the kg that price was built on — and say so. */}
+                    {charged != null
+                      ? ` · ${formatKg(charged.grams)} kg${
+                          charged.basis === 'volumetric'
+                            ? ` ${t('listVolumetric')}`
+                            : ''
+                        }`
                       : ''}
                     {tr.priceTiyin != null
                       ? ` · ${formatSom(tr.priceTiyin)} ${tCommon('som')}`
@@ -108,7 +131,8 @@ export default async function TwaTracksPage({
                 </div>
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </Screen>

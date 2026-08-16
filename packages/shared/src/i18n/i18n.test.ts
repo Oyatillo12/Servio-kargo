@@ -164,3 +164,20 @@ describe('volumetric weight is never a bare number (§7.16, D-007)', () => {
     expect(ru.calcStepDims).toContain('3/3');
   });
 });
+
+describe('readyDetail keeps kg and so\'m consistent (§3.3, §7.16)', () => {
+  it('marks the line volumetric so the arithmetic adds up', () => {
+    expect(uz.readyDetail({ kg: '10.02', actualKg: '5.2', som: '300 600' })).toBe(
+      " — 10.02 kg (hajmiy), 300 600 so'm",
+    );
+    expect(ru.readyDetail({ kg: '10.02', actualKg: '5.2', som: '300 600' })).toContain(
+      'объёмный',
+    );
+  });
+
+  it('stays exactly as before when the scale won', () => {
+    expect(uz.readyDetail({ kg: '1.5', som: '82 500' })).toBe(
+      " — 1.5 kg, 82 500 so'm",
+    );
+  });
+});

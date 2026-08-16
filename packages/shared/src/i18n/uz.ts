@@ -86,7 +86,10 @@ export const uz: Strings = {
   // --- §3.3 my tracks ---
   myTracksHeader: '📦 Mening yuklarim:',
   myTracksTapHint: "👆 Batafsil ko'rish uchun trek ustiga bosing.",
-  readyDetail: ({ kg, som }) => ` — ${kg} kg, ${som} so'm`,
+  readyDetail: ({ kg, actualKg, som }) =>
+    actualKg != null
+      ? ` — ${kg} kg (hajmiy), ${som} so'm`
+      : ` — ${kg} kg, ${som} so'm`,
   pageIndicator: (page, pages) => `Sahifa ${page}/${pages}`,
 
   // --- §3.4 balance ---

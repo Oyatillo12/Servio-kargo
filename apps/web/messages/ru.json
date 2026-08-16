@@ -78,6 +78,7 @@
     "etaLabel": "Прибытие (ориентировочно)",
     "trackWeight": "Вес",
     "trackChargeableWeight": "Расчётный вес",
+    "listVolumetric": "(объёмный)",
     "trackVolumetricNote": "(объёмный · фактический {actual} кг)",
     "trackPrice": "Стоимость",
     "trackDescription": "Описание",

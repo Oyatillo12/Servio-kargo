@@ -78,6 +78,7 @@
     "etaLabel": "Yetib kelishi (taxminiy)",
     "trackWeight": "Og'irligi",
     "trackChargeableWeight": "Hisob vazni",
+    "listVolumetric": "(hajmiy)",
     "trackVolumetricNote": "(hajmiy · haqiqiy {actual} kg)",
     "trackPrice": "Narxi",
     "trackDescription": "Tavsif",

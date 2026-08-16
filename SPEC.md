@@ -79,7 +79,10 @@ with the grouped summary (4.3) plus the `➕ / 📦` follow-up row (3.11).
 ### 3.3 My tracks
 Group user's non-deleted tracks by status in pipeline order. Each line:
 `{emoji} {code_original}`; for READY_FOR_PICKUP also append
-` — {weight} kg, {price} so'm` when set. Paginate 10 per page with inline
+` — {weight} kg, {price} so'm` when set — where `{weight}` is the CHARGEABLE
+weight and carries `(hajmiy)` when volume set the price (7.16). A kg figure
+printed next to a so'm figure must be the kg that so'm came from; the Mini App
+list follows the same rule. Paginate 10 per page with inline
 `◀️ / ▶️` buttons plus a `🔄` refresh. One tappable button per track opens its
 card **in place** (3.11). Empty state text in 4.1.
 

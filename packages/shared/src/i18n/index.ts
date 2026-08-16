@@ -19,8 +19,10 @@ export const LANG_BUTTON_UZ = "O'zbekcha 🇺🇿";
 export const LANG_BUTTON_RU = 'Русский 🇷🇺';
 
 export interface ReadyDetail {
-  /** Formatted kg string, e.g. "1.5". */
+  /** Formatted kg the price was built on — chargeable when volume won (§7.16). */
   kg: string;
+  /** The scale reading, present only when volume set the price (§7.16). */
+  actualKg?: string;
   /** Formatted so'm string (no suffix), e.g. "82 500". */
   som: string;
 }

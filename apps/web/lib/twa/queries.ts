@@ -160,6 +160,8 @@ export interface TwaTrackRow {
   codeOriginal: string;
   currentStatus: TrackStatus;
   weightGrams: number | null;
+  /** Frozen volumetric weight (§7.16) — the list shows what the price used. */
+  volumetricGrams: number | null;
   priceTiyin: number | null;
   hasPhoto: boolean;
   createdAt: Date;
@@ -182,6 +184,7 @@ export async function listTwaTracks(
       codeOriginal: tracks.codeOriginal,
       currentStatus: tracks.currentStatus,
       weightGrams: tracks.weightGrams,
+      volumetricGrams: tracks.volumetricGrams,
       priceTiyin: tracks.priceTiyin,
       hasPhoto: sql<boolean>`exists (select 1 from ${trackPhotos} where ${trackPhotos.trackId} = ${tracks.id})`,
       createdAt: tracks.createdAt,
@@ -206,6 +209,7 @@ export async function listTwaTracks(
       codeOriginal: r.codeOriginal,
       currentStatus: r.currentStatus,
       weightGrams: r.weightGrams,
+      volumetricGrams: r.volumetricGrams,
       priceTiyin: r.priceTiyin,
       hasPhoto: r.hasPhoto,
       createdAt: r.createdAt,

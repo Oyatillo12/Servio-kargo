@@ -3,7 +3,14 @@
  * per-track display line.
  */
 
-import { formatKg, formatSom, ru, STATUS_META, uz } from '@kargotrack/shared';
+import {
+  formatKg,
+  formatSom,
+  ru,
+  storedChargeableWeight,
+  STATUS_META,
+  uz,
+} from '@kargotrack/shared';
 import type { Track } from '@kargotrack/db/schema';
 
 import type { KargoContext } from '../context';
@@ -67,8 +74,19 @@ export function renderTrackLine(track: Track, ctx: KargoContext): string {
     track.weightGrams != null &&
     track.priceTiyin != null
   ) {
+    // §7.16: the kg on this line sits next to the price, so it has to be the kg
+    // that price was built on — a customer doing the arithmetic on the scale
+    // reading is a dispute waiting to be written.
+    const charged = storedChargeableWeight(
+      track.weightGrams,
+      track.volumetricGrams,
+    );
     line += ctx.s.readyDetail({
-      kg: formatKg(track.weightGrams),
+      kg: formatKg(charged?.grams ?? track.weightGrams),
+      actualKg:
+        charged?.basis === 'volumetric'
+          ? formatKg(track.weightGrams)
+          : undefined,
       som: formatSom(track.priceTiyin),
     });
   }
