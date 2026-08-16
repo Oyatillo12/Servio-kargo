@@ -206,3 +206,40 @@ Bloklaganlar esa faqat bitta mijoz kartasida ko'rinadi, umumiy manzara yo'q.
   "2 980 / 3 000" ko'rsatish va "tugadimi" savoliga javob berish uchun.
 - Bloklaganlar navbatga baribir tushadi: Telegram limiti bo'yicha bu narx,
   lekin blokdan chiqqan mijoz avtomatik qaytadi.
+
+---
+
+## D-009 · QR klient-karta (L-epic) — 2026-08-16 (egasi)
+
+**Kontekst.** Peshtaxtada mijozni topish hozir qidiruv orqali: kod, ism yoki
+telefon terish. Raqobatchi (Cargou) mijozga QR-karta beradi, xodim skanerlaydi.
+tasks.md L bloki epic boshida ikki savolni ochiq qoldirgan edi.
+
+**Qaror (egasi, 2/2 tavsiya bo'yicha).**
+
+1. **QR ichida oddiy `client_code`** (`DK-1042`), imzolangan token EMAS.
+   Sabab: QR mijozni faqat **tanlaydi** — xodim ekranda ism, telefon va
+   qarzni ko'rib turib tasdiqlaydi, ya'ni soxta QR bilan boshqa birovning
+   yukini olib bo'lmaydi. Oddiy kod inson o'qiy oladigan zaxira ham beradi
+   (QR kir bo'lsa — qo'lda kiritiladi) va kalit almashishi eski kartalarni
+   o'ldirmaydi. Imzolangan token xavfsizlikni deyarli oshirmasdan uchta
+   yangi nosozlik yo'lini qo'shardi.
+2. **`qrcode` kutubxonasi qo'shiladi** — "yangi kutubxona = alohida asoslash"
+   siyosati (tasks.md) bo'yicha ataylab so'ralgan qaror. Asoslash: QR
+   standarti (Reed–Solomon + maska tanlash) bir necha yuz qator kod va o'zi
+   bitta bug manbai; `qrcode` sof JS, Node'da PNG bufer, brauzerda data-URL
+   beradi — bitta kutubxona ikkala surfeysga. Muqobillar rad etildi:
+   "rasmsiz, faqat matn" L2 ni ma'nosiz qilardi; "faqat Mini App'da"
+   botdagi kartani yarim qoldirardi.
+
+**Oqibatlar.**
+- QR — sirli kalit EMAS: uni ko'rgan odam faqat client_code'ni biladi, bu esa
+  posilka qutisiga baribir yozib qo'yiladi (marka, §7.13). Xavfsizlik chegarasi
+  o'sha joyda qoladi — xodim tasdig'i.
+- Skanerlash yagona joyda: `CustomerPickerSheet` (peshtaxta, biriktirish, trek
+  detali) va /weigh marka maydoni. Shu sababli shtrix-skan infratuzilmasi
+  `features/weigh` dan `components/shared` ga ko'chiriladi (CLAUDE.md
+  layout qoidasi: cross-feature qismlar shu yerda).
+- Trek kodi va client_code bitta skanerdan tushadi, shakli bo'yicha ajratiladi
+  (`looksLikeClientCode`, testlar bilan) — xodim "qaysi rejim" deb
+  o'ylamaydi.

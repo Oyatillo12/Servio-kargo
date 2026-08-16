@@ -58,11 +58,13 @@ TASHKENT_WAREHOUSE as their own status.
 3. Create/update customer, assign `client_code` = tenant prefix + sequence
    (e.g. `DK-1042`), show confirmation + main menu.
 
-Main menu (reply keyboard, 2 columns, 4 rows):
+Main menu (reply keyboard, 2 columns, 5 rows):
 - uz: `➕ Trek qo'shish` `📦 Mening yuklarim` / `🧮 Kalkulyator` `💰 Balans` /
-  `🇨🇳 Ombor manzili` `ℹ️ Ma'lumot` / `✍️ Murojaat` `🌐 Til / Язык`
+  `🇨🇳 Ombor manzili` `ℹ️ Ma'lumot` / `🪪 Mening kartam` `✍️ Murojaat` /
+  `🌐 Til / Язык`
 - ru: `➕ Добавить трек` `📦 Мои посылки` / `🧮 Калькулятор` `💰 Баланс` /
-  `🇨🇳 Адрес склада` `ℹ️ Информация` / `✍️ Обращение` `🌐 Til / Язык`
+  `🇨🇳 Адрес склада` `ℹ️ Информация` / `🪪 Моя карта` `✍️ Обращение` /
+  `🌐 Til / Язык`
 
 Immediately after registration the bot also sends the `help_card` (3.12) — a
 brand-new customer is looking at seven unexplained buttons and this is the
@@ -178,6 +180,21 @@ never mentions volume at all.
 All three steps are numbered `1/3` … `3/3` and all are cancellable: the flow
 hijacks the customer's next plain message, so without a visible exit a mistyped
 trek code is silently read as a weight.
+
+### 3.14 Client card (`🪪 Mening kartam`, tasks.md L1 — D-009)
+`🪪` (or `/karta`) → a QR image of the customer's `client_code`, captioned with
+the code itself in monospace and one line telling them to show it at the
+counter. Also reachable from the Mini App (10.2).
+
+The QR encodes the **plain client code**, nothing else (D-009). It is not a
+credential: it selects a customer at a counter where the employee then sees
+their name, phone and balance before doing anything (5.14, 5.15). The code is
+already written on their boxes (7.13), so a QR that reveals it reveals nothing.
+The readable code under the image is the fallback for a scuffed print, a dead
+camera, or a customer reading it down the phone.
+
+Unregistered users get the same "register first" reply the ticket flow gives —
+there is no code to show yet.
 
 ### 3.10 China warehouse address
 `🇨🇳` → send `china_addr_header` + the tenant's `china_address_template`
@@ -406,7 +423,12 @@ two copies would drift the moment one side is edited.
   `Biriktirish`; attached → `O'zgartirish` / `Ajratish` next to the profile
   and call shortcuts. Both open the customer picker: search by
   client_code / ism / telefon, plus `Yangi mijoz qo'shish` inline (5.5) for
-  the common case that the owner is not in the system yet.
+  the common case that the owner is not in the system yet. The picker also
+  carries the QR scan button (L2, D-009) — one component, so the handover
+  counter (5.15), assignment and the track page all gained it at once; a scan
+  fills the search and picks the customer outright when it matches exactly one.
+  Where the camera or `BarcodeDetector` is missing there is simply no button
+  (the 5.14 rule), and typing keeps working.
   Assignment events appear in the timeline as `Mijozga biriktirildi` /
   `Mijozdan ajratildi` / `Mijoz o'zgartirildi`, not as a status.
 - **5.4 /import** — 4 steps:
@@ -651,6 +673,10 @@ two copies would drift the moment one side is edited.
 
   **Camera scan** — a button beside the code field opens a full-screen scanner
   built on the browser's own `BarcodeDetector` (Android Chrome), no library.
+  One scanner reads both things the desk holds: a parcel's barcode goes to the
+  code field, and a customer's QR card (3.14) goes to `marka`, decided by the
+  SHAPE of what was scanned (`looksLikeClientCode` — prefix letters, a dash,
+  digits) rather than by a mode the operator has to remember (L2, D-009).
   Where the API, a camera or a secure context is missing there is no button at
   all rather than one that does nothing; USB-scanner and manual entry are the
   baseline and never depend on it. Only formats the device reports supporting
@@ -1085,6 +1111,9 @@ the bot (3.1); the Mini App never asks for a phone.
   filled the result names the chargeable weight and why it rose.
 - China address: tenant template with `{client_code}` substituted (3.7),
   one-tap copy.
+- Client card (`/m/{tenantId}/card`): the same QR the bot sends (3.14) with the
+  code under it, rendered server-side — nothing to load, nothing to fetch, and
+  it opens at a counter where the phone may have no signal worth trusting.
 - Public lookup (`/m/{tenantId}/lookup`): works WITHOUT registration —
   status + last-change date only, never price/owner/weight; per-IP
   fixed-window throttle (`lookup:` scope in `auth_throttle`).
