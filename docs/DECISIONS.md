@@ -392,6 +392,10 @@ ya'ni o'zi idempotent.
 - **Har sirt uchun bitta choke point:** panel — `lib/auth.ts` (sessiya),
   TWA — `lib/twa/auth.ts`, bot — bitta middleware, ishchi — jo'natishdan
   oldingi tekshiruv. Sahifama-sahifa emas.
+- **Banner faqat owner'ga.** 4-band javobining matni "panelga kirgan owner
+  ko'radi" edi, va C varianti ("hamma xodimga") aynan "ichki pul masalasi
+  butun jamoaga ochiladi" degani uchun rad etilgan. Qulf ekrani ham shu
+  chiziqni tortadi: xodim "kompaniya o'chirilgan" ni ko'radi, sanani emas.
 - **`authorize()` ham to'sadi.** Qulf ekrani — UI; Server Action esa tizimga
   kirgan har kim chaqira oladigan POST (qoida 9). O'chirilgan tenant'da
   mutatsiya umuman o'tmaydi, hatto qulf ekranini aylanib o'tsa ham.

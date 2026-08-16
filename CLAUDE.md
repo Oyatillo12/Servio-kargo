@@ -83,6 +83,11 @@ entry, and update SPEC.md BEFORE writing the code (workflow: D-001).
   usd_rate_tiyin (som per 1 USD, in tiyin; used when currency=USD),
   plan ('basic'|'premium' — which features it unlocks is answered ONLY by
   `planIncludes` in packages/shared/services/plans.ts),
+  active (bool, default true — the door: false locks panel, TWA and bot and
+  drops queued sends; independent of `plan`, SPEC 7.19),
+  paid_until (date, nullable — NULL means billing is not set: never warns,
+  never auto-disables; state answered ONLY by `billingState` in
+  packages/shared/services/billing.ts),
   pickup_address, settings jsonb (reminder toggles, china_address_template,
   info_text, working_hours, contact_phone), created_at
   - `settings.staff_tg_ids` is RETIRED — employees live in `admin_users` with a
@@ -133,6 +138,12 @@ entry, and update SPEC.md BEFORE writing the code (workflow: D-001).
   'broadcast'), status ('sent'|'dropped'|'failed'), track_id?, broadcast_id?,
   error, created_at. The worker records every outbound message's FINAL outcome;
   the customer page shows it. Best-effort — a failed log write never re-sends.
+- `import_runs` — id, tenant_id, created_by, status, batch_id, source_name,
+  the counts the result screen showed, `items` jsonb (per touched track: what
+  the run WROTE and what stood there BEFORE — the undo's evidence, pruned
+  after 7 days), `rejected` jsonb, undone_at/by + its counts. Undo window is
+  60 minutes, once; rules live in packages/shared/services/importRun.ts
+  (SPEC 7.18, D-010).
 - `bot_sessions` — (tenant_id, key) PK, data jsonb, updated_at. grammY session
   state so deploys don't wipe multi-step flows; hourly sweep prunes >30 days.
 - `auth_throttle` — key PK, window_start, count. Platform-level (pre-auth, no

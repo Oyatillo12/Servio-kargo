@@ -46,7 +46,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       />
 
       {/* §5.17: the subscription warning, above everything and undismissable */}
-      <BillingBanner paidUntil={tenant.paidUntil} />
+      <BillingBanner paidUntil={tenant.paidUntil} role={role} />
 
       <SidebarProvider
         defaultOpen={sidebarOpen}

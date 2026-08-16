@@ -784,7 +784,9 @@ the data is intact, not to make the owner wonder whether it was deleted.
   Action refuses anyway (rule 9, 7.19).
 
 **Banner** — a persistent bar above the panel content while `billingState` is
-`due-soon` (amber) or `grace` (red), on every page, for every role:
+`due-soon` (amber) or `grace` (red), on every page, **for the owner only** —
+the same line the lock screen draws, and for the same reason the owner
+rejected warning the whole team (D-011):
 `To'lov muddati {date} da tugaydi — {n} kun qoldi` /
 `To'lov muddati {date} da tugadi — xizmat {n} kundan keyin to'xtaydi`.
 It is not dismissible and it is not sent anywhere (D-011): the banner IS the

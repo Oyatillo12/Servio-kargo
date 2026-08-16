@@ -20,6 +20,15 @@ function StateChip({ active, billing }: { active: boolean; billing: BillingStatu
       </span>
     );
   }
+  // Grace ended at Tashkent midnight but the hourly sweep has not run yet —
+  // the one window where a doomed tenant would otherwise read as healthy.
+  if (billing.state === 'expired') {
+    return (
+      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+        Sweep’da o‘chadi
+      </span>
+    );
+  }
   if (billing.state === 'grace') {
     return (
       <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
@@ -62,10 +71,17 @@ export default async function SaPage() {
   // chose a panel banner, which an owner who never opens the panel never sees.
   // This list is the other half of that decision: the platform's own warning,
   // so a call gets made before the hourly sweep closes the door.
+  // `expired` is included on purpose: between Tashkent midnight and the next
+  // hourly sweep a tenant is past grace but still open, and that hour is
+  // exactly when a call still changes the outcome. Sorted by days left, so it
+  // leads the list.
   const expiring = tenants
     .filter(
       (t) =>
-        t.active && (t.billing.state === 'due-soon' || t.billing.state === 'grace'),
+        t.active &&
+        (t.billing.state === 'due-soon' ||
+          t.billing.state === 'grace' ||
+          t.billing.state === 'expired'),
     )
     .sort((a, b) => (a.billing.daysLeft ?? 0) - (b.billing.daysLeft ?? 0));
 
@@ -106,9 +122,11 @@ export default async function SaPage() {
                     <span className="font-medium">{t.name}</span>
                     <span className="tabular-nums">{t.paidUntil}</span>
                     <span className="text-xs">
-                      {t.billing.state === 'grace'
-                        ? `muddati o‘tgan — ${t.billing.graceDaysLeft} kundan keyin avtomatik o‘chadi`
-                        : `${t.billing.daysLeft} kun qoldi`}
+                      {t.billing.state === 'expired'
+                        ? 'muddati tugadi — keyingi soatlik sweep’da o‘chadi'
+                        : t.billing.state === 'grace'
+                          ? `muddati o‘tgan — ${t.billing.graceDaysLeft} kundan keyin avtomatik o‘chadi`
+                          : `${t.billing.daysLeft} kun qoldi`}
                     </span>
                   </li>
                 ))}

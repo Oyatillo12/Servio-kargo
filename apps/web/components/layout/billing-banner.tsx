@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { AlertTriangle } from 'lucide-react';
 
-import { billingNeedsBanner, billingState } from '@kargotrack/shared';
+import { billingNeedsBanner, billingState, type AdminRole } from '@kargotrack/shared';
 
 /**
  * The subscription warning (SPEC §5.17, §7.19 — D-011). This bar IS the
@@ -9,14 +9,19 @@ import { billingNeedsBanner, billingState } from '@kargotrack/shared';
  * lets it stay stateless — a banner is computed on every render, so it can
  * neither be missed twice nor sent twice.
  *
- * Shown to every role. An owner who is away should not be the only person in
- * the company who could have seen it.
+ * Owner only, like the lock screen's billing detail: the owner rejected
+ * warning the whole team precisely because a company's invoice is not the
+ * warehouse hand's business (D-011, rejected option).
  */
 export async function BillingBanner({
   paidUntil,
+  role,
 }: {
   paidUntil: string | null;
+  role: AdminRole;
 }) {
+  if (role !== 'owner') return null;
+
   const status = billingState(paidUntil, new Date());
   if (!billingNeedsBanner(status)) return null;
 
