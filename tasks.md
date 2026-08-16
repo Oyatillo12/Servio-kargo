@@ -339,15 +339,35 @@ token emas) va `qrcode` kutubxonasi qo'shiladi.
       skanerlab mijoz avto-tanlanishi, /weigh'da mijoz QR'i marka maydoniga
       tushishi.
 
-### M · Import himoyasi
+### M · Import himoyasi (D-010; SPEC 5.4, 7.18)
 
-- [ ] **M1 · `import_runs`** — har apply run yozuvi; qatorlarga run_id
-      izi (track_events meta orqali, yangi ustunsiz).
-- [ ] **M2 · Undo** — 60 daqiqa ichida: faqat shu run YOZGAN maydonlar/
-      statuslar qaytariladi; keyin o'zgargan qatorlar tashlab o'tiladi va
-      hisobot beriladi.
-- [ ] **M3 · Rad etilgan qatorlar eksporti** — xato qatorlar xlsx bo'lib
-      qaytadi (Xitoy ofisiga qaytarib berish uchun).
+Qaror qabul qilindi (D-010): undo **to'liq** qaytaradi, xabarlar jim
+(hisobot bilan), oyna **60 daqiqa**, eksportda rad etilgan **va**
+ogohlantirishli qatorlar sabab ustuni bilan. Yangi kutubxona YO'Q — `xlsx`
+allaqachon bor (`apps/web/lib/xlsx.ts`, eksport yo'li tayyor).
+
+- [ ] **M1 · `import_runs`** — jadval (migratsiya 0022, additive): tenant_id,
+      created_by, status, batch_id, source_name, sanoqlar, `items` jsonb
+      (har trek uchun: nima YOZILDI / o'rnida nima BOR EDI), `rejected` jsonb,
+      `undone_at/by`. Run yozuvi importning O'ZI bilan bitta tranzaksiyada.
+      Per-trek iz — `track_events.meta.runId` (yangi ustunsiz, `{source:
+      'batch', batchId}` naqshi). `applyImport` runId qaytaradi.
+- [ ] **M2 · Undo** — 60 daqiqa ichida: yaratilganlar soft-delete, status
+      ortga (yangi teskari event, `meta.source='import-undo'`), to'ldirilgan
+      maydonlar bo'shaydi, biriktirilgan mijoz uziladi, reys avvalgiga,
+      tiriltirilgan trek qayta o'chadi. Har qator uchun HOZIRGI qiymat run
+      yozgani bilan solishtiriladi — bittasi farq qilsa butun qator tashlab
+      o'tiladi va sanaladi. Qoida sof funksiyada (`planImportUndoRow`,
+      testlar bilan). Xabar yuborilmaydi; ketib bo'lganlari son bo'lib
+      aytiladi. Import notify'lari 60s ushlab turiladi va ishchi har
+      xabardan oldin run tirikligini tekshiradi (K naqshi). Yangi
+      `import.undo` capability. UI: natija ekranida va `Oxirgi importlar`
+      kartasida (SPEC 5.4).
+- [ ] **M3 · Rad etilgan qatorlar eksporti** — `rejected` jsonb apply
+      paytida to'liq saqlanadi (namunaning 200 tasi emas, ≤1000 qator), har
+      qatorda asl ustunlar + `Sabab` (badCode / weight / price /
+      customerMissing / customerAmbiguous). `⬇️ Muammoli qatorlar` → xlsx
+      (mavjud `writeXlsx` + `xlsxResponse` yo'li).
 
 ### J · SaaS boshqaruv (pul olishdan oldin — F–M ning oxiri)
 

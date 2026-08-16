@@ -451,11 +451,19 @@ two copies would drift the moment one side is edited.
      file holds (see 7.2). Status select applied to all + OPTIONAL `Reys`
      select (attach all imported tracks to a batch).
   4. Apply → result: created / updated / attached / filled /
-     `{M} ta xabar navbatga qo'yildi`.
+     `{M} ta xabar navbatga qo'yildi`, plus the two things the run leaves
+     behind (7.18): `↩️ Importni bekor qilish` while the undo window is open,
+     and `⬇️ Muammoli qatorlar` whenever the file had any.
 
   The file (or the pasted text) is re-sent at every step and re-parsed
   server-side; the browser never hands back a list of rows to write. Capped at
   10 000 rows and 12 columns per run.
+
+  The page also carries **`Oxirgi importlar`** — the last 10 runs of this
+  tenant (time, who, status, the same counts), each with the same two buttons
+  under the same rules. Without it the undo would live only on a result screen
+  the admin has already navigated away from, which is exactly the minute they
+  realize the file was wrong.
 - **5.5 /customers** — search; columns: Kod, Ism, Telefon, Treklar, Qarz
   (red if > 0). A `🚫 Bloklaganlar` filter chip narrows the list to customers
   whose bot looks blocked (7.17) and carries in the URL beside the search and
@@ -1028,6 +1036,63 @@ working until the code is redeemed.
     show `Hisob vazni: 8.0 kg (hajmiy) · haqiqiy 5.2 kg` whenever volumetric
     won, and the plain weight otherwise. Weight and price stay owner-only
     (F1, 3.6) — this changes what an owner sees, not who sees it.
+
+- **7.18 Import runs & undo (tasks.md M — D-010):** an import is the one act
+  in this system that writes thousands of rows from a file nobody re-read.
+  Every apply therefore leaves a **run** behind, and a run can be taken back.
+  - **`import_runs`** — id, tenant_id, created_by, created_at, the target
+    status, the batch, the source name, the counts the result screen showed,
+    `items` jsonb, `rejected` jsonb, and `undone_at` / `undone_by` with the
+    undo's own counts. Written **inside the same transaction** as the import:
+    a rolled-back import must not leave a run claiming it happened.
+  - **`items`** records, per touched track, what the run WROTE and what stood
+    there BEFORE. This is not derivable from history: fill-if-empty writes
+    (owner, kg, price, marka, description) append no event at all, and
+    `batch_id` / `deleted_at` are overwrites. Per-track provenance still rides
+    the audit log — every event this run appends carries
+    `meta = {source: 'import', runId}` (7.2, 7.3).
+  - **The window is 60 minutes** from `created_at`. After that the run is
+    history, not a lever: a day-old import has real work layered on top of it,
+    and reverting it would skip most of its own rows anyway. A run is undone
+    **once** — `undone_at` is the guard, and the undo itself is never undone.
+  - **What undo reverts** (D-010, the run's own writes and nothing else):
+    tracks this run CREATED are soft-deleted; a status this run wrote goes
+    back to the previous one; fields this run FILLED go back to empty; an
+    owner this run attached is detached; the batch goes back to what the row
+    carried before; a track this run REVIVED (7.2 clears `deleted_at`) is
+    soft-deleted again.
+  - **Anything changed since is left alone.** Undo compares every value the
+    run wrote against what the track holds NOW; if a single one differs, the
+    whole row is skipped and counted. A parcel handed over and paid for at the
+    counter, re-weighed at the warehouse or edited by hand survives the undo
+    of the import that created it — the reverting of a mistake must never
+    become a second, larger mistake. The result names both numbers:
+    `{N} qator qaytarildi · {M} qator o'zgargani uchun tegilmadi`.
+  - **Reverting is silent and audited.** A revert appends a `track_events` row
+    (rule 7 — history is never rewritten) carrying the restored status and
+    `meta = {source: 'import-undo', runId}`, and sends the customer NOTHING:
+    the 7.3 reasoning applies unchanged, a correction message is a second
+    message about a parcel whose owner may never have read the first.
+    Notifications already delivered are reported as a plain count.
+  - **Import notifications are held for 60 seconds** before delivery (the same
+    hold and the same number as a broadcast, 7.11) and the worker re-reads the
+    run before each send: an undo inside that minute means nobody is told at
+    all. Without the hold the queue drains in seconds and "the pending ones
+    are stopped" would be a promise the architecture cannot keep. A held
+    message the undo cancels writes nothing to `message_log` (7.11's rule,
+    same reason).
+  - **`rejected`** keeps the rows the run could not use in full — no longer
+    the preview's 200-row sample: each carries its line number, the original
+    cells and a reason (`badCode` — dropped; `weight` / `price` — cell
+    unreadable, row imported without it; `customerMissing` /
+    `customerAmbiguous` — owner cell unresolved, 7.12). `⬇️ Muammoli
+    qatorlar` returns them as an xlsx with the original columns plus a
+    `Sabab` column, which is the form the China office can fix and re-send.
+    Capped at 1 000 rows per run; the sheet says so when it truncates.
+  - **Capability:** `import.undo` (owner + manager, like `import.run`), and a
+    run is undoable only by the tenant that owns it. `items` is pruned after
+    7 days by the hourly sweep — the window is an hour, so keeping the
+    evidence longer only grows the table; the run row itself stays.
 
 ## 8. Non-functional requirements
 

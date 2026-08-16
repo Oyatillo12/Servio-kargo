@@ -243,3 +243,81 @@ tasks.md L bloki epic boshida ikki savolni ochiq qoldirgan edi.
 - Trek kodi va client_code bitta skanerdan tushadi, shakli bo'yicha ajratiladi
   (`looksLikeClientCode`, testlar bilan) — xodim "qaysi rejim" deb
   o'ylamaydi.
+
+---
+
+## D-010 · Import himoyasi (M-epic) — 2026-08-16 (egasi)
+
+**Kontekst.** Import bitta tugma bilan 10 000 qatorgacha yozadi: yangi trek
+yaratadi, mavjudining statusini o'zgartiradi (va mijozga xabar yuboradi),
+bo'sh maydonlarini (mijoz, kg, narx, marka, tavsif) to'ldiradi, hammasini
+reysga biriktiradi va soft-delete qilingan trekni tiriltiradi. Xato ustun
+tanlansa yoki kechagi fayl qayta yuklansa — qaytarish yo'li YO'Q. Rad etilgan
+qatorlar esa faqat 3-qadamda, 200 tagacha namuna bo'lib ko'rinadi va
+apply'dan keyin butunlay yo'qoladi: Xitoy ofisiga "bularini tuzatib qayta
+yuboring" deb beradigan hech narsa qolmaydi.
+
+**Qaror (egasi, 4/4 tavsiya bo'yicha).**
+
+1. **Undo — to'liq qaytarish.** Shu run YARATGAN treklar soft-delete bo'ladi;
+   status ortga qaytadi (tarix o'chirilmaydi — qoida 7 bo'yicha YANGI teskari
+   event yoziladi); run to'ldirgan maydonlar bo'shatiladi; run biriktirgan
+   mijoz uziladi; reys avvalgi qiymatiga qaytadi; run tiriltirgan trek qayta
+   soft-delete bo'ladi. **Undo'dan keyin boshqa kim yoki nima o'zgartirgan
+   qator tegilmaydi** — tashlab o'tiladi va hisobotda sanaladi.
+   *Rad etilgan:* "faqat maydonlar, status qoladi" (asosiy xato — 500 trekni
+   noto'g'ri statusga surish — tuzalmasdan qolardi); "faqat yaratilganlarni
+   o'chirish" (haqiqiy og'riqni umuman yopmaydi).
+2. **Xabarlar: jim qaytarish + halol hisobot.** Undo mijozga hech qanday yangi
+   xabar yubormaydi (teskari status event'i ham xabarsiz — 7.3 mantig'i),
+   natijada "N mijozga xabar ketib bo'lgan edi" deb yoziladi. Hali
+   yuborilmagan navbatdagi xabarlar jo'natilmaydi.
+   *Rad etilgan:* tuzatish xabari (bitta xato ikkita xabarga aylanadi);
+   xabar ketgan bo'lsa undo'ni bloklash (amalda undo hech qachon ishlamasdi).
+3. **Oyna — 60 daqiqa.** *Rad etilgan:* 24 soat (bir kechada ustiga real ish
+   qatlami tushadi, "120 qator tashlab o'tildi" odatiy holga aylanardi);
+   "keyingi importgacha" (bir haftalik run'ni qaytarish xavfi).
+4. **M3 eksporti — rad etilgan VA ogohlantirishli qatorlar**, har birida
+   sabab ustuni bilan: kodi yaroqsiz (tashlangan), kg/narx o'qilmadi, mijoz
+   topilmadi, ism bir nechta mijozga to'g'ri keldi. *Rad etilgan:* faqat
+   tashlanganlar (ogohlantirishlar baribir qayta ishlanishi kerak); butun
+   fayl + natija ustuni (10 000 qatorda "nimani tuzatish kerak" ko'rinmay
+   qoladi).
+
+**Texnik shakl (egasi qarorining ichida, men).**
+
+- **`import_runs` jadvali + `items` jsonb** (har qator uchun: nima YOZILDI va
+  o'rnida nima BOR EDI). Sabab: fill-if-empty yozuvlari `track_events`ga
+  hech nima yozmaydi, `batch_id` va `deleted_at` esa ustiga yoziladi —
+  ya'ni run'ni faqat tarixdan tiklab bo'lmaydi. M1 ning niyati saqlanadi:
+  **`tracks` jadvaliga bitta ham ustun qo'shilmaydi**, per-trek iz esa
+  `track_events.meta.runId` orqali (mavjud `{source:'batch', batchId}`
+  naqshi).
+- **"O'zgargan bo'lsa — tegilmaydi" qator darajasida.** Undo har qatorda
+  HOZIRGI qiymatni run YOZGAN qiymat bilan solishtiradi; bittasi ham farq
+  qilsa — butun qator tashlab o'tiladi. Peshtaxtada topshirilib to'langan
+  quti, qayta tortilgan posilka, qo'lda tahrirlangan trek undo'dan omon
+  qoladi. Qoida sof funksiya (`planImportUndoRow`) va testlanadi.
+- **Import bildirishnomalari 60 soniya ushlab turiladi** (K bilan bir xil
+  raqam). Aks holda 2-band bo'sh va'da bo'lardi: notify ishchisi navbatni
+  bir necha soniyada bo'shatadi, ya'ni "navbatdagilar to'xtatiladi" hech
+  qachon hech kimni qutqarmasdi. Ishchi har xabardan oldin run tirikligini
+  tekshiradi (K naqshi: `isBroadcastLive` → `isImportRunLive`); to'xtatilgan
+  yetkazish `message_log`ga hech nima yozmaydi.
+- **Yangi `import.undo` capability** (owner + manager — `import.run` bilan
+  bir xil). Ataylab `tracks.delete`ka (owner-only) bog'lanmadi: undo
+  o'chiradigan yagona qator — shu running O'ZI yaratgan va o'shandan beri
+  o'zgarmagan treklar, ya'ni bu o'z ishini qaytarish, birovning ma'lumotini
+  o'chirish emas. Alohida nom matritsada — A7 dagi `payments.cancel` bilan
+  bir xil sabab: keyin qattiqlashtirish bir qatorlik ish bo'lsin.
+
+**Oqibatlar.**
+- 60 daqiqadan keyin qaytarish yo'q — keyin faqat qo'lda tuzatish (bulk
+  amallar). Undo'ning o'zi qaytarilmaydi: bir run bir marta.
+- Har import endi ~1 daqiqa kechikib xabar yuboradi. Bu K dagi bilan bir xil
+  ataylab qilingan narx.
+- 10 000 qatorli run ~2 MB jsonb saqlaydi. `items` 7 kundan keyin tozalanadi
+  (mavjud soatlik sweep) — undo oynasi baribir 60 daqiqa; run yozuvining
+  o'zi (kim, qachon, nechta) tarixda qoladi.
+- Import hech qachon tarixsiz bo'lmaydi: har apply, hatto undo qilinmagani
+  ham, /import sahifasida ko'rinadigan qator qoldiradi.
