@@ -15,7 +15,7 @@ import { WebhookButton } from './webhook-button';
 function StateChip({ active, billing }: { active: boolean; billing: BillingStatus }) {
   if (!active) {
     return (
-      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+      <span className="rounded-full bg-red-100 px-2 py-0.5 text-micro font-semibold text-red-700">
         O‘chirilgan
       </span>
     );
@@ -24,27 +24,27 @@ function StateChip({ active, billing }: { active: boolean; billing: BillingStatu
   // the one window where a doomed tenant would otherwise read as healthy.
   if (billing.state === 'expired') {
     return (
-      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+      <span className="rounded-full bg-red-100 px-2 py-0.5 text-micro font-semibold text-red-700">
         Sweep’da o‘chadi
       </span>
     );
   }
   if (billing.state === 'grace') {
     return (
-      <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+      <span className="rounded-full bg-red-50 px-2 py-0.5 text-micro font-semibold text-red-700">
         Muddati o‘tgan · {billing.graceDaysLeft} kun
       </span>
     );
   }
   if (billing.state === 'due-soon') {
     return (
-      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+      <span className="rounded-sm border border-warning/30 bg-[var(--st-china-bg)] px-2 py-0.5 text-micro font-semibold text-warning">
         {billing.daysLeft} kun qoldi
       </span>
     );
   }
   return (
-    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+    <span className="rounded-full bg-green-100 px-2 py-0.5 text-micro font-medium text-green-700">
       Faol
     </span>
   );
@@ -86,21 +86,21 @@ export default async function SaPage() {
     .sort((a, b) => (a.billing.daysLeft ?? 0) - (b.billing.daysLeft ?? 0));
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-svh bg-paper">
       <header className="sticky top-0 z-10 border-b border-rule bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-900">
+            <p className="truncate text-small font-bold text-ink">
               SERVIO Kargo — Super-admin
             </p>
-            <p className="truncate text-xs text-faint">
+            <p className="truncate text-micro text-faint">
               Platforma boshqaruvi
             </p>
           </div>
           <form action={saLogoutAction}>
             <button
               type="submit"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink-2 hover:bg-slate-100"
+              className="rounded-md px-3 py-1.5 text-small font-medium text-ink-2 hover:bg-surface-alt"
             >
               Chiqish
             </button>
@@ -112,16 +112,16 @@ export default async function SaPage() {
         {/* Tenants list */}
         <section className="min-w-0">
           {expiring.length > 0 ? (
-            <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-              <h2 className="text-sm font-semibold text-amber-900">
+            <div className="mb-5 rounded-md border border-warning/30 bg-[var(--st-china-bg)] px-4 py-3">
+              <h2 className="text-small font-semibold text-warning">
                 Muddati tugayapti ({expiring.length})
               </h2>
-              <ul className="mt-2 space-y-1 text-sm text-amber-900">
+              <ul className="mt-2 space-y-1 text-small text-warning">
                 {expiring.map((t) => (
                   <li key={t.id} className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{t.name}</span>
                     <span className="tabular-nums">{t.paidUntil}</span>
-                    <span className="text-xs">
+                    <span className="text-micro">
                       {t.billing.state === 'expired'
                         ? 'muddati tugadi — keyingi soatlik sweep’da o‘chadi'
                         : t.billing.state === 'grace'
@@ -131,25 +131,25 @@ export default async function SaPage() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-amber-800">
+              <p className="mt-2 text-micro text-warning">
                 Kompaniyalarga to‘lov haqida hech qanday xabar yuborilmaydi
                 (D-011) — bu ro‘yxat yagona ogohlantirish.
               </p>
             </div>
           ) : null}
 
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">
+          <h2 className="mb-3 text-small font-semibold text-ink">
             Kompaniyalar ({tenants.length})
           </h2>
           {tenants.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-faint">
+            <p className="rounded-md border border-dashed border-input px-4 py-8 text-center text-small text-faint">
               Hali kompaniya yo‘q. O‘ngdagi forma orqali birinchisini qo‘shing.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-rule">
-              <table className="w-full min-w-[900px] text-sm">
+            <div className="overflow-x-auto rounded-md border border-rule">
+              <table className="w-full min-w-[900px] text-small">
                 <thead>
-                  <tr className="border-b border-rule bg-surface-alt text-left text-xs uppercase tracking-wide text-faint">
+                  <tr className="border-b border-rule bg-surface-alt text-left text-micro uppercase tracking-wide text-faint">
                     <th className="px-3 py-2 font-medium">Nomi</th>
                     <th className="px-3 py-2 font-medium">Bot</th>
                     <th className="px-3 py-2 font-medium">Reja</th>
@@ -165,13 +165,13 @@ export default async function SaPage() {
                   {tenants.map((t) => (
                     <tr
                       key={t.id}
-                      className="border-b border-slate-100 last:border-0"
+                      className="border-b border-rule-soft last:border-0"
                     >
                       <td className="px-3 py-2">
-                        <span className="font-medium text-slate-900">
+                        <span className="font-medium text-ink">
                           {t.name}
                         </span>
-                        <span className="ml-1 text-xs text-faint">
+                        <span className="ml-1 text-micro text-faint">
                           {t.codePrefix}
                         </span>
                       </td>
@@ -193,8 +193,8 @@ export default async function SaPage() {
                         <span
                           className={
                             t.plan === 'premium'
-                              ? 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800'
-                              : 'rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-ink-2'
+                              ? 'rounded-sm border border-warning/30 bg-[var(--st-china-bg)] px-2 py-0.5 text-micro font-semibold text-warning'
+                              : 'rounded-sm bg-surface-alt px-2 py-0.5 text-micro font-medium text-ink-2'
                           }
                         >
                           {t.plan === 'premium' ? 'Premium' : 'Basic'}
@@ -233,18 +233,18 @@ export default async function SaPage() {
             </div>
           )}
           {/* Landing-page demo requests */}
-          <h2 className="mb-3 mt-8 text-sm font-semibold text-slate-900">
+          <h2 className="mb-3 mt-8 text-small font-semibold text-ink">
             Demo so‘rovlari ({saLeads.length})
           </h2>
           {saLeads.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-faint">
+            <p className="rounded-md border border-dashed border-input px-4 py-6 text-center text-small text-faint">
               Hali so‘rov yo‘q.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-rule">
-              <table className="w-full min-w-[520px] text-sm">
+            <div className="overflow-x-auto rounded-md border border-rule">
+              <table className="w-full min-w-[520px] text-small">
                 <thead>
-                  <tr className="border-b border-rule bg-surface-alt text-left text-xs uppercase tracking-wide text-faint">
+                  <tr className="border-b border-rule bg-surface-alt text-left text-micro uppercase tracking-wide text-faint">
                     <th className="px-3 py-2 font-medium">Ism</th>
                     <th className="px-3 py-2 font-medium">Telefon</th>
                     <th className="px-3 py-2 font-medium">Kompaniya</th>
@@ -256,9 +256,9 @@ export default async function SaPage() {
                   {saLeads.map((lead) => (
                     <tr
                       key={lead.id}
-                      className="border-b border-slate-100 last:border-0"
+                      className="border-b border-rule-soft last:border-0"
                     >
-                      <td className="px-3 py-2 font-medium text-slate-900">
+                      <td className="px-3 py-2 font-medium text-ink">
                         {lead.name}
                       </td>
                       <td className="px-3 py-2">
@@ -288,11 +288,11 @@ export default async function SaPage() {
 
         {/* Onboard form */}
         <section className="min-w-0">
-          <div className="rounded-lg bg-surface p-5 shadow-sm ring-1 ring-slate-200">
-            <h2 className="mb-1 text-sm font-semibold text-slate-900">
+          <div className="rounded-md bg-surface p-5 border border-rule">
+            <h2 className="mb-1 text-small font-semibold text-ink">
               Yangi kompaniya qo‘shish
             </h2>
-            <p className="mb-4 text-xs text-faint">
+            <p className="mb-4 text-micro text-faint">
               Token tekshiriladi, webhook avtomatik o‘rnatiladi.
             </p>
             <OnboardForm />

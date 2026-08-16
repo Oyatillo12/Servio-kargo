@@ -12,7 +12,7 @@ function Button() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-ink-2 hover:bg-surface-alt disabled:opacity-60"
+      className="rounded-md border border-input px-2.5 py-1 text-xs font-medium text-ink-2 hover:bg-surface-alt disabled:opacity-60"
     >
       {pending ? '…' : 'Webhook'}
     </button>

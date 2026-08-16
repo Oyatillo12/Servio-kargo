@@ -11,11 +11,11 @@ export default function SaLoginPage() {
   if (isSuperadmin()) redirect('/sa');
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-sm rounded-lg bg-surface p-6 shadow-sm ring-1 ring-slate-200">
+    <main className="flex min-h-svh bg-paper items-center justify-center px-4 py-10">
+      <div className="w-full max-w-sm rounded-md bg-surface p-6 border border-rule">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-bold text-slate-900">SERVIO Kargo</h1>
-          <p className="mt-1 text-sm text-faint">Super-admin panel</p>
+          <h1 className="font-display text-title font-semibold uppercase tracking-[0.04em] text-ink">SERVIO Kargo</h1>
+          <p className="mt-1 text-small text-faint">Super-admin panel</p>
         </div>
         <SaLoginForm />
       </div>

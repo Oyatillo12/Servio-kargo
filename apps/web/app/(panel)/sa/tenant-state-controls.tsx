@@ -68,7 +68,7 @@ export function ActiveToggle({
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="rounded-md px-2 py-1 text-xs text-faint hover:bg-slate-100"
+            className="rounded-md px-2 py-1 text-xs text-faint hover:bg-surface-alt"
           >
             Bekor
           </button>
@@ -104,11 +104,11 @@ export function PaidUntilField({
         name="paidUntil"
         defaultValue={paidUntil ?? ''}
         aria-label="To‘lov muddati"
-        className="rounded-md border border-slate-300 px-1.5 py-1 text-xs tabular-nums"
+        className="rounded-md border border-input px-1.5 py-1 text-xs tabular-nums"
       />
       <Submit
         label="Saqlash"
-        className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-ink-2 hover:bg-surface-alt disabled:opacity-60"
+        className="rounded-md border border-input px-2 py-1 text-xs font-medium text-ink-2 hover:bg-surface-alt disabled:opacity-60"
       />
       {state.error ? (
         <span className="text-xs text-red-600">{state.error}</span>

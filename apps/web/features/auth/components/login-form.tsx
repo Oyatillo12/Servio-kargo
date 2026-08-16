@@ -32,7 +32,7 @@ function ErrorBanner({ message }: { message: string }) {
     // above the button the user just pressed, out of their line of sight.
     <p
       role="alert"
-      className="rounded-lg bg-[var(--st-lost-bg)] px-3 py-2 text-sm text-destructive"
+      className="rounded-sm border-l-[3px] border-destructive bg-[var(--st-lost-bg)] px-3 py-2 text-small font-medium text-destructive"
     >
       {message}
     </p>
@@ -73,6 +73,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
           inputMode="tel"
           autoComplete="username"
           placeholder={t('phonePlaceholder')}
+          className="font-mono"
           required
         />
       </div>

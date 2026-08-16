@@ -12,7 +12,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+      className="w-full rounded-md bg-ink px-4 py-2.5 text-small font-semibold text-white transition hover:bg-ink/90 disabled:opacity-60"
     >
       {pending ? 'Tekshirilmoqda…' : 'Kirish'}
     </button>
@@ -27,7 +27,7 @@ export function SaLoginForm() {
       <div>
         <label
           htmlFor="token"
-          className="mb-1 block text-sm font-medium text-ink-2"
+          className="mb-1 block text-small font-medium text-ink-2"
         >
           Super-admin token
         </label>
@@ -37,12 +37,12 @@ export function SaLoginForm() {
           type="password"
           autoComplete="off"
           required
-          className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+          className="w-full rounded-md border border-input px-3 py-2.5 text-small outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
       {state.error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-md bg-red-50 px-3 py-2 text-small text-red-700">
           {state.error}
         </p>
       ) : null}
