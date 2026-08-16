@@ -40,10 +40,10 @@ export async function BillingBanner({
   return (
     <div
       role="status"
-      className={`flex items-center justify-center gap-2 px-4 py-2 text-center text-[13px] font-medium ${
+      className={`flex items-center justify-center gap-2 border-b px-4 py-2 text-center text-small font-medium ${
         grace
-          ? 'bg-red-50 text-red-800'
-          : 'bg-amber-50 text-amber-900'
+          ? 'border-destructive/30 bg-[var(--st-lost-bg)] text-destructive'
+          : 'border-warning/30 bg-[var(--st-china-bg)] text-warning'
       }`}
     >
       <AlertTriangle className="h-4 w-4 flex-none" aria-hidden />

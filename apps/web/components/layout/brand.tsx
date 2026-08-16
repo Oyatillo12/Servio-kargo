@@ -4,15 +4,21 @@ import { cn } from '@/lib/utils';
 import logo from '../../public/logo.png';
 import mark from '../../public/favicon.png';
 
-/** The dotted route mark used under the SERVIO Kargo wordmark (design 01/14). */
+/**
+ * The route mark under the SERVIO Kargo wordmark: China → transit → Tashkent.
+ *
+ * Squares on a dashed line rather than dots on a dotted one (SPEC 5.0) — the
+ * same shape language as the status chips, and the first stop is filled with
+ * signal because that is where a parcel starts.
+ */
 export function RouteDots({ className }: { className?: string }) {
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
-      <span className="h-[7px] w-[7px] rounded-full bg-primary" />
-      <span className="w-8 border-t-2 border-dotted border-[#b9c0cf]" />
-      <span className="h-[7px] w-[7px] rounded-full border-2 border-[#b9c0cf] bg-white" />
-      <span className="w-8 border-t-2 border-dotted border-[#b9c0cf]" />
-      <span className="h-[7px] w-[7px] rounded-full border-2 border-[#b9c0cf] bg-white" />
+      <span className="h-[7px] w-[7px] rounded-[1px] bg-signal" />
+      <span className="w-8 border-t-2 border-dashed border-rule" />
+      <span className="h-[7px] w-[7px] rounded-[1px] border-2 border-rule bg-surface" />
+      <span className="w-8 border-t-2 border-dashed border-rule" />
+      <span className="h-[7px] w-[7px] rounded-[1px] border-2 border-rule bg-surface" />
     </div>
   );
 }
@@ -27,7 +33,7 @@ export function BrandMark({ className }: { className?: string }) {
       src={mark}
       alt="SERVIO Kargo"
       priority
-      className={cn('h-7 w-7 rounded-[9px]', className)}
+      className={cn('h-7 w-7 rounded-sm', className)}
     />
   );
 }

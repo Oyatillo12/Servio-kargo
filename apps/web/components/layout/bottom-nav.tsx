@@ -23,7 +23,7 @@ function CountBadge({ count, className }: { count: number; className?: string })
   return (
     <span
       className={cn(
-        'flex items-center justify-center rounded-full bg-destructive px-1 font-bold leading-none text-white',
+        'flex items-center justify-center rounded-sm bg-destructive px-1 font-bold leading-none text-destructive-foreground',
         className,
       )}
     >
@@ -81,7 +81,7 @@ export function BottomNav({
               <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
               <CountBadge
                 count={moreBadge}
-                className="absolute -right-2 -top-1.5 h-4 min-w-4 text-[10px]"
+                className="absolute -right-2 -top-1.5 h-4 min-w-4 text-micro"
               />
             </span>
             {t('more')}
@@ -114,8 +114,8 @@ export function BottomNav({
 }
 
 const tabClass =
-  'flex flex-1 flex-col items-center justify-center gap-[3px] text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring';
-const activeClass = 'font-semibold text-primary';
+  'flex flex-1 flex-col items-center justify-center gap-[3px] text-micro transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring';
+const activeClass = 'font-semibold text-signal';
 const idleClass = 'font-medium text-muted-foreground active:text-foreground';
 
 function BottomLink({ item }: { item: NavItem }) {
@@ -154,10 +154,10 @@ function MoreLink({
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex min-h-[52px] items-center gap-3 rounded-md border px-3.5 py-3 transition-colors',
+        'flex min-h-[52px] items-center gap-3 rounded-sm border px-3.5 py-3 transition-colors',
         active
-          ? 'border-primary/30 bg-accent text-primary'
-          : 'border-input bg-white text-foreground active:bg-secondary',
+          ? 'border-signal/40 bg-signal-soft text-signal-strong'
+          : 'border-input bg-surface text-foreground active:bg-surface-alt',
       )}
     >
       <Icon
@@ -165,8 +165,8 @@ function MoreLink({
         strokeWidth={1.5}
         aria-hidden
       />
-      <span className="flex-1 text-[14px] font-medium">{t(item.key)}</span>
-      <CountBadge count={badge} className="h-5 min-w-5 px-1.5 text-[11px]" />
+      <span className="flex-1 text-body font-medium">{t(item.key)}</span>
+      <CountBadge count={badge} className="h-5 min-w-5 px-1.5 text-micro" />
     </Link>
   );
 }

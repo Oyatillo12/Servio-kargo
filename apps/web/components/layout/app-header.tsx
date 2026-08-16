@@ -84,14 +84,14 @@ function HomeLink({ tenantName }: { tenantName: string }) {
       aria-label={t('home')}
     >
       <BrandMark className="h-[22px] w-[22px] flex-none rounded-[5px]" />
-      <span className="hidden text-[14px] font-bold tracking-tight text-foreground md:inline">
+      <span className="hidden font-display text-body font-semibold uppercase tracking-[0.06em] text-ink md:inline">
         SERVIO Kargo
       </span>
       <span
         aria-hidden
         className="hidden h-4 w-px flex-none bg-n-200 md:inline-block"
       />
-      <span className="truncate text-[14px] font-bold text-foreground md:text-[13px] md:font-normal md:text-muted-foreground">
+      <span className="truncate text-body font-semibold text-ink md:font-normal md:text-muted-foreground">
         {tenantName}
       </span>
     </Link>
@@ -154,11 +154,11 @@ function HeaderSearch() {
           type="search"
           placeholder={t('searchPlaceholder')}
           aria-label={t('searchLabel')}
-          className="h-[34px] rounded-md pl-9 pr-9 text-[13px]"
+          className="h-[34px] rounded-md bg-surface-alt pl-9 pr-9 text-small"
         />
         <kbd
           aria-hidden
-          className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded-sm border border-n-200 bg-white px-1.5 font-mono text-[11px] font-medium text-faint lg:block"
+          className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded-sm border border-rule bg-surface px-1.5 font-mono text-micro font-medium text-faint lg:block"
         >
           /
         </kbd>
@@ -168,7 +168,7 @@ function HeaderSearch() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('searchLabel')}
-        className="ml-auto flex h-9 w-9 flex-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+        className="ml-auto flex h-9 w-9 flex-none items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-surface-alt hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
       >
         <Search className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
       </button>
@@ -234,16 +234,16 @@ function AccountMenu({
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={t('account')}
-          className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-input bg-secondary text-[12px] font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-input bg-surface-alt text-micro font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {initial}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>
-            <p className="truncate text-[13px] font-semibold text-foreground">
+            <p className="truncate text-small font-semibold text-foreground">
               {tenantName}
             </p>
-            <p className="truncate text-[11px] font-normal text-muted-foreground">
+            <p className="truncate text-micro font-normal text-muted-foreground">
               {roleLabel}
               {identity ? ` · ${identity}` : null}
             </p>

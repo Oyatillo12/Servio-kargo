@@ -63,8 +63,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         {/* White on phones so the full-bleed sections read as one sheet and
             only the 8px `SectionStack` gaps show grey; the canvas returns at
             `md`, where content is cards floating on it. */}
-        <SidebarInset className="min-w-0 bg-white md:bg-background">
-          <div className="mx-auto w-full max-w-5xl px-4 py-4 md:px-6 md:py-5">
+        {/* White on phones so the full-bleed sections read as one sheet and
+            only the 8px `SectionStack` gaps show the band; the paper canvas
+            returns at `md`, where content is cards floating on it.
+            The column is 1152px rather than 1024: with the rail beside it, the
+            old width left a desk browser two thirds empty while the tables
+            inside it scrolled sideways. */}
+        <SidebarInset className="min-w-0 bg-surface md:bg-background">
+          <div className="mx-auto w-full max-w-6xl px-4 py-4 md:px-6 md:py-5">
             {children}
           </div>
         </SidebarInset>
