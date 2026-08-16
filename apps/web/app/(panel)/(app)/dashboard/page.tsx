@@ -184,7 +184,7 @@ async function PeriodToggle({ current }: { current: DashboardPeriod }) {
 
   return (
     <Segmented
-      label={t('pageTitle')}
+      label={t('periodLabel')}
       active={current}
       options={DASHBOARD_PERIODS.map((p) => ({
         value: p,

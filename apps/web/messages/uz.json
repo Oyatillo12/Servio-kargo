@@ -192,7 +192,8 @@
     "cashUnattributed": "Kim qabul qilgani noma’lum",
     "cashPaymentCount": "{count, plural, other {# ta to'lov}}",
     "blockedCustomers": "Botni bloklaganlar",
-    "blockedCustomersHint": "Xabar yetmaydi"
+    "blockedCustomersHint": "Xabar yetmaydi",
+    "periodLabel": "Davr"
   },
   "tracks": {
     "pageTitle": "Treklar",

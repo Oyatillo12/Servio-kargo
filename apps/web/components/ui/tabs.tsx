@@ -49,7 +49,9 @@ export function TabStrip({
         // Scrolls itself on a phone rather than wrapping to a second row: two
         // rows of tabs push the content down by a whole thumb-width, and the
         // strip is sticky under the head, where every pixel is the record's.
-        '-mx-4 flex gap-1 overflow-x-auto border-b border-rule px-4 md:mx-0 md:px-0',
+        // Bleeding to the screen edge is the caller's job (see `DetailShell`),
+        // so a sticky wrapper can paint the background under the bleed.
+        'flex gap-1 overflow-x-auto border-b border-rule',
         '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}

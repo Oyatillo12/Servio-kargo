@@ -386,7 +386,7 @@ function BulkBar({
          a full-width orange slab there fights the rows it is meant to act on.
          Black reads as a tool that was pulled out and will be put away; the one
          signal-coloured thing on it is the action that changes the parcels. */
-      className="animate-fade-in-up sticky top-[60px] z-[5] mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-ink px-3 py-2.5 text-white shadow-lg md:top-2"
+      className="animate-fade-in-up sticky top-[52px] z-[5] mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-ink px-3 py-2.5 text-white shadow-lg md:top-2"
     >
       <div className="flex items-center gap-3">
         <button

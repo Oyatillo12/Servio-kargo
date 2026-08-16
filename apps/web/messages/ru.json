@@ -192,7 +192,8 @@
     "cashUnattributed": "Кто принял — неизвестно",
     "cashPaymentCount": "{count, plural, one {# оплата} few {# оплаты} many {# оплат} other {# оплаты}}",
     "blockedCustomers": "Заблокировали бота",
-    "blockedCustomersHint": "Сообщения не доходят"
+    "blockedCustomersHint": "Сообщения не доходят",
+    "periodLabel": "Период"
   },
   "tracks": {
     "pageTitle": "Треки",

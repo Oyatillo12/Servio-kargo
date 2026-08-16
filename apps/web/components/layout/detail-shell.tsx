@@ -68,8 +68,11 @@ export function DetailShell({
 
       {/* Sticky under the app header (52px) so the tabs stay reachable while
           reading a long history — the one part of the record that can run to
-          several screens even after the split. */}
-      <div className="sticky top-[52px] z-10 mt-3 bg-surface md:bg-background">
+          several screens even after the split.
+          The bleed to the screen edge lives HERE rather than on the strip: the
+          sticky element has to paint its own background all the way across, or
+          the content scrolling underneath shows through beside the tabs. */}
+      <div className="sticky top-[52px] z-10 -mx-4 mt-3 bg-surface px-4 md:mx-0 md:bg-background md:px-0">
         <TabStrip items={tabs} active={activeTab} buildHref={buildTabHref} />
       </div>
 
@@ -101,8 +104,9 @@ export function DetailColumns({
     >
       <div className="flex flex-col gap-3 md:col-span-2">{main}</div>
       {/* Sticky on desktop: the actions stay in view while the left column
-          scrolls, which is the whole reason the counter staff open this page. */}
-      <div className="flex flex-col gap-3 md:sticky md:top-[104px]">{side}</div>
+          scrolls, which is the whole reason the counter staff open this page.
+          96px = the 52px top bar plus the sticky tab strip that sits under it. */}
+      <div className="flex flex-col gap-3 md:sticky md:top-[96px]">{side}</div>
     </div>
   );
 }
