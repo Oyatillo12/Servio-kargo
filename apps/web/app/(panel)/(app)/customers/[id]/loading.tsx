@@ -5,7 +5,7 @@ export default function CustomerDetailLoading() {
   return (
     <div className="mx-auto max-w-md space-y-3">
       <Skeleton className="h-4 w-24" />
-      <Skeleton className="h-28 w-full rounded-xl" />
+      <Skeleton className="h-28 w-full rounded-lg" />
       <CardsSkeleton cards={3} />
     </div>
   );

@@ -53,7 +53,7 @@ export function CurrencyCard({
         <div className="mt-3 flex flex-col gap-1.5">
           <Label htmlFor="usdRate">{t('usdRate')}</Label>
           <div className="flex items-center overflow-hidden rounded-sm border border-input focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-            <span className="border-e border-border bg-secondary px-3 py-2.5 text-[13px] text-muted-foreground">
+            <span className="border-e border-border bg-secondary px-3 py-2.5 text-small text-muted-foreground">
               1$ =
             </span>
             <input
@@ -62,13 +62,13 @@ export function CurrencyCard({
               value={rate}
               onChange={(e) => setRate(e.target.value)}
               placeholder="12 800"
-              className="min-w-0 flex-1 bg-white px-3 py-2.5 font-mono text-[16px] font-semibold outline-none"
+              className="min-w-0 flex-1 bg-surface px-3 py-2.5 font-mono text-lead font-semibold outline-none"
             />
-            <span className="border-s border-border bg-secondary px-3 py-2.5 text-[13px] text-muted-foreground">
+            <span className="border-s border-border bg-secondary px-3 py-2.5 text-small text-muted-foreground">
               {tCommon('som')}
             </span>
           </div>
-          <p className="text-[13px] text-muted-foreground">{t('usdRateHint')}</p>
+          <p className="text-small text-muted-foreground">{t('usdRateHint')}</p>
         </div>
       ) : null}
 
@@ -76,7 +76,7 @@ export function CurrencyCard({
       <div className="mt-3.5 flex md:justify-end">
         <Button
           type="button"
-          className="w-full md:h-8 md:w-auto md:px-3 md:text-[13px]"
+          className="w-full md:h-8 md:w-auto md:px-3 md:text-small"
           onClick={save}
           disabled={saving}
         >

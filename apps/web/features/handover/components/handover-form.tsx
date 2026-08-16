@@ -141,7 +141,7 @@ export function HandoverForm({
             {tracks.map((tr) => (
               <li
                 key={tr.id}
-                className="border-t border-[#eef0f4] first:border-0"
+                className="border-t border-rule-soft first:border-0"
               >
                 <label className="flex cursor-pointer items-center gap-3 py-2.5">
                   <Checkbox
@@ -149,10 +149,10 @@ export function HandoverForm({
                     onCheckedChange={() => toggle(tr.id)}
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-mono text-[13px] font-semibold text-foreground">
+                    <span className="block truncate font-mono text-small font-semibold text-foreground">
                       {tr.codeOriginal}
                     </span>
-                    <span className="mt-0.5 block font-mono text-[11.5px] text-muted-foreground">
+                    <span className="mt-0.5 block font-mono text-micro text-muted-foreground">
                       {tr.weightGrams != null
                         ? `${formatKg(tr.weightGrams)} ${tCommon('kg')}`
                         : tCommon('dash')}
@@ -160,12 +160,12 @@ export function HandoverForm({
                   </span>
                   <span className="flex flex-none items-center gap-2">
                     {tr.priceTiyin != null ? (
-                      <span className="whitespace-nowrap font-mono text-[12.5px] text-slate-600">
+                      <span className="whitespace-nowrap font-mono text-micro text-ink-2">
                         {formatSom(tr.priceTiyin)} {tCommon('som')}
                       </span>
                     ) : (
                       <AlertTriangle
-                        className="h-4 w-4 text-[#92400e]"
+                        className="h-4 w-4 text-warning"
                         aria-label={t('noPrice')}
                       />
                     )}
@@ -180,7 +180,7 @@ export function HandoverForm({
 
       {tracks.length > 0 ? (
         <SectionCard>
-          <div className="flex items-center justify-between text-[13.5px]">
+          <div className="flex items-center justify-between text-small">
             <span className="text-muted-foreground">
               {t('selectedTotal', { count: selected.size })}
             </span>
@@ -189,7 +189,7 @@ export function HandoverForm({
             </span>
           </div>
           {unpriced > 0 ? (
-            <p className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-[#92400e]">
+            <p className="mt-1.5 flex items-center gap-1.5 text-micro text-warning">
               <AlertTriangle className="h-3.5 w-3.5 flex-none" aria-hidden />
               {t('unpricedWarning', { count: unpriced })}
             </p>
@@ -209,7 +209,7 @@ export function HandoverForm({
                   }}
                   className="font-mono"
                 />
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-micro text-muted-foreground">
                   {t('amountHint')}
                 </p>
               </div>
@@ -235,7 +235,7 @@ export function HandoverForm({
             </div>
           ) : null}
 
-          <div className="mt-3 flex items-center justify-between border-t border-[#eef0f4] pt-3 text-[13.5px]">
+          <div className="mt-3 flex items-center justify-between border-t border-rule-soft pt-3 text-small">
             <span className="text-muted-foreground">{t('balanceAfter')}</span>
             <DebtCell tiyin={afterTiyin} />
           </div>

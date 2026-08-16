@@ -27,7 +27,7 @@ export function SaLoginForm() {
       <div>
         <label
           htmlFor="token"
-          className="mb-1 block text-sm font-medium text-slate-700"
+          className="mb-1 block text-sm font-medium text-ink-2"
         >
           Super-admin token
         </label>

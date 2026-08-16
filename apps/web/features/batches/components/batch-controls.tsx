@@ -169,7 +169,7 @@ export function BatchControls({
           <DialogHeader>
             <DialogTitle>{t('confirmTitle')}</DialogTitle>
           </DialogHeader>
-          <p className="text-[13.5px] leading-snug text-slate-700">
+          <p className="text-small leading-snug text-ink-2">
             {t('confirmBody', { count: changeCount })}
             {notifyCount > 0 ? (
               <>, {t('confirmNotify', { count: notifyCount })}</>
@@ -178,7 +178,7 @@ export function BatchControls({
             )}
             .
           </p>
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-micro text-muted-foreground">
             {t('confirmTerminalNote')}
           </p>
           <DialogFooter>

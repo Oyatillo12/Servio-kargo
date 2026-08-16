@@ -141,7 +141,7 @@ export function PhotoCard({
         canEdit ? (
           <div className="flex items-center gap-1.5">
             <Select value={kind} onValueChange={(v) => setKind(v as PhotoKind)}>
-              <SelectTrigger className="h-8 w-auto gap-1 text-[12.5px]">
+              <SelectTrigger className="h-8 w-auto gap-1 text-micro">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -176,10 +176,10 @@ export function PhotoCard({
                 className="max-h-80 w-auto rounded-lg border border-border"
               />
               <div className="mt-1 flex items-center gap-2">
-                <span className="rounded-full bg-accent px-2 py-0.5 text-[11.5px] font-semibold text-slate-700">
+                <span className="rounded-full bg-accent px-2 py-0.5 text-micro font-semibold text-ink-2">
                   {kindLabels[p.kind]}
                 </span>
-                <span className="font-mono text-[11.5px] text-muted-foreground">
+                <span className="font-mono text-micro text-muted-foreground">
                   {formatDateTime(p.createdAt)}
                 </span>
                 {canEdit ? (

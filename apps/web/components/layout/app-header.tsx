@@ -56,7 +56,7 @@ export function AppHeader({
   const initial = tenantName.trim().charAt(0).toUpperCase() || 'S';
 
   return (
-    <header className="sticky top-0 z-30 flex h-[52px] flex-none items-center gap-3 border-b border-n-200 bg-white px-4 md:px-5">
+    <header className="sticky top-0 z-30 flex h-[52px] flex-none items-center gap-3 border-b border-n-200 bg-surface px-4 md:px-5">
       <HomeLink tenantName={tenantName} />
 
       <HeaderSearch />

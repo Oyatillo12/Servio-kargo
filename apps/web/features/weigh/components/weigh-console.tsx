@@ -210,14 +210,14 @@ export function WeighConsole({
   return (
     <div className="flex flex-col gap-4">
       {blockedReason ? (
-        <p className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning/10 px-3 py-2.5 text-[13px] font-medium text-warning">
+        <p className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning/10 px-3 py-2.5 text-small font-medium text-warning">
           <AlertTriangle className="mt-px h-4 w-4 flex-none" aria-hidden />
           {blockedReason}
         </p>
       ) : null}
 
       {/* Entry form. Big targets: this is used with cold hands and gloves. */}
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-white p-3.5 shadow-sm">
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-3.5 shadow-sm">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="weigh-code">{t('codeLabel')}</Label>
           <div className="flex items-stretch gap-2">
@@ -242,7 +242,7 @@ export function WeighConsole({
               }}
               // `uppercase` is for the typed code, not the hint — a shouted
               // placeholder reads as an error message.
-              className="h-14 min-w-0 flex-1 rounded-lg border border-input bg-white px-3.5 font-mono text-[20px] font-semibold uppercase tracking-wide outline-none placeholder:normal-case focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="h-14 min-w-0 flex-1 rounded-lg border border-input bg-surface px-3.5 font-mono text-title font-semibold uppercase tracking-wide outline-none placeholder:normal-case focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
             {/* W3: only on devices that actually have a decoder and a camera —
                 elsewhere there is no button rather than one that does nothing. */}
@@ -251,7 +251,7 @@ export function WeighConsole({
                 type="button"
                 onClick={() => setScanning(true)}
                 aria-label={t('scanTitle')}
-                className="flex h-14 w-14 flex-none items-center justify-center rounded-lg border border-input bg-white text-primary active:bg-accent"
+                className="flex h-14 w-14 flex-none items-center justify-center rounded-lg border border-input bg-surface text-primary active:bg-accent"
               >
                 <ScanLine className="h-6 w-6" strokeWidth={1.5} aria-hidden />
               </button>
@@ -277,9 +277,9 @@ export function WeighConsole({
                   submit();
                 }
               }}
-              className="h-14 min-w-0 flex-1 bg-white px-3.5 font-mono text-[20px] font-semibold outline-none"
+              className="h-14 min-w-0 flex-1 bg-surface px-3.5 font-mono text-title font-semibold outline-none"
             />
-            <span className="self-stretch border-l border-border bg-[#f7f8fa] px-4 py-[18px] text-[13px] text-muted-foreground">
+            <span className="self-stretch border-l border-border bg-surface-alt px-4 py-[18px] text-small text-muted-foreground">
               {tCommon('kg')}
             </span>
           </div>
@@ -301,7 +301,7 @@ export function WeighConsole({
                   setDimsOpen(false);
                   setDims({ lengthCm: '', widthCm: '', heightCm: '' });
                 }}
-                className="rounded-md px-1.5 py-1 text-[11.5px] font-medium text-muted-foreground hover:bg-secondary"
+                className="rounded-md px-1.5 py-1 text-micro font-medium text-muted-foreground hover:bg-secondary"
               >
                 {tCommon('cancel')}
               </button>
@@ -313,7 +313,7 @@ export function WeighConsole({
                   className="flex min-w-0 flex-1 items-center gap-1.5"
                 >
                   {i > 0 ? (
-                    <span className="flex-none text-[15px] text-muted-foreground">
+                    <span className="flex-none text-body text-muted-foreground">
                       ×
                     </span>
                   ) : null}
@@ -337,11 +337,11 @@ export function WeighConsole({
                         submit();
                       }
                     }}
-                    className="h-12 min-w-0 flex-1 rounded-lg border border-input bg-white px-3 font-mono text-[16px] font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    className="h-12 min-w-0 flex-1 rounded-lg border border-input bg-surface px-3 font-mono text-lead font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               ))}
-              <span className="flex-none text-[13px] text-muted-foreground">
+              <span className="flex-none text-small text-muted-foreground">
                 {tCommon('cm')}
               </span>
             </div>
@@ -353,7 +353,7 @@ export function WeighConsole({
               setDimsOpen(true);
               setTimeout(() => lengthRef.current?.focus(), 0);
             }}
-            className="self-start rounded-md px-1 py-1 text-[13px] font-medium text-primary hover:bg-secondary"
+            className="self-start rounded-md px-1 py-1 text-small font-medium text-primary hover:bg-secondary"
           >
             + {t('dimsAdd')}
           </button>
@@ -373,7 +373,7 @@ export function WeighConsole({
                 onClick={() => setMarkaLocked((v) => !v)}
                 aria-pressed={markaLocked}
                 className={cn(
-                  'flex items-center gap-1 rounded-md px-1.5 py-1 text-[11.5px] font-medium transition-colors',
+                  'flex items-center gap-1 rounded-md px-1.5 py-1 text-micro font-medium transition-colors',
                   markaLocked
                     ? 'bg-accent text-primary'
                     : 'text-muted-foreground hover:bg-secondary',
@@ -411,7 +411,7 @@ export function WeighConsole({
                     submit();
                   }
                 }}
-                className="h-12 min-w-0 flex-1 bg-transparent px-3.5 font-mono text-[16px] font-semibold uppercase outline-none"
+                className="h-12 min-w-0 flex-1 bg-transparent px-3.5 font-mono text-lead font-semibold uppercase outline-none"
               />
               {marka ? (
                 <button
@@ -433,7 +433,7 @@ export function WeighConsole({
         <Button
           onClick={submit}
           disabled={pending}
-          className="h-14 w-full text-[16px]"
+          className="h-14 w-full text-lead"
         >
           {pending ? <Spinner /> : null}
           {tCommon('save')}
@@ -443,11 +443,11 @@ export function WeighConsole({
       {/* Today's entries — the whole point of the screen: mistakes are visible. */}
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between px-0.5">
-          <h2 className="text-[13px] font-semibold text-foreground">
+          <h2 className="text-small font-semibold text-foreground">
             {t('todayTitle')}
           </h2>
           {rows.length > 0 ? (
-            <p className="font-mono text-[12px] text-muted-foreground">
+            <p className="font-mono text-micro text-muted-foreground">
               {t('todayTotals', {
                 count: rows.length,
                 kg: formatKg(totals.grams),
@@ -458,11 +458,11 @@ export function WeighConsole({
         </div>
 
         {rows.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-input px-3 py-6 text-center text-[13px] text-muted-foreground">
+          <p className="rounded-lg border border-dashed border-input px-3 py-6 text-center text-small text-muted-foreground">
             {t('todayEmpty')}
           </p>
         ) : (
-          <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-white">
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
             {rows.map((row, i) => (
               <WeighRow
                 key={`${row.trackId}-${i}`}
@@ -505,13 +505,13 @@ function WeighRow({
   return (
     <li className="flex flex-col gap-1 px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-mono text-[14px] font-semibold text-foreground">
+        <span className="truncate font-mono text-body font-semibold text-foreground">
           {row.code}
         </span>
         <span className="flex flex-none items-center gap-1.5">
-          <span className="font-mono text-[14px] font-semibold text-primary">
+          <span className="font-mono text-body font-semibold text-primary">
             {formatSom(row.priceTiyin)}{' '}
-            <span className="text-[11px] font-medium text-muted-foreground">
+            <span className="text-micro font-medium text-muted-foreground">
               {tCommon('som')}
             </span>
           </span>
@@ -548,7 +548,7 @@ function WeighRow({
               uploading && 'pointer-events-none opacity-50',
               row.hasPhoto
                 ? 'border-success/30 bg-success/10 text-success'
-                : 'border-input bg-white text-muted-foreground active:bg-secondary',
+                : 'border-input bg-surface text-muted-foreground active:bg-secondary',
             )}
           >
             {uploading ? (
@@ -562,7 +562,7 @@ function WeighRow({
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-micro">
         <span className="font-mono text-muted-foreground">
           {formatKg(row.weightGrams)} {tCommon('kg')}
         </span>
@@ -594,7 +594,7 @@ function WeighRow({
       </div>
 
       {warningKey ? (
-        <p className="flex items-center gap-1.5 text-[12px] font-medium text-warning">
+        <p className="flex items-center gap-1.5 text-micro font-medium text-warning">
           <AlertTriangle className="h-3.5 w-3.5 flex-none" aria-hidden />
           {t(warningKey)}
         </p>
@@ -613,7 +613,7 @@ function Tag({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-semibold',
+        'inline-flex items-center gap-1 rounded px-1.5 py-px text-micro font-semibold',
         className,
       )}
     >

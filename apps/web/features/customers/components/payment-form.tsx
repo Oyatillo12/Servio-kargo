@@ -70,7 +70,7 @@ export function PaymentForm({
           name="amount"
           inputMode="numeric"
           placeholder="0"
-          className="font-mono text-[16px] font-semibold"
+          className="font-mono text-lead font-semibold"
         />
       </div>
 
@@ -91,11 +91,11 @@ export function PaymentForm({
                 aria-checked={active}
                 onClick={() => setMethod(m.value)}
                 className={cn(
-                  'flex-1 rounded-md border py-2.5 text-[13px] font-semibold transition-colors',
+                  'flex-1 rounded-md border py-2.5 text-small font-semibold transition-colors',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
                   active
                     ? 'border-primary bg-primary text-white'
-                    : 'border-input bg-white text-muted-foreground hover:bg-secondary',
+                    : 'border-input bg-surface text-muted-foreground hover:bg-secondary',
                 )}
               >
                 {t(m.labelKey)}

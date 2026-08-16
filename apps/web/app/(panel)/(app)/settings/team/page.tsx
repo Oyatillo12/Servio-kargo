@@ -27,7 +27,7 @@ export default async function TeamPage() {
   return (
     <>
       <div className="mb-3 flex items-center justify-between gap-3 md:mb-4">
-        <h1 className="text-[20px] font-semibold text-foreground">
+        <h1 className="text-title font-semibold text-foreground">
           {t('pageTitle')}
         </h1>
         <InviteMemberButton />
@@ -75,10 +75,10 @@ async function RoleExplainer({ role }: { role: string }) {
   const tRoles = await getTranslations('roles');
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-[13.5px] font-semibold text-foreground">
+      <dt className="text-small font-semibold text-foreground">
         {tRoles(role)}
       </dt>
-      <dd className="text-[13px] leading-snug text-muted-foreground">
+      <dd className="text-small leading-snug text-muted-foreground">
         {tRoles(`${role}Hint`)}
       </dd>
     </div>

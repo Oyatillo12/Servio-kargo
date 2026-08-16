@@ -31,14 +31,14 @@ export function ListSkeleton({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl border border-border bg-white',
+        'overflow-hidden rounded-lg border border-border bg-surface',
         className,
       )}
     >
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 border-b border-[#eef0f4] px-4 py-3.5 last:border-0"
+          className="flex items-center gap-3 border-b border-rule-soft px-4 py-3.5 last:border-0"
         >
           <div className="flex-1 space-y-2">
             <Skeleton className="h-3 w-40" />
@@ -62,7 +62,7 @@ export function CardsSkeleton({
   return (
     <div className={cn('space-y-3', className)}>
       {Array.from({ length: cards }).map((_, i) => (
-        <div key={i} className="space-y-2.5 rounded-xl border border-border bg-white p-3.5">
+        <div key={i} className="space-y-2.5 rounded-lg border border-border bg-surface p-3.5">
           <Skeleton className="h-3 w-28" />
           <Skeleton className="h-9 w-full rounded-lg" />
           <Skeleton className="h-2.5 w-2/3" />

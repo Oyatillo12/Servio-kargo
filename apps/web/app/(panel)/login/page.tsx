@@ -23,14 +23,14 @@ export default async function LoginPage() {
       <div className="flex flex-col items-center gap-2.5 text-center">
         <Wordmark className="h-9" />
         <RouteDots />
-        <p className="text-[13px] text-muted-foreground">{t('tagline')}</p>
+        <p className="text-small text-muted-foreground">{t('tagline')}</p>
       </div>
 
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-5 shadow-sm">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-sm">
         <LoginForm />
       </div>
 
-      <p className="text-[11px] text-muted-foreground">{t('footer')}</p>
+      <p className="text-micro text-muted-foreground">{t('footer')}</p>
     </main>
   );
 }

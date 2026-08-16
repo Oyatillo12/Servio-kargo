@@ -17,7 +17,7 @@ function Button({ next }: { next: TenantPlan }) {
       className={
         next === 'premium'
           ? 'rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-60'
-          : 'rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60'
+          : 'rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-ink-2 hover:bg-surface-alt disabled:opacity-60'
       }
     >
       {pending ? '…' : next === 'premium' ? '→ Premium' : '→ Basic'}

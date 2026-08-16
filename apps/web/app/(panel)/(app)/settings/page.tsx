@@ -59,7 +59,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <h1 className="mb-3 text-[20px] font-semibold text-foreground md:mb-4">
+      <h1 className="mb-3 text-title font-semibold text-foreground md:mb-4">
         {t('pageTitle')}
       </h1>
 
@@ -85,10 +85,10 @@ export default async function SettingsPage() {
                 aria-hidden
               />
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold text-foreground">
+                <span className="block text-body font-semibold text-foreground">
                   {t('teamCardTitle')}
                 </span>
-                <span className="block text-[13px] text-muted-foreground">
+                <span className="block text-small text-muted-foreground">
                   {t('teamCardHint')}
                 </span>
               </span>

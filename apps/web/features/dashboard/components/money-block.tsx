@@ -35,7 +35,7 @@ export function MoneyBlock({
 
   const debtBody = (
     <>
-      <p className="text-[13px] text-muted-foreground">{t('debt')}</p>
+      <p className="text-small text-muted-foreground">{t('debt')}</p>
       <p
         className={cn(
           // `formatSom` groups with a plain space, which is a legal break
@@ -43,13 +43,13 @@ export function MoneyBlock({
           'mt-1 whitespace-nowrap font-semibold leading-[1.1] tracking-[-0.01em]',
           hasDebt
             ? 'text-[28px] font-bold text-destructive'
-            : 'text-[24px] font-bold text-foreground',
+            : 'text-display font-bold text-foreground',
         )}
       >
         {formatSom(debtTiyin)}{' '}
         <span
           className={cn(
-            'text-[15px] font-medium',
+            'text-body font-medium',
             hasDebt ? 'text-destructive/70' : 'text-faint',
           )}
         >
@@ -57,12 +57,12 @@ export function MoneyBlock({
         </span>
       </p>
       {hasDebt ? (
-        <p className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-destructive">
+        <p className="mt-2 flex items-center gap-1 text-small font-semibold text-destructive">
           {t('debtorCount', { count: debtorCount })}
           <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
         </p>
       ) : (
-        <p className="mt-1.5 flex items-center gap-1.5 text-[13px] font-medium text-success">
+        <p className="mt-1.5 flex items-center gap-1.5 text-small font-medium text-success">
           <CircleCheck className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
           {t('debtorsNone')}
         </p>
@@ -73,17 +73,17 @@ export function MoneyBlock({
   return (
     <PanelSection flush className="md:col-span-2">
       <div className="flex items-baseline justify-between gap-3 border-b border-n-divider px-4 py-3">
-        <span className="text-[13px] text-muted-foreground">
+        <span className="text-small text-muted-foreground">
           {t('revenue', { period: periodLabel })}
         </span>
         <span
           className={cn(
-            'flex-none text-[18px] font-semibold',
+            'flex-none text-lead font-semibold',
             revenueTiyin > 0 ? 'text-foreground' : 'text-faint',
           )}
         >
           {formatSom(revenueTiyin)}{' '}
-          <span className="text-[12px] font-medium">{tCommon('som')}</span>
+          <span className="text-micro font-medium">{tCommon('som')}</span>
         </span>
       </div>
 

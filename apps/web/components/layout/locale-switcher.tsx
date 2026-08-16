@@ -41,7 +41,7 @@ export function LocaleSwitcher() {
 
   return (
     <>
-      <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+      <DropdownMenuLabel className="flex items-center gap-1.5 text-micro font-medium text-muted-foreground">
         <Languages className="h-3.5 w-3.5" aria-hidden />
         {t('language')}
       </DropdownMenuLabel>

@@ -59,7 +59,7 @@ export default async function TicketsPage({
   return (
     <div className="mx-auto max-w-3xl space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-[20px] font-semibold text-foreground">
+        <h1 className="text-title font-semibold text-foreground">
           {t('pageTitle')}
         </h1>
         <span className="font-mono text-sm text-muted-foreground">
@@ -93,29 +93,29 @@ export default async function TicketsPage({
               return (
                 <li
                   key={row.id}
-                  className="border-t border-[#eef0f4] first:border-0"
+                  className="border-t border-rule-soft first:border-0"
                 >
                   <Link
                     href={`/tickets/${row.id}`}
                     className="block px-4 py-3 transition-colors hover:bg-secondary/50"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="min-w-0 truncate text-[13.5px] font-semibold text-foreground">
+                      <span className="min-w-0 truncate text-small font-semibold text-foreground">
                         {cat.emoji} {cat[locale]}
                         {row.trackCode ? (
-                          <span className="ml-2 font-mono text-[12px] font-normal text-muted-foreground">
+                          <span className="ml-2 font-mono text-micro font-normal text-muted-foreground">
                             {row.trackCode}
                           </span>
                         ) : null}
                       </span>
-                      <span className="flex-none text-[12px] font-semibold">
+                      <span className="flex-none text-micro font-semibold">
                         {st.emoji} {st[locale]}
                       </span>
                     </div>
-                    <p className="mt-0.5 truncate text-[13px] text-slate-600">
+                    <p className="mt-0.5 truncate text-small text-ink-2">
                       {row.lastMessageText || tCommon('dash')}
                     </p>
-                    <div className="mt-1 flex items-center justify-between gap-3 text-[11.5px] text-muted-foreground">
+                    <div className="mt-1 flex items-center justify-between gap-3 text-micro text-muted-foreground">
                       <span className="min-w-0 truncate">
                         {row.clientCode}
                         {row.customerName ? ` · ${row.customerName}` : ''}

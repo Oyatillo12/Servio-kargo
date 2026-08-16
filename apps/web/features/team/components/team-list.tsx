@@ -74,7 +74,7 @@ export function TeamList({ members }: { members: TeamMemberView[] }) {
 
   if (members.length === 0) {
     return (
-      <p className="px-4 py-6 text-[13.5px] text-muted-foreground">
+      <p className="px-4 py-6 text-small text-muted-foreground">
         {t('empty')}
       </p>
     );
@@ -127,7 +127,7 @@ function MemberRow({ member }: { member: TeamMemberView }) {
         <span
           aria-hidden
           className={cn(
-            'mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-[13px] font-semibold',
+            'mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-small font-semibold',
             member.active
               ? 'bg-accent text-primary'
               : 'bg-n-200 text-muted-foreground',
@@ -140,34 +140,34 @@ function MemberRow({ member }: { member: TeamMemberView }) {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span
               className={cn(
-                'truncate text-[14px] font-semibold',
+                'truncate text-body font-semibold',
                 member.active ? 'text-foreground' : 'text-muted-foreground',
               )}
             >
               {name}
             </span>
             {member.isSelf ? (
-              <span className="flex-none text-[11.5px] text-faint">
+              <span className="flex-none text-micro text-faint">
                 {t('you')}
               </span>
             ) : null}
             <RoleBadge role={member.role} label={tRoles(member.role)} />
             {!member.active ? (
-              <span className="flex-none rounded-full bg-n-200 px-2 py-px text-[11px] font-semibold text-muted-foreground">
+              <span className="flex-none rounded-full bg-n-200 px-2 py-px text-micro font-semibold text-muted-foreground">
                 {t('deactivated')}
               </span>
             ) : null}
           </div>
 
           {member.phone ? (
-            <p className="mt-0.5 truncate font-mono text-[12.5px] text-muted-foreground">
+            <p className="mt-0.5 truncate font-mono text-micro text-muted-foreground">
               {member.phone}
             </p>
           ) : null}
 
           {/* Status line: the two facts that decide what an owner does next —
               can they get into the panel, and does the bot recognise them. */}
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-faint">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-micro text-faint">
             <span className={member.tgLinked ? 'text-success' : undefined}>
               {member.tgLinked ? t('telegramLinked') : t('telegramMissing')}
             </span>
@@ -187,7 +187,7 @@ function MemberRow({ member }: { member: TeamMemberView }) {
           {member.invite ? (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <InviteCode code={member.invite.code} />
-              <span className="text-[12px] text-faint">
+              <span className="text-micro text-faint">
                 {t('inviteValidUntil', {
                   when: formatDateTime(new Date(member.invite.expiresAt)),
                 })}
@@ -354,7 +354,7 @@ function RoleBadge({ role, label }: { role: AdminRole; label: string }) {
   return (
     <span
       className={cn(
-        'flex-none rounded-full px-2 py-px text-[11px] font-semibold',
+        'flex-none rounded-full px-2 py-px text-micro font-semibold',
         role === 'owner'
           ? 'bg-accent text-primary'
           : 'border border-n-200 text-muted-foreground',

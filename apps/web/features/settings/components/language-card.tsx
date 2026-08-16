@@ -40,7 +40,7 @@ export function LanguageCard() {
 
   return (
     <PanelSection title={t('languageTitle')} className="md:col-span-4">
-      <p className="mb-3 text-[13px] text-muted-foreground">
+      <p className="mb-3 text-small text-muted-foreground">
         {t('languageDescription')}
       </p>
       <ChoiceGroup label={t('languageTitle')}>

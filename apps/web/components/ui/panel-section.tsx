@@ -43,7 +43,7 @@ export function PanelSection({
   return (
     <Tag
       className={cn(
-        'border-y border-n-200 bg-white md:rounded-lg md:border',
+        'border-y border-n-200 bg-surface md:rounded-lg md:border',
         className,
       )}
       {...props}

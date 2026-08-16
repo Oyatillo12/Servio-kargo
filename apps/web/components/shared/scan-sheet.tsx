@@ -122,12 +122,12 @@ export function ScanSheet({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
       <div className="flex h-[52px] flex-none items-center justify-between px-3 text-white">
-        <span className="text-[14px] font-semibold">{t('scanTitle')}</span>
+        <span className="text-body font-semibold">{t('scanTitle')}</span>
         <button
           type="button"
           onClick={onClose}
           aria-label={t('scanClose')}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-surface/10"
         >
           <X className="h-5 w-5" aria-hidden />
         </button>
@@ -157,13 +157,13 @@ export function ScanSheet({
         ) : null}
 
         {error ? (
-          <p className="absolute inset-x-6 text-center text-[14px] font-medium text-white">
+          <p className="absolute inset-x-6 text-center text-body font-medium text-white">
             {error}
           </p>
         ) : null}
       </div>
 
-      <p className="flex-none px-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-4 text-center text-[12.5px] text-white/70">
+      <p className="flex-none px-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-4 text-center text-micro text-white/70">
         {t('scanHint')}
       </p>
     </div>

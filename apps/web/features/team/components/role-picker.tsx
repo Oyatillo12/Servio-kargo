@@ -54,7 +54,7 @@ export function RolePicker({
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  'block text-[14px]',
+                  'block text-body',
                   selected
                     ? 'font-semibold text-primary'
                     : 'font-medium text-foreground',
@@ -62,7 +62,7 @@ export function RolePicker({
               >
                 {t(role)}
               </span>
-              <span className="mt-0.5 block text-[12.5px] leading-snug text-muted-foreground">
+              <span className="mt-0.5 block text-micro leading-snug text-muted-foreground">
                 {t(`${role}Hint`)}
               </span>
             </span>

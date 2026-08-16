@@ -9,7 +9,7 @@ export default function TrackDetailLoading() {
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-5 w-24 rounded-full" />
       </div>
-      <Skeleton className="h-24 w-full rounded-xl" />
+      <Skeleton className="h-24 w-full rounded-lg" />
       <CardsSkeleton cards={3} />
     </div>
   );

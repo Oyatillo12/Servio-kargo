@@ -39,26 +39,26 @@ export default async function LockedPage() {
         <RouteDots />
       </div>
 
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-5 shadow-sm">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-sm">
         <div className="flex flex-col items-center gap-2 text-center">
           <PauseCircle className="h-8 w-8 text-amber-600" aria-hidden />
-          <p className="text-[13px] font-medium text-muted-foreground">
+          <p className="text-small font-medium text-muted-foreground">
             {tenant.name}
           </p>
           <h1 className="text-lg font-bold">{t('lockedTitle')}</h1>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <p className="text-small leading-relaxed text-muted-foreground">
             {isOwner ? t('lockedOwner') : t('lockedStaff')}
           </p>
         </div>
 
         {isOwner && tenant.paidUntil ? (
-          <p className="mt-4 rounded-lg bg-muted px-3 py-2 text-center text-[13px] tabular-nums">
+          <p className="mt-4 rounded-lg bg-muted px-3 py-2 text-center text-small tabular-nums">
             {t('lockedPaidUntil', { date: tenant.paidUntil })}
           </p>
         ) : null}
 
         {isOwner ? (
-          <div className="mt-4 space-y-1.5 text-center text-[13px]">
+          <div className="mt-4 space-y-1.5 text-center text-small">
             <p className="font-medium">{t('lockedContact')}</p>
             {CONTACT_PHONE ? (
               <a

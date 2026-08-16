@@ -98,8 +98,8 @@ export default async function CustomersPage({
           aria-current={onlyBlocked ? undefined : 'page'}
           className={
             onlyBlocked
-              ? 'rounded-full border border-input px-3 py-1.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-secondary'
-              : 'rounded-full bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-foreground'
+              ? 'rounded-full border border-input px-3 py-1.5 text-micro font-medium text-muted-foreground transition-colors hover:bg-secondary'
+              : 'rounded-full bg-primary px-3 py-1.5 text-micro font-semibold text-primary-foreground'
           }
         >
           {t('filterAll')}
@@ -109,8 +109,8 @@ export default async function CustomersPage({
           aria-current={onlyBlocked ? 'page' : undefined}
           className={
             onlyBlocked
-              ? 'rounded-full bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-foreground'
-              : 'rounded-full border border-input px-3 py-1.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-secondary'
+              ? 'rounded-full bg-primary px-3 py-1.5 text-micro font-semibold text-primary-foreground'
+              : 'rounded-full border border-input px-3 py-1.5 text-micro font-medium text-muted-foreground transition-colors hover:bg-secondary'
           }
         >
           🚫 {t('filterBlocked')}
@@ -129,12 +129,12 @@ export default async function CustomersPage({
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-white">
+        <div className="overflow-hidden rounded-lg border border-border bg-surface">
           {customers.map((c) => (
             <Link
               key={c.id}
               href={`/customers/${c.id}`}
-              className="flex items-center justify-between gap-3 border-b border-[#eef0f4] px-4 py-3 transition-colors last:border-0 hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              className="flex items-center justify-between gap-3 border-b border-rule-soft px-4 py-3 transition-colors last:border-0 hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">
@@ -144,19 +144,19 @@ export default async function CustomersPage({
                     </span>
                   ) : null}
                   {c.fullName ?? tCommon('noName')}{' '}
-                  <span className="font-mono text-[12px] font-medium text-muted-foreground">
+                  <span className="font-mono text-micro font-medium text-muted-foreground">
                     {c.clientCode}
                   </span>
                 </p>
-                <p className="truncate font-mono text-[12px] text-muted-foreground">
+                <p className="truncate font-mono text-micro text-muted-foreground">
                   {c.phone ?? tCommon('dash')}
                 </p>
               </div>
               <div className="flex-none text-right">
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-micro text-muted-foreground">
                   {t('trackCount', { count: c.trackCount })}
                 </p>
-                <p className="text-[12.5px]">
+                <p className="text-micro">
                   <DebtCell tiyin={c.debtTiyin} />
                 </p>
               </div>

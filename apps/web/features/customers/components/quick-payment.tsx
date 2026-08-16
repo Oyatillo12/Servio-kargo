@@ -64,7 +64,7 @@ export function QuickPaymentSheet({
           <SheetHeader>
             <SheetTitle>
               {customer?.fullName ?? tCommon('noName')}{' '}
-              <span className="font-mono text-[13px] font-medium text-muted-foreground">
+              <span className="font-mono text-small font-medium text-muted-foreground">
                 {customer?.clientCode}
               </span>
             </SheetTitle>

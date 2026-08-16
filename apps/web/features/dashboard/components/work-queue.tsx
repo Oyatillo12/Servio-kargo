@@ -39,10 +39,10 @@ export function WorkQueue({ counts }: { counts: WorklistCounts }) {
             aria-hidden
           />
           <span className="min-w-0">
-            <span className="block text-[15px] font-medium text-foreground">
+            <span className="block text-body font-medium text-foreground">
               {t('workQueueEmpty')}
             </span>
-            <span className="block text-[13px] text-faint">
+            <span className="block text-small text-faint">
               {t('workQueueEmptyHint')}
             </span>
           </span>
@@ -77,15 +77,15 @@ function WorkRow({ work, count }: { work: TrackWorklist; count: number }) {
 
       {/* Two lines on a phone, one on desktop where there is room for both. */}
       <span className="min-w-0 flex-1 md:flex md:items-baseline md:gap-3">
-        <span className="block truncate text-[15px] font-medium text-foreground">
+        <span className="block truncate text-body font-medium text-foreground">
           {label}
         </span>
-        <span className="block truncate text-[13px] text-faint">{hint}</span>
+        <span className="block truncate text-small text-faint">{hint}</span>
       </span>
 
       <span
         className={cn(
-          'flex-none text-[18px] font-semibold leading-none',
+          'flex-none text-lead font-semibold leading-none',
           // Amber only for the queue that is a service failure in progress:
           // a parcel ready for a week is a customer who was not told.
           work === 'stale_pickup' ? 'text-warning' : 'text-foreground',

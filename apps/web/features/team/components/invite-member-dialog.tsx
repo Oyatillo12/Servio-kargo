@@ -87,16 +87,16 @@ export function InviteMemberDialog({
 
         {code ? (
           <div className="flex flex-col gap-3">
-            <p className="text-[13.5px] text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               {t('codeExplainer', { name: fullName || phone })}
             </p>
             <InviteCode code={code} className="self-start" />
-            <ol className="flex list-decimal flex-col gap-1 ps-5 text-[13px] text-muted-foreground">
+            <ol className="flex list-decimal flex-col gap-1 ps-5 text-small text-muted-foreground">
               <li>{t('codeStep1')}</li>
               <li>{t('codeStep2')}</li>
               <li>{t('codeStep3')}</li>
             </ol>
-            <p className="text-[12px] text-faint">{t('codeExpiry')}</p>
+            <p className="text-micro text-faint">{t('codeExpiry')}</p>
             <Button onClick={() => close(false)} className="mt-1">
               {tCommon('done')}
             </Button>
@@ -126,7 +126,7 @@ export function InviteMemberDialog({
               />
               <p
                 id="member-phone-hint"
-                className="text-[12px] text-muted-foreground"
+                className="text-micro text-muted-foreground"
               >
                 {t('phoneHint')}
               </p>
@@ -149,7 +149,7 @@ export function InviteMemberDialog({
                       obvious from a form field, so it is stated. */}
                   <p
                     id="member-name-hint"
-                    className="text-[12px] text-muted-foreground"
+                    className="text-micro text-muted-foreground"
                   >
                     {t('fullNameHint')}
                   </p>

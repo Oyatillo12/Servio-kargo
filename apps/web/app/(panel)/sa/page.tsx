@@ -87,20 +87,20 @@ export default async function SaPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-10 border-b border-rule bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-900">
               SERVIO Kargo — Super-admin
             </p>
-            <p className="truncate text-xs text-slate-500">
+            <p className="truncate text-xs text-faint">
               Platforma boshqaruvi
             </p>
           </div>
           <form action={saLogoutAction}>
             <button
               type="submit"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink-2 hover:bg-slate-100"
             >
               Chiqish
             </button>
@@ -142,14 +142,14 @@ export default async function SaPage() {
             Kompaniyalar ({tenants.length})
           </h2>
           {tenants.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+            <p className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-faint">
               Hali kompaniya yo‘q. O‘ngdagi forma orqali birinchisini qo‘shing.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <div className="overflow-x-auto rounded-lg border border-rule">
               <table className="w-full min-w-[900px] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-rule bg-surface-alt text-left text-xs uppercase tracking-wide text-faint">
                     <th className="px-3 py-2 font-medium">Nomi</th>
                     <th className="px-3 py-2 font-medium">Bot</th>
                     <th className="px-3 py-2 font-medium">Reja</th>
@@ -171,11 +171,11 @@ export default async function SaPage() {
                         <span className="font-medium text-slate-900">
                           {t.name}
                         </span>
-                        <span className="ml-1 text-xs text-slate-400">
+                        <span className="ml-1 text-xs text-faint">
                           {t.codePrefix}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-slate-600">
+                      <td className="px-3 py-2 text-ink-2">
                         {t.botUsername ? (
                           <a
                             href={`https://t.me/${t.botUsername}`}
@@ -194,7 +194,7 @@ export default async function SaPage() {
                           className={
                             t.plan === 'premium'
                               ? 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800'
-                              : 'rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600'
+                              : 'rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-ink-2'
                           }
                         >
                           {t.plan === 'premium' ? 'Premium' : 'Basic'}
@@ -215,7 +215,7 @@ export default async function SaPage() {
                       <td className="px-3 py-2 text-right tabular-nums">
                         {t.customerCount}
                       </td>
-                      <td className="px-3 py-2 text-slate-500">
+                      <td className="px-3 py-2 text-faint">
                         {formatDate(t.createdAt)}
                       </td>
                       <td className="px-3 py-2">
@@ -237,14 +237,14 @@ export default async function SaPage() {
             Demo so‘rovlari ({saLeads.length})
           </h2>
           {saLeads.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+            <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-faint">
               Hali so‘rov yo‘q.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <div className="overflow-x-auto rounded-lg border border-rule">
               <table className="w-full min-w-[520px] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-rule bg-surface-alt text-left text-xs uppercase tracking-wide text-faint">
                     <th className="px-3 py-2 font-medium">Ism</th>
                     <th className="px-3 py-2 font-medium">Telefon</th>
                     <th className="px-3 py-2 font-medium">Kompaniya</th>
@@ -264,18 +264,18 @@ export default async function SaPage() {
                       <td className="px-3 py-2">
                         <a
                           href={`tel:${lead.phone.replace(/[^+\d]/g, '')}`}
-                          className="tabular-nums text-slate-700 underline"
+                          className="tabular-nums text-ink-2 underline"
                         >
                           {lead.phone}
                         </a>
                       </td>
-                      <td className="px-3 py-2 text-slate-600">
+                      <td className="px-3 py-2 text-ink-2">
                         {lead.company ?? '—'}
                       </td>
-                      <td className="px-3 py-2 uppercase text-slate-500">
+                      <td className="px-3 py-2 uppercase text-faint">
                         {lead.locale}
                       </td>
-                      <td className="px-3 py-2 text-slate-500">
+                      <td className="px-3 py-2 text-faint">
                         {formatDate(lead.createdAt)}
                       </td>
                     </tr>
@@ -288,11 +288,11 @@ export default async function SaPage() {
 
         {/* Onboard form */}
         <section className="min-w-0">
-          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <div className="rounded-lg bg-surface p-5 shadow-sm ring-1 ring-slate-200">
             <h2 className="mb-1 text-sm font-semibold text-slate-900">
               Yangi kompaniya qo‘shish
             </h2>
-            <p className="mb-4 text-xs text-slate-500">
+            <p className="mb-4 text-xs text-faint">
               Token tekshiriladi, webhook avtomatik o‘rnatiladi.
             </p>
             <OnboardForm />

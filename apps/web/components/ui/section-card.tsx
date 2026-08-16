@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * The white bordered card block used across the panel — replaces the repeated
- * `rounded-xl border border-border bg-white p-3.5` + `text-[13.5px] font-semibold`
+ * `rounded-lg border border-border bg-surface p-3.5` + `text-small font-semibold`
  * heading pattern. Pass `title` (optional) for a heading row with an optional
  * `action` on the right and a `description` under it.
  */
@@ -22,7 +22,7 @@ const SectionCard = React.forwardRef<HTMLDivElement, SectionCardProps>(
     <div
       ref={ref}
       className={cn(
-        'rounded-lg border border-border bg-white',
+        'rounded-lg border border-border bg-surface',
         !flush && 'p-4',
         className,
       )}

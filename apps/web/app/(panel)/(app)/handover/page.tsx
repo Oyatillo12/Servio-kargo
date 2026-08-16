@@ -44,7 +44,7 @@ export default async function HandoverPage({
   if (!customerId.success) {
     return (
       <div className="mx-auto max-w-md space-y-3">
-        <h1 className="text-[20px] font-semibold text-foreground">
+        <h1 className="text-title font-semibold text-foreground">
           {t('pageTitle')}
         </h1>
         <SectionCard>
@@ -96,7 +96,7 @@ export default async function HandoverPage({
   return (
     <div className="mx-auto max-w-md space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="min-w-0 truncate text-[20px] font-semibold text-foreground">
+        <h1 className="min-w-0 truncate text-title font-semibold text-foreground">
           {t('pageTitle')}
         </h1>
         <HandoverPicker variant="change" />
@@ -109,16 +109,16 @@ export default async function HandoverPage({
             <p className="truncate text-base font-bold text-foreground">
               {customer.fullName ?? tCommon('noName')}
             </p>
-            <p className="truncate font-mono text-[12.5px] text-muted-foreground">
+            <p className="truncate font-mono text-micro text-muted-foreground">
               {customer.clientCode}
               {customer.phone ? ` · ${customer.phone}` : ''}
             </p>
           </div>
           <div className="flex-none text-right">
-            <p className="text-[11.5px] text-muted-foreground">
+            <p className="text-micro text-muted-foreground">
               {t('balanceNow')}
             </p>
-            <div className="text-[13.5px]">
+            <div className="text-small">
               <DebtCell tiyin={debtTiyin} />
             </div>
           </div>

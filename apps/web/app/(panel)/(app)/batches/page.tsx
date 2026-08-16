@@ -34,12 +34,12 @@ export default async function BatchesPage() {
       {batches.length === 0 ? (
         <EmptyState title={t('emptyTitle')} hint={t('emptyHint')} />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-white">
+        <div className="overflow-hidden rounded-lg border border-border bg-surface">
           {batches.map((b) => (
             <Link
               key={b.id}
               href={`/batches/${b.id}`}
-              className="flex items-center gap-3 border-b border-[#eef0f4] px-4 py-3 transition-colors last:border-0 hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              className="flex items-center gap-3 border-b border-rule-soft px-4 py-3 transition-colors last:border-0 hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -48,7 +48,7 @@ export default async function BatchesPage() {
                   </span>
                   <StatusBadge status={b.status} />
                 </div>
-                <p className="mt-0.5 font-mono text-[12px] text-muted-foreground">
+                <p className="mt-0.5 font-mono text-micro text-muted-foreground">
                   {t(TRANSPORT_KEY[b.transport])}
                   {b.etaDate ? ` · ${t('etaPrefix', { date: b.etaDate })}` : ''} ·{' '}
                   {t('trackCount', { count: b.trackCount })}

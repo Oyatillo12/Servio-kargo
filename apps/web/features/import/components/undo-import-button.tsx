@@ -85,7 +85,7 @@ export function UndoImportButton({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11.5px] font-semibold text-[#b3261e] transition-colors hover:bg-[#b3261e]/10"
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-micro font-semibold text-destructive transition-colors hover:bg-destructive/10"
         >
           <Undo2 className="h-3.5 w-3.5" aria-hidden />
           {label}

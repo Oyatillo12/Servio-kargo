@@ -68,7 +68,7 @@ function Stepper({ step, labels }: { step: Step; labels: string[] }) {
                   'mx-1.5 flex-1 border-t-2',
                   n <= step
                     ? 'border-solid border-primary'
-                    : 'border-dotted border-[#c3c9d6]',
+                    : 'border-dotted border-input',
                 )}
               />
             ) : null}
@@ -81,10 +81,10 @@ function Stepper({ step, labels }: { step: Step; labels: string[] }) {
                   'flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold',
                   active && 'bg-primary text-white',
                   done &&
-                    'border-[1.5px] border-[#177338] bg-[#e2f6e8] text-[#177338]',
+                    'border-[1.5px] border-success bg-[var(--st-ready-bg)] text-success',
                   !active &&
                     !done &&
-                    'border-[1.5px] border-[#c3c9d6] bg-white text-muted-foreground',
+                    'border-[1.5px] border-input bg-surface text-muted-foreground',
                 )}
               >
                 {done ? (
@@ -95,11 +95,11 @@ function Stepper({ step, labels }: { step: Step; labels: string[] }) {
               </span>
               <span
                 className={cn(
-                  'text-[11px]',
+                  'text-micro',
                   active
                     ? 'font-bold text-primary'
                     : done
-                      ? 'font-medium text-[#177338]'
+                      ? 'font-medium text-success'
                       : 'font-medium text-muted-foreground',
                 )}
               >
@@ -123,14 +123,14 @@ function StatCard({
   tone: 'green' | 'amber' | 'red';
 }) {
   const cls = {
-    green: 'bg-[#e2f6e8] border-[#c2e8cf] text-[#177338]',
-    amber: 'bg-[#fdf3d8] border-[#f3e2b0] text-[#92600a]',
-    red: 'bg-[#fde8e8] border-[#f5c8c6] text-[#b3261e]',
+    green: 'bg-[var(--st-ready-bg)] border-success/25 text-success',
+    amber: 'bg-[var(--st-china-bg)] border-warning/30 text-warning',
+    red: 'bg-[var(--st-lost-bg)] border-destructive/25 text-destructive',
   }[tone];
   return (
     <div className={cn('flex-1 rounded-lg border p-2.5 text-center', cls)}>
       <div className="font-mono text-lg font-semibold tabular-nums">{n}</div>
-      <div className="text-[11.5px] font-semibold">{label}</div>
+      <div className="text-micro font-semibold">{label}</div>
     </div>
   );
 }
@@ -154,9 +154,9 @@ function ColumnPicker({
 
   return (
     <div className="flex items-center gap-2.5">
-      <Label htmlFor={id} className="w-[92px] flex-none text-[13px]">
+      <Label htmlFor={id} className="w-[92px] flex-none text-small">
         {t(`field_${field}`)}
-        {required ? <span className="text-[#b3261e]"> *</span> : null}
+        {required ? <span className="text-destructive"> *</span> : null}
       </Label>
       <Select
         value={value == null ? NO_COLUMN : String(value)}
@@ -309,7 +309,7 @@ export function ImportWizard({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-white p-4">
+      <div className="rounded-lg border border-border bg-surface p-4">
         <Stepper
           step={step}
           labels={[t('step1'), t('step2'), t('step3'), t('step4')]}
@@ -319,7 +319,7 @@ export function ImportWizard({
       {error ? (
         <p
           role="alert"
-          className="rounded-lg bg-[#fde8e8] px-3 py-2 text-sm text-[#b3261e]"
+          className="rounded-lg bg-[var(--st-lost-bg)] px-3 py-2 text-sm text-destructive"
         >
           {error}
         </p>
@@ -327,9 +327,9 @@ export function ImportWizard({
 
       {/* --- Step 4: result -------------------------------------------------- */}
       {step === 4 && applied?.ok ? (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-white px-6 py-10 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-surface px-6 py-10 text-center">
           <div
-            className="flex h-16 w-16 items-center justify-center rounded-full border-[1.5px] border-[#177338] bg-[#e2f6e8] text-2xl text-[#177338]"
+            className="flex h-16 w-16 items-center justify-center rounded-full border-[1.5px] border-success bg-[var(--st-ready-bg)] text-2xl text-success"
             aria-hidden
           >
             ✓
@@ -384,7 +384,7 @@ export function ImportWizard({
       {step === 2 && mapping ? (
         <div className="space-y-4">
           <SectionCard>
-            <p className="mb-3 text-[13px] text-muted-foreground">
+            <p className="mb-3 text-small text-muted-foreground">
               {source?.sheetName
                 ? t('sourceSheet', {
                     sheet: source.sheetName,
@@ -394,7 +394,7 @@ export function ImportWizard({
             </p>
 
             <label className="mb-3 flex items-center justify-between gap-3">
-              <span className="text-[13px] font-medium">{t('hasHeader')}</span>
+              <span className="text-small font-medium">{t('hasHeader')}</span>
               <Switch checked={hasHeader} onCheckedChange={setHasHeader} />
             </label>
 
@@ -426,19 +426,19 @@ export function ImportWizard({
           </SectionCard>
 
           {source?.sample?.length ? (
-            <div className="overflow-hidden rounded-xl border border-border bg-white">
-              <div className="border-b border-[#eef0f4] px-3.5 py-2.5 text-[13px] font-semibold">
+            <div className="overflow-hidden rounded-lg border border-border bg-surface">
+              <div className="border-b border-rule-soft px-3.5 py-2.5 text-small font-semibold">
                 {t('samplePreview')}
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-[12px]">
+                <table className="w-full text-micro">
                   <tbody>
                     {source.sample.map((row, r) => (
                       <tr
                         key={r}
                         className={cn(
-                          'border-b border-[#f2f4f7] last:border-0',
-                          hasHeader && r === 0 && 'bg-[#f8fafc] font-semibold',
+                          'border-b border-rule-soft last:border-0',
+                          hasHeader && r === 0 && 'bg-surface-alt font-semibold',
                         )}
                       >
                         {columns.map((c) => {
@@ -475,7 +475,7 @@ export function ImportWizard({
           ) : null}
 
           {source?.truncated ? (
-            <p className="text-xs text-[#92600a]">{t('truncated')}</p>
+            <p className="text-xs text-warning">{t('truncated')}</p>
           ) : null}
 
           <div className="flex gap-2.5">
@@ -499,7 +499,7 @@ export function ImportWizard({
             <StatCard n={counts.malformed} label={t('statError')} tone="red" />
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-border bg-white">
+          <div className="overflow-hidden rounded-lg border border-border bg-surface">
             <PreviewRow label={t('rowNew')} items={preview.samples?.create} />
             <PreviewRow
               label={t('rowUpdated')}
@@ -550,7 +550,7 @@ export function ImportWizard({
             </p>
           ) : null}
           {counts.missing + counts.ambiguous > 0 ? (
-            <p className="text-xs text-[#92600a]">{t('unresolvedHint')}</p>
+            <p className="text-xs text-warning">{t('unresolvedHint')}</p>
           ) : null}
 
           <SectionCard>
@@ -620,14 +620,14 @@ export function ImportWizard({
       {/* --- Step 1: input --------------------------------------------------- */}
       {step === 1 ? (
         <form ref={formRef} onSubmit={onReadSource} className="space-y-3">
-          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-[#c3c9d6] bg-white px-4 py-7 text-center transition-colors hover:border-primary hover:bg-accent/30 focus-within:border-primary">
+          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-input bg-surface px-4 py-7 text-center transition-colors hover:border-primary hover:bg-accent/30 focus-within:border-primary">
             <UploadCloud
               className="h-7 w-7 text-primary"
               strokeWidth={1.6}
               aria-hidden
             />
             <span className="text-sm font-semibold">{t('pickFile')}</span>
-            <span className="text-[12.5px] text-muted-foreground">
+            <span className="text-micro text-muted-foreground">
               {t('pickFileHint')}
             </span>
             <input
@@ -640,14 +640,14 @@ export function ImportWizard({
           </label>
 
           {file ? (
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-white px-3.5 py-3">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3.5 py-3">
               <span
-                className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-[#e2f6e8] font-mono text-[10px] font-bold text-[#177338]"
+                className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-[var(--st-ready-bg)] font-mono text-micro font-bold text-success"
                 aria-hidden
               >
                 XLSX
               </span>
-              <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">
+              <span className="min-w-0 flex-1 truncate text-small font-semibold">
                 {file.name}
               </span>
               <button
@@ -664,7 +664,7 @@ export function ImportWizard({
             </div>
           ) : null}
 
-          <div className="text-center text-[11px] uppercase tracking-wide text-muted-foreground">
+          <div className="text-center text-micro uppercase tracking-wide text-muted-foreground">
             {t('or')}
           </div>
 
@@ -703,8 +703,8 @@ function PreviewCount({
   tone?: 'green';
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-[#eef0f4] px-3.5 py-3 text-[13.5px] last:border-0">
-      <span className={cn(count > 0 && tone === 'green' && 'text-[#177338]')}>
+    <div className="flex items-center justify-between border-b border-rule-soft px-3.5 py-3 text-small last:border-0">
+      <span className={cn(count > 0 && tone === 'green' && 'text-success')}>
         {label}
       </span>
       <span className="font-mono tabular-nums">{count}</span>
@@ -729,21 +729,21 @@ function PreviewRow({
   const total = count ?? list.length;
   if (total === 0) {
     return (
-      <div className="flex items-center justify-between border-b border-[#eef0f4] px-3.5 py-3 text-[13.5px] text-muted-foreground last:border-0">
+      <div className="flex items-center justify-between border-b border-rule-soft px-3.5 py-3 text-small text-muted-foreground last:border-0">
         <span>{label}</span>
         <span className="font-mono tabular-nums">0</span>
       </div>
     );
   }
   return (
-    <details className="border-b border-[#eef0f4] last:border-0">
+    <details className="border-b border-rule-soft last:border-0">
       <summary
         className={cn(
-          'flex cursor-pointer items-center justify-between px-3.5 py-3 text-[13.5px] font-semibold',
+          'flex cursor-pointer items-center justify-between px-3.5 py-3 text-small font-semibold',
           tone === 'red'
-            ? 'text-[#b3261e]'
+            ? 'text-destructive'
             : tone === 'amber'
-              ? 'text-[#92600a]'
+              ? 'text-warning'
               : 'text-foreground',
         )}
       >
@@ -751,7 +751,7 @@ function PreviewRow({
           {label} · <span className="font-mono tabular-nums">{total}</span>
         </span>
       </summary>
-      <div className="max-h-40 overflow-y-auto px-3.5 pb-3 font-mono text-[12px] text-slate-600">
+      <div className="max-h-40 overflow-y-auto px-3.5 pb-3 font-mono text-micro text-ink-2">
         {list.map((it, i) => (
           <div key={`${it.line}-${i}`} className="flex gap-2 py-0.5">
             <span className="w-8 flex-none text-right tabular-nums text-muted-foreground">

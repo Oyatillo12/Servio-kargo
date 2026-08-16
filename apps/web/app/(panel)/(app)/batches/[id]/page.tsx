@@ -58,7 +58,7 @@ export default async function BatchDetailPage({
         <h1 className="text-xl font-bold text-foreground">{batch.name}</h1>
         <StatusBadge status={batch.status} />
       </div>
-      <p className="font-mono text-[12.5px] text-muted-foreground">
+      <p className="font-mono text-micro text-muted-foreground">
         {t(TRANSPORT_KEY[batch.transport])}
         {batch.etaDate ? ` · ${t('etaPrefix', { date: batch.etaDate })}` : ''} ·{' '}
         {t('trackCount', { count: members.length })}
@@ -72,8 +72,8 @@ export default async function BatchDetailPage({
       />
 
       {/* Member tracks */}
-      <div className="overflow-hidden rounded-xl border border-border bg-white">
-        <div className="border-b border-border bg-secondary px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="border-b border-border bg-secondary px-4 py-2.5 text-micro font-semibold uppercase tracking-wide text-muted-foreground">
           {t('membersTitle')}
         </div>
         {members.length === 0 ? (
@@ -85,15 +85,15 @@ export default async function BatchDetailPage({
             <Link
               key={m.id}
               href={`/tracks/${m.id}`}
-              className="flex items-center justify-between gap-2 border-b border-[#eef0f4] px-4 py-3 transition-colors last:border-0 hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              className="flex items-center justify-between gap-2 border-b border-rule-soft px-4 py-3 transition-colors last:border-0 hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
               <div className="min-w-0">
-                <p className="truncate font-mono text-[13.5px] font-semibold text-foreground">
+                <p className="truncate font-mono text-small font-semibold text-foreground">
                   {m.codeOriginal}
                 </p>
-                <p className="truncate text-[12px] text-muted-foreground">
+                <p className="truncate text-micro text-muted-foreground">
                   {m.customerLabel ?? (
-                    <span className="text-slate-400">
+                    <span className="text-faint">
                       {tCommon('unassigned')}
                     </span>
                   )}

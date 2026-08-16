@@ -56,7 +56,7 @@ export function ActiveToggle({
       {active ? (
         <>
           <span
-            className="text-[11px] text-slate-500"
+            className="text-micro text-faint"
             title="Bot javob beradi (jim bo‘lmaydi), panel qulflanadi, navbatdagi xabarlar tashlanadi."
           >
             Ishonchingiz komilmi?
@@ -68,7 +68,7 @@ export function ActiveToggle({
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+            className="rounded-md px-2 py-1 text-xs text-faint hover:bg-slate-100"
           >
             Bekor
           </button>
@@ -108,7 +108,7 @@ export function PaidUntilField({
       />
       <Submit
         label="Saqlash"
-        className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+        className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-ink-2 hover:bg-surface-alt disabled:opacity-60"
       />
       {state.error ? (
         <span className="text-xs text-red-600">{state.error}</span>

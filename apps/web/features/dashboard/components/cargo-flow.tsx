@@ -56,7 +56,7 @@ export function CargoFlow({
       </div>
 
       {total === 0 ? (
-        <p className="mt-3 text-[13px] text-faint">{t('cargoFlowEmpty')}</p>
+        <p className="mt-3 text-small text-faint">{t('cargoFlowEmpty')}</p>
       ) : (
         <>
           <ul className="mt-2 flex gap-[3px]">
@@ -72,20 +72,20 @@ export function CargoFlow({
               >
                 <span
                   className={cn(
-                    'block text-[18px] font-semibold leading-tight md:inline md:me-1.5',
+                    'block text-lead font-semibold leading-tight md:inline md:me-1.5',
                     s.value > 0 ? 'text-foreground' : 'text-faint',
                   )}
                 >
                   {s.value}
                 </span>
-                <span className="block truncate text-[11px] font-medium uppercase tracking-[0.05em] text-faint md:inline">
+                <span className="block truncate text-micro font-medium uppercase tracking-[0.05em] text-faint md:inline">
                   {t(s.key)}
                 </span>
               </li>
             ))}
           </ul>
 
-          <p className="mt-2.5 text-[13px] text-muted-foreground">
+          <p className="mt-2.5 text-small text-muted-foreground">
             {t('deliveredTotals')}{' '}
             <span className="font-semibold text-foreground">
               {formatKg(deliveredWeightGrams)}

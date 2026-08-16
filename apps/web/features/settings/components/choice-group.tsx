@@ -59,7 +59,7 @@ export function ChoiceOption({
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        'flex h-11 flex-1 items-center gap-2 rounded-md px-3 text-[14px] transition-colors md:h-10',
+        'flex h-11 flex-1 items-center gap-2 rounded-md px-3 text-body transition-colors md:h-10',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         'disabled:cursor-not-allowed disabled:opacity-60',
         selected
@@ -70,7 +70,7 @@ export function ChoiceOption({
       {tag ? (
         <span
           className={cn(
-            'flex-none font-mono text-[11px] font-medium',
+            'flex-none font-mono text-micro font-medium',
             selected ? 'text-primary' : 'text-faint',
           )}
         >

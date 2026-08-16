@@ -53,7 +53,7 @@ export function TushumChart({ points }: { points: TushumPoint[] }) {
                     'w-full rounded-t-[2px] transition-colors',
                     p.totalTiyin > 0
                       ? 'bg-primary/80 group-hover:bg-primary'
-                      : 'h-[2px] rounded-[1px] bg-[#e9ebef]',
+                      : 'h-[2px] rounded-[1px] bg-surface-alt',
                   )}
                   style={pct > 0 ? { height: `${pct}%` } : undefined}
                 />
@@ -63,14 +63,14 @@ export function TushumChart({ points }: { points: TushumPoint[] }) {
         </div>
 
         {hasData ? null : (
-          <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-[13px] text-faint">
+          <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-small text-faint">
             {t('chartEmpty')}
           </p>
         )}
       </div>
 
       {hasData ? (
-        <div className="mt-2 flex justify-between text-[11px] text-faint">
+        <div className="mt-2 flex justify-between text-micro text-faint">
           <span>{first ? shortDate(first.dateKey) : ''}</span>
           <span>{t('periodToday')}</span>
         </div>

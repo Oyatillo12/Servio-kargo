@@ -9,7 +9,7 @@ const initialState: OnboardState = {};
 
 const inputClass =
   'w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
-const labelClass = 'mb-1 block text-sm font-medium text-slate-700';
+const labelClass = 'mb-1 block text-sm font-medium text-ink-2';
 
 function Field({
   name,
@@ -27,7 +27,7 @@ function Field({
         {label}
       </label>
       <input id={name} name={name} className={inputClass} {...props} />
-      {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-faint">{hint}</p> : null}
     </div>
   );
 }
@@ -84,7 +84,7 @@ export function OnboardForm() {
       ) : null}
 
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-faint">
           Kompaniya
         </p>
         <Field
@@ -148,7 +148,7 @@ export function OnboardForm() {
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-faint">
           Telegram bot
         </p>
         <Field
@@ -162,7 +162,7 @@ export function OnboardForm() {
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-faint">
           Ma'lumot kartasi (ixtiyoriy)
         </p>
         <Field
@@ -186,7 +186,7 @@ export function OnboardForm() {
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-faint">
           Birinchi admin
         </p>
         <div className="grid grid-cols-2 gap-4">

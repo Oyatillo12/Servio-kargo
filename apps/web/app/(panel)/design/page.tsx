@@ -474,7 +474,7 @@ function GlyphCard({
       <p className={cn(family, 'text-[26px] leading-tight text-ink')}>
         Съешь ещё
       </p>
-      <p className={cn(family, 'mt-1 text-[20px] tabular-nums text-ink-2')}>
+      <p className={cn(family, 'mt-1 text-title tabular-nums text-ink-2')}>
         0123456789
       </p>
     </div>

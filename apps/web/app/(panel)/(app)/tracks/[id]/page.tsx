@@ -76,30 +76,30 @@ function RouteRail({
                   'mb-[18px] flex-1 border-t-2',
                   reached[i]
                     ? 'border-solid border-primary'
-                    : 'border-dotted border-[#c3c9d6]',
+                    : 'border-dotted border-input',
                 )}
               />
             ) : null}
             <div className="flex w-[58px] flex-none flex-col items-center gap-1.5">
               <div
                 className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] text-[15px]',
+                  'flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] text-body',
                   isActive &&
                     'border-primary bg-primary shadow-[0_0_0_4px_#e0e4f4]',
                   isDone && 'border-primary bg-accent',
                   !reached[i] &&
-                    'border-[#c3c9d6] bg-white opacity-65 grayscale',
+                    'border-input bg-surface opacity-65 grayscale',
                 )}
               >
                 {stage.emoji}
               </div>
               <span
                 className={cn(
-                  'text-[10px]',
+                  'text-micro',
                   isActive
                     ? 'font-bold text-primary'
                     : reached[i]
-                      ? 'font-semibold text-slate-600'
+                      ? 'font-semibold text-ink-2'
                       : 'font-medium text-muted-foreground',
                 )}
               >
@@ -241,7 +241,7 @@ export default async function TrackDetailPage({
 
       {/* Batch */}
       {batch ? (
-        <div className="flex items-center gap-2 rounded-xl border border-border bg-white px-3.5 py-3 text-[13.5px]">
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-3 text-small">
           <span className="text-muted-foreground">🚚 {t('batch')}</span>
           <Link
             href={`/batches/${batch.id}`}
@@ -250,7 +250,7 @@ export default async function TrackDetailPage({
             {batch.name}
           </Link>
           {batch.etaDate ? (
-            <span className="ml-auto font-mono text-[12px] text-muted-foreground">
+            <span className="ml-auto font-mono text-micro text-muted-foreground">
               {batch.etaDate}
             </span>
           ) : null}
@@ -325,14 +325,14 @@ export default async function TrackDetailPage({
                     ) : null}
                   </div>
                   <div className={cn('min-w-0', last ? 'pb-0' : 'pb-3.5')}>
-                    <p className="text-[13.5px] font-semibold text-foreground">
+                    <p className="text-small font-semibold text-foreground">
                       {assignLabel ?? v.label}
                     </p>
-                    <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
+                    <p className="mt-0.5 font-mono text-micro text-muted-foreground">
                       {formatDateTime(e.createdAt)}
                     </p>
                     {actorLine(e.createdBy) ? (
-                      <p className="text-[12px] text-slate-600">
+                      <p className="text-micro text-ink-2">
                         {actorLine(e.createdBy)}
                       </p>
                     ) : null}

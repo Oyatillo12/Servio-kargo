@@ -65,7 +65,7 @@ export function BottomNav({
 
   return (
     <>
-      <nav className="flex h-[60px] border-t border-n-200 bg-white pb-[env(safe-area-inset-bottom)]">
+      <nav className="flex h-[60px] border-t border-n-200 bg-surface pb-[env(safe-area-inset-bottom)]">
         {primary.map((item) => (
           <BottomLink key={item.href} item={item} />
         ))}

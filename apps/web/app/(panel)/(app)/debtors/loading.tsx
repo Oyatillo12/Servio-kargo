@@ -5,7 +5,7 @@ export default function DebtorsLoading() {
   return (
     <div>
       <HeaderSkeleton />
-      <Skeleton className="mb-4 h-32 w-full rounded-xl" />
+      <Skeleton className="mb-4 h-32 w-full rounded-lg" />
       <ListSkeleton rows={6} />
     </div>
   );

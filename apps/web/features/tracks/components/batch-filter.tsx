@@ -49,7 +49,7 @@ export function BatchFilter({
     <select
       value={current ?? ''}
       onChange={(e) => onChange(e.target.value)}
-      className="h-11 flex-none rounded-lg border border-input bg-white px-2.5 text-sm text-slate-700 outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
+      className="h-11 flex-none rounded-lg border border-input bg-surface px-2.5 text-sm text-ink-2 outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
       aria-label={t('batchFilterLabel')}
     >
       <option value="">{t('allBatches')}</option>
