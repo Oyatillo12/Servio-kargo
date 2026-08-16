@@ -59,7 +59,7 @@ export function PanelSection({
               ("Weekly auto-reminder") it is the label for what that switch
               does, and half of it is worse than two lines of it. */}
           {title ? (
-            <h2 className="min-w-0 text-[15px] font-semibold text-foreground">
+            <h2 className="min-w-0 font-display text-body font-semibold uppercase tracking-[0.06em] text-ink">
               {title}
             </h2>
           ) : (
@@ -67,7 +67,7 @@ export function PanelSection({
           )}
           {action ?? (
             meta ? (
-              <span className="flex-none text-[13px] text-faint">{meta}</span>
+              <span className="flex-none text-small text-faint">{meta}</span>
             ) : null
           )}
         </div>

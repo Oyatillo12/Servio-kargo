@@ -15,17 +15,17 @@ export function DebtCell({ tiyin }: { tiyin: number }) {
 
   if (tiyin > 0) {
     return (
-      <span className="whitespace-nowrap font-mono font-semibold tabular-nums text-[#b3261e]">
+      <span className="whitespace-nowrap font-mono font-semibold tabular-nums text-destructive">
         {formatSom(tiyin)} {tCommon('som')}
       </span>
     );
   }
   if (tiyin < 0) {
     return (
-      <span className="whitespace-nowrap font-mono font-medium tabular-nums text-[#177338]">
+      <span className="whitespace-nowrap font-mono font-medium tabular-nums text-success">
         {t('advance', { amount: formatSom(Math.abs(tiyin)) })}
       </span>
     );
   }
-  return <span className="text-muted-foreground">{t('noDebt')}</span>;
+  return <span className="text-faint">{t('noDebt')}</span>;
 }

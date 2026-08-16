@@ -38,12 +38,15 @@ const SectionCard = React.forwardRef<HTMLDivElement, SectionCardProps>(
         >
           <div className="min-w-0">
             {title ? (
-              <h2 className="text-[15px] font-semibold text-foreground">
+              /* Card headings speak in the system's display voice — condensed
+                 uppercase — so a stack of cards reads as sections of one
+                 document rather than as a pile of widgets. */
+              <h2 className="font-display text-body font-semibold uppercase tracking-[0.06em] text-ink">
                 {title}
               </h2>
             ) : null}
             {description ? (
-              <p className="mt-1 text-[13px] text-muted-foreground">
+              <p className="mt-1 text-small text-muted-foreground">
                 {description}
               </p>
             ) : null}

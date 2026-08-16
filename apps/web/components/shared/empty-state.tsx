@@ -27,16 +27,16 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'rounded-xl border border-border bg-white p-10 text-center',
+        'rounded-lg border border-border bg-surface p-10 text-center',
         className,
       )}
     >
       {icon ?? (
-        <div className="mx-auto mb-2 h-11 w-11 rounded-full border-2 border-dotted border-[#c3c9d6]" />
+        <div className="mx-auto mb-2.5 h-10 w-10 rounded-sm border-2 border-dashed border-input" />
       )}
-      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="text-body font-semibold text-foreground">{title}</p>
       {hint ? (
-        <p className="mt-1 text-[13px] text-muted-foreground">{hint}</p>
+        <p className="mt-1 text-small text-muted-foreground">{hint}</p>
       ) : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>

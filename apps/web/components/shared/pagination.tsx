@@ -27,7 +27,7 @@ export async function Pagination({
   return (
     <nav
       aria-label={t('pageOf', { page, pages })}
-      className={cn('mt-4 flex items-center justify-between gap-3 text-sm', className)}
+      className={cn('mt-4 flex items-center justify-between gap-3 text-small', className)}
     >
       <PageLink
         href={buildHref(page - 1)}
@@ -68,7 +68,7 @@ function PageLink({
     </>
   );
   const shared =
-    'inline-flex items-center gap-1 rounded-lg border border-input px-3 py-1.5 font-medium';
+    'inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 font-medium';
 
   // Rendered as a disabled span rather than omitted: keeping both ends in the
   // DOM stops the page indicator from jumping sideways on the first/last page.
@@ -76,7 +76,7 @@ function PageLink({
     return (
       <span
         aria-disabled
-        className={cn(shared, 'cursor-default bg-secondary/50 text-muted-foreground/60')}
+        className={cn(shared, 'cursor-default bg-surface-alt text-faint')}
       >
         {content}
       </span>
@@ -85,7 +85,7 @@ function PageLink({
   return (
     <Link
       href={href}
-      className={cn(shared, 'bg-white text-slate-700 transition-colors hover:bg-secondary')}
+      className={cn(shared, 'bg-surface text-ink-2 transition-colors hover:bg-surface-alt')}
     >
       {content}
     </Link>

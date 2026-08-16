@@ -84,7 +84,7 @@ export function SearchField({
   return (
     <div className={cn('relative flex-1', className)}>
       <Search
-        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
         aria-hidden
       />
       <Input
@@ -106,7 +106,7 @@ export function SearchField({
         placeholder={placeholder}
         aria-label={label}
         // `pl-9` clears the magnifier, `pr-9` the spinner / clear button.
-        className="h-11 bg-[#f7f8fa] pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden"
+        className="h-control bg-surface-alt pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden"
       />
       <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center text-muted-foreground">
         {isPending ? (

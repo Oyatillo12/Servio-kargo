@@ -4,9 +4,20 @@ import { AlertTriangle, ArrowRight, Download, Plus } from 'lucide-react';
 
 import { TRACK_STATUSES } from '@kargotrack/shared';
 
+import { EmptyState } from '@/components/shared/empty-state';
+import { FilterChips } from '@/components/shared/filter-chips';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DataItem, DataList } from '@/components/ui/data-list';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Segmented } from '@/components/ui/segmented';
+import { StatTile } from '@/components/ui/stat-tile';
+import { Switch } from '@/components/ui/switch';
+import { TabStrip, resolveTab, type TabItem } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 /**
@@ -25,8 +36,32 @@ import { cn } from '@/lib/utils';
  */
 export const metadata = { title: 'TERMINAL — design system' };
 
-export default function DesignPage() {
+/** The specimen tabs — real links, so the strip below really navigates. */
+const DEMO_TABS: TabItem[] = [
+  { key: 'umumiy', label: 'Umumiy' },
+  { key: 'suratlar', label: 'Suratlar', count: 3 },
+  { key: 'tarix', label: 'Tarix' },
+  { key: 'xabarlar', label: 'Xabarlar', count: 12 },
+];
+
+export default function DesignPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string; p?: string };
+}) {
   if (process.env.NODE_ENV === 'production') notFound();
+
+  const tab = resolveTab(DEMO_TABS, searchParams.tab);
+  const period = ['today', '7d', '30d'].includes(searchParams.p ?? '')
+    ? (searchParams.p as string)
+    : 'today';
+  const keep = (next: Record<string, string | undefined>) => {
+    const p = new URLSearchParams();
+    const merged = { tab: searchParams.tab, p: searchParams.p, ...next };
+    for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
+    const qs = p.toString();
+    return qs ? `/design?${qs}` : '/design';
+  };
 
   return (
     <main className="min-h-svh bg-paper px-4 py-8 md:px-8">
@@ -243,7 +278,117 @@ export default function DesignPage() {
           </div>
         </Section>
 
-        {/* ---- 6. In situ -------------------------------------------------- */}
+        {/* ---- 6. Controls ------------------------------------------------- */}
+        <Section
+          title="Boshqaruv elementlari"
+          note="Tab'lar va segment — havola, ya'ni URL'da yashaydi"
+        >
+          <div className="flex flex-col gap-5 bg-surface p-4">
+            <div>
+              <p className="eyebrow mb-2">Tab lentasi (bosib ko&apos;ring)</p>
+              <TabStrip
+                items={DEMO_TABS}
+                active={tab}
+                buildHref={(k) => keep({ tab: k === 'umumiy' ? undefined : k })}
+              />
+              <p className="mt-2 text-small text-ink-2">
+                Faol tab: <code className="font-mono text-ink">{tab}</code> —
+                sahifa yangilansa ham saqlanadi.
+              </p>
+            </div>
+
+            <div>
+              <p className="eyebrow mb-2">Segment</p>
+              <Segmented
+                label="Davr"
+                active={period}
+                options={[
+                  { value: 'today', label: 'Bugun', href: keep({ p: undefined }) },
+                  { value: '7d', label: '7 kun', href: keep({ p: '7d' }) },
+                  { value: '30d', label: '30 kun', href: keep({ p: '30d' }) },
+                ]}
+              />
+            </div>
+
+            <div>
+              <p className="eyebrow mb-2">Filtr chiplari</p>
+              <FilterChips
+                label="Holat"
+                active={undefined}
+                chips={[
+                  { value: undefined, label: 'Barchasi' },
+                  { value: 'a', label: 'Xitoy omborida', count: 42 },
+                  { value: 'b', label: 'Yo‘lda', count: 7 },
+                  { value: 'c', label: 'Tayyor', count: 13 },
+                ]}
+                buildHref={() => keep({})}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="d-code">Trek kodi</Label>
+                <Input id="d-code" defaultValue="CN-4821-9920" className="font-mono" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="d-note">Izoh</Label>
+                <Textarea id="d-note" rows={2} placeholder="Ixtiyoriy izoh" />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-5">
+              <label className="flex items-center gap-2 text-small text-ink">
+                <Checkbox defaultChecked /> Tanlangan
+              </label>
+              <label className="flex items-center gap-2 text-small text-ink">
+                <Switch defaultChecked /> Haftalik eslatma
+              </label>
+              <Badge>12</Badge>
+              <Badge variant="secondary">Qoralama</Badge>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Raqamli plitkalar" note="Nol — tinch, diqqat — shtrixli">
+          <div className="grid gap-px bg-rule-soft md:grid-cols-3">
+            <StatTile
+              label="Yangi mijozlar"
+              sublabel="Bugun"
+              value={6}
+              className="border-0 md:rounded-none md:border-0"
+            />
+            <StatTile
+              label="Yetkazilmagan xabar"
+              sublabel="Bugun"
+              value={4}
+              alert
+              className="border-0 md:rounded-none md:border-0"
+            />
+            <StatTile
+              label="Botni bloklaganlar"
+              sublabel="Hozirgi"
+              value={0}
+              alert
+              className="border-0 md:rounded-none md:border-0"
+            />
+          </div>
+        </Section>
+
+        <Section title="Bo&apos;sh holat">
+          <div className="bg-surface p-4">
+            <EmptyState
+              title="Hech narsa topilmadi"
+              hint="Qidiruvni o'zgartiring yoki filtrni tozalang"
+              action={
+                <Button variant="outline" size="sm">
+                  Filtrni tozalash
+                </Button>
+              }
+            />
+          </div>
+        </Section>
+
+        {/* ---- 7. In situ -------------------------------------------------- */}
         <Section title="Amalda" note="Trek kartasi — sistema bir joyda">
           <article className="bg-surface">
             <div className="flex items-start justify-between gap-3 border-b border-rule-soft p-4">
@@ -255,12 +400,12 @@ export default function DesignPage() {
               </div>
               <StatusBadge status="TASHKENT_WAREHOUSE" />
             </div>
-            <dl className="grid grid-cols-2 gap-px bg-rule-soft sm:grid-cols-4">
-              <Cell label="Vazn" value="12.40" unit="kg" />
-              <Cell label="Narx" value="1 240 000" unit="so'm" />
-              <Cell label="Reys" value="AVIA-21.07" />
-              <Cell label="Qarz" value="240 000" unit="so'm" tone="debt" />
-            </dl>
+            <DataList>
+              <DataItem label="Vazn" value="12.40" unit="kg" />
+              <DataItem label="Narx" value="1 240 000" unit="so'm" />
+              <DataItem label="Reys" value="AVIA-21.07" mono={false} />
+              <DataItem label="Qarz" value="240 000" unit="so'm" tone="debt" />
+            </DataList>
             <div className="flex items-center justify-between gap-3 p-4">
               <span className="text-small text-ink-2">
                 DK-1042 · Aziz Karimov
@@ -380,37 +525,6 @@ function TypeRow({
         <span className="text-micro text-ink-3">{spec}</span>
       </div>
       <div className="min-w-0 text-ink">{children}</div>
-    </div>
-  );
-}
-
-function Cell({
-  label,
-  value,
-  unit,
-  tone,
-}: {
-  label: string;
-  value: string;
-  unit?: string;
-  tone?: 'debt';
-}) {
-  return (
-    <div className="bg-surface px-4 py-3">
-      <dt className="eyebrow">{label}</dt>
-      <dd
-        className={cn(
-          'mt-0.5 font-mono text-lead font-semibold tabular-nums',
-          tone === 'debt' ? 'text-destructive' : 'text-ink',
-        )}
-      >
-        {value}
-        {unit ? (
-          <span className="ms-1 font-sans text-micro font-normal text-ink-3">
-            {unit}
-          </span>
-        ) : null}
-      </dd>
     </div>
   );
 }
