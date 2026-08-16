@@ -104,8 +104,14 @@ export function calcSkipDimsKeyboard(s: Strings): InlineKeyboard {
 }
 
 /** After a calculation: run it again without re-opening the menu (§3.11). */
-export function calcResultKeyboard(s: Strings): InlineKeyboard {
-  return new InlineKeyboard().text(s.nav.recalc, 'calc:restart');
+export function calcResultKeyboard(
+  s: Strings,
+  /** Premium only: the cabinet's calculator does the same sum with a form. */
+  miniAppUrl?: string,
+): InlineKeyboard {
+  const kb = new InlineKeyboard().text(s.nav.recalc, 'calc:restart');
+  if (miniAppUrl) kb.row().webApp(s.nav.openCabinet, miniAppUrl);
+  return kb;
 }
 
 /**
@@ -119,6 +125,8 @@ export function myTracksKeyboard(
   page: number,
   pages: number,
   s: Strings,
+  /** Premium only: deep link to the cabinet's own track list (D-012). */
+  miniAppUrl?: string,
 ): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const track of slice) {
@@ -133,6 +141,9 @@ export function myTracksKeyboard(
     kb.row();
   }
   kb.text(s.nav.refresh, `mytracks:${page}:refresh`);
+  // Paging a long list one message at a time is what the cabinet is for; the
+  // chat keeps the quick look, the app takes over when there is more to see.
+  if (miniAppUrl) kb.row().webApp(s.nav.openCabinet, miniAppUrl);
   return kb;
 }
 
@@ -161,8 +172,14 @@ export function addSummaryKeyboard(s: Strings): InlineKeyboard {
 }
 
 /** "Where next?" row under the balance card (SPEC §3.11). */
-export function balanceKeyboard(s: Strings): InlineKeyboard {
-  return new InlineKeyboard().text(s.nav.myTracks, 'mytracks:1');
+export function balanceKeyboard(
+  s: Strings,
+  /** Premium only: the full payment history lives in the cabinet (D-012). */
+  miniAppUrl?: string,
+): InlineKeyboard {
+  const kb = new InlineKeyboard().text(s.nav.myTracks, 'mytracks:1');
+  if (miniAppUrl) kb.row().webApp(s.nav.openCabinet, miniAppUrl);
+  return kb;
 }
 
 /**

@@ -16,6 +16,7 @@ import {
 
 import type { KargoContext } from '../context';
 import { balanceKeyboard, myTracksKeyboard } from '../keyboards';
+import { miniAppUrlFor } from '../miniApp';
 import {
   getActiveTariffs,
   getTrackById,
@@ -45,7 +46,13 @@ async function buildMyTracksView(
 
   return {
     text: lines.join('\n'),
-    keyboard: myTracksKeyboard(slice, page, pages, ctx.s),
+    keyboard: myTracksKeyboard(
+      slice,
+      page,
+      pages,
+      ctx.s,
+      miniAppUrlFor(ctx.tenant, 'tracks'),
+    ),
   };
 }
 
@@ -184,7 +191,9 @@ export async function showBalance(ctx: KargoContext): Promise<void> {
     }
   }
 
-  await ctx.reply(lines.join('\n'), { reply_markup: balanceKeyboard(s) });
+  await ctx.reply(lines.join('\n'), {
+    reply_markup: balanceKeyboard(s, miniAppUrlFor(ctx.tenant, 'finance')),
+  });
 }
 
 /** `balance` inline callback — same card, reached from the help fallback. */

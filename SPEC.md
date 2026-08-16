@@ -288,17 +288,28 @@ texts below are canonical.
 
 **Emoji discipline (D-012).** An emoji is a label, never punctuation:
 
-- **One per message, at the head.** It names what the message is about. The
-  body lines carry none — `⚖️ Og'irligi:` becomes `Og'irligi:`, because the
-  scale emoji says nothing the word does not, and four of them in one message
-  turn a notification into a ransom note.
+- **At most one per line, always leading.** The message's own mark opens the
+  first line and names what the message is about; a value line carries none —
+  `⚖️ Og'irligi:` becomes `Og'irligi:`, because the scale says nothing the word
+  does not, and four of them in one notification make it a ransom note. A list
+  whose lines are separate things (the help card's steps, the menu tour) may
+  mark each line, still one and still leading.
 - **One per button**, leading, and never reused by a second button in the same
   keyboard: in an inline keyboard the emoji is what the thumb aims at.
 - **A status always wears its own mark** — `STATUS_META[status].emoji`, the one
   the panel and the Mini App show for that status. A template never spells an
   emoji for a state inline; three surfaces, one mark.
-- Flags mean countries (`🇺🇿`, `🇨🇳`), never decoration, and nothing else is
-  ever a flag.
+- Flags mean a country or its language (`🇺🇿`, `🇨🇳`, `🇷🇺`), never decoration,
+  and nothing else is ever a flag.
+
+**Cabinet hand-off (D-012).** Where a premium tenant's answer summarises
+something the Mini App shows in full — the track list, the balance, the
+calculator — the keyboard's last row is a Web App button into that exact
+screen (`/m/{tenantId}/{tracks|finance|calc}`). The chat keeps the quick look;
+the app takes over when there is more to see, instead of the bot growing
+another paging flow inside a conversation. Basic tenants simply do not get the
+row (`miniAppUrlFor` returns undefined), and nothing else about the answer
+changes.
 
 ### 4.1 Onboarding & service texts
 - welcome — uz: `Assalomu alaykum! {tenant_name} botiga xush kelibsiz.\nTilni tanlang / Выберите язык:`

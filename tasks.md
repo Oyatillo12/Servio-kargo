@@ -442,13 +442,13 @@ tegmaydi. Har bosqich oxirida `pnpm typecheck && lint && test`.
       desktopda zich jadval, mobilda karta qator; filtr/chip/pagination/bulk.
 - [x] **N5 · Detail shablon** — bitta `DetailShell` + tab'lar (SPEC 5.0);
       tracks/[id], customers/[id], batches/[id] unga o'tadi.
-- [ ] **N6 · Uzun formalar** — import wizard, settings (+team), broadcast,
+- [x] **N6 · Uzun formalar** — import wizard, settings (+team), broadcast,
       handover, weigh konsoli.
-- [ ] **N7 · Auth ekranlari** — login (parol + taklif kodi), invite, locked,
+- [x] **N7 · Auth ekranlari** — login (parol + taklif kodi), invite, locked,
       /sa.
-- [ ] **N8 · Mini App** — `twa.css` umumiy identitetga ulanadi; sirt Telegram
+- [x] **N8 · Mini App** — `twa.css` umumiy identitetga ulanadi; sirt Telegram
       temasidan (SPEC 10.4); 9 ta ekran.
-- [ ] **N9 · Bot** — emoji intizomi (SPEC 4), `keyboards.ts` tugma tartibi va
+- [x] **N9 · Bot** — emoji intizomi (SPEC 4), `keyboards.ts` tugma tartibi va
       menyu ierarxiyasi, uzun flow'lar o'rniga TWA deep-link tugmalari.
 
 ---

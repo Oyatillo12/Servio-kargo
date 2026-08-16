@@ -31,6 +31,7 @@ import {
   calcTariffsKeyboard,
   cancelKeyboard,
 } from '../keyboards';
+import { miniAppUrlFor } from '../miniApp';
 import { getActiveTariffs } from '../queries';
 
 /** Clear any pending calculator state on the session. */
@@ -202,6 +203,6 @@ async function replyWithPrice(
       // answer to the "hajmiy" wording.
       actualKg: charged.basis === 'volumetric' ? formatKg(grams) : undefined,
     }),
-    { reply_markup: calcResultKeyboard(ctx.s) },
+    { reply_markup: calcResultKeyboard(ctx.s, miniAppUrlFor(ctx.tenant, 'calc')) },
   );
 }

@@ -17,7 +17,7 @@ export const ru: Strings = {
   askTracks:
     'Отправьте трек-коды 👇\nМожно несколько сразу — каждый с новой строки.',
   noTracks:
-    'У вас пока нет посылок. Нажмите ➕ Добавить трек и отправьте свой трек-код.',
+    'У вас пока нет посылок. Нажмите «Добавить трек» и отправьте свой трек-код.',
   helpFallback:
     'Не понял 🤔\nОтправьте трек-код или выберите одну из кнопок ниже.',
   errorGeneric: 'Произошла ошибка, попробуйте ещё раз чуть позже.',
@@ -58,6 +58,7 @@ export const ru: Strings = {
     cancel: '❌ Отмена',
     recalc: '🧮 Пересчитать',
     photo: '📷 Фото',
+    openCabinet: '📱 Открыть в кабинете',
   },
   cancelled: 'Отменено.',
   refreshedNoChange: 'Без изменений',
@@ -69,7 +70,7 @@ export const ru: Strings = {
     'ℹ️ Как работает бот',
     '',
     '1️⃣ Возьмите трек-код у продавца в Китае.',
-    '2️⃣ Нажмите ➕ Добавить трек и отправьте код — можно несколько сразу.',
+    '2️⃣ Нажмите «Добавить трек» и отправьте код — можно несколько сразу.',
     '3️⃣ Когда статус посылки изменится, бот сам вам напишет.',
     '',
     '🔍 В любой момент просто отправьте трек-код — покажу его статус.',
@@ -99,7 +100,7 @@ export const ru: Strings = {
   // --- §3.4 balance ---
   balanceDebt: (som) => `💰 Ваш долг: ${som} so'm`,
   balanceAdvance: (som) => `💰 Аванс: ${som} so'm`,
-  balanceZero: '💰 Задолженности нет. ✅',
+  balanceZero: '💰 Задолженности нет.',
   paymentsHeader: 'Последние платежи:',
   noPayments: 'История платежей пока пуста.',
   paymentLine: (date, som, method) => `${date} — ${som} so'm (${method})`,
@@ -120,8 +121,8 @@ export const ru: Strings = {
     if (usdRateSom) lines.push('', `Курс: 1$ = ${usdRateSom} so'm`);
     if (address || hours || phone) {
       lines.push('');
-      if (address) lines.push(`📍 Адрес: ${address}`);
-      if (hours) lines.push(`🕘 Часы работы: ${hours}`);
+      if (address) lines.push(`Адрес: ${address}`);
+      if (hours) lines.push(`Часы работы: ${hours}`);
       if (phone) lines.push(`📞 Контакт: ${phone}`);
     }
     if (infoText) lines.push('', infoText);
@@ -158,11 +159,11 @@ export const ru: Strings = {
     if (kg != null) {
       lines.push(
         actualKg != null
-          ? `⚖️ Расчётный вес: ${kg} кг (объёмный) · фактический ${actualKg} кг`
-          : `⚖️ Вес: ${kg} кг`,
+          ? `Расчётный вес: ${kg} кг (объёмный) · фактический ${actualKg} кг`
+          : `Вес: ${kg} кг`,
       );
     }
-    if (som != null) lines.push(`💵 К оплате: ${som} so'm`);
+    if (som != null) lines.push(`К оплате: ${som} so'm`);
     return lines.join('\n');
   },
   lookupNotFound: (code) => `🔍 ${code} — трек не найден.`,
@@ -184,9 +185,9 @@ export const ru: Strings = {
   ticketRegisterFirst:
     'Чтобы написать обращение, сначала зарегистрируйтесь — нажмите /start.',
   ticketReply: (category, text) =>
-    `💬 Ответ на ваше обращение (${category}):\n\n${text}\n\nЧтобы ответить: ✍️ Обращение`,
+    `💬 Ответ на ваше обращение (${category}):\n\n${text}\n\nЧтобы ответить: Обращение`,
   ticketClosedNotice: (category) =>
-    `✅ Ваше обращение (${category}) закрыто. Если проблема появится снова — ✍️ Обращение.`,
+    `✅ Ваше обращение (${category}) закрыто. Если проблема появится снова — Обращение.`,
 
   // --- §3.9 calculator (§4.5) ---
   calcStepTariff: '🧮 1/3 · Выберите тариф',
@@ -209,7 +210,7 @@ export const ru: Strings = {
   chinaAddrHeader:
     '🇨🇳 Адрес склада в Китае — отправьте это продавцу (поставщику):',
   chinaAddrFooter: (clientCode) =>
-    `❗️ Не забудьте попросить написать этот код на каждой коробке: ${clientCode}`,
+    `Не забудьте попросить написать этот код на каждой коробке: ${clientCode}`,
   chinaAddrMissing: (contactPhone) =>
     `Адрес пока не указан. Свяжитесь с администратором: ${contactPhone}`,
 
@@ -274,13 +275,13 @@ export const ru: Strings = {
     if (kg != null) {
       lines.push(
         actualKg != null
-          ? `⚖️ Расчётный вес: ${kg} кг (объёмный) · фактический ${actualKg} кг`
-          : `⚖️ Вес: ${kg} кг`,
+          ? `Расчётный вес: ${kg} кг (объёмный) · фактический ${actualKg} кг`
+          : `Вес: ${kg} кг`,
       );
     }
-    if (som != null) lines.push(`💵 К оплате: ${som} so'm`);
-    lines.push(`📍 Адрес: ${pickupAddress}`);
-    lines.push(`🕘 Часы работы: ${workingHours}`);
+    if (som != null) lines.push(`К оплате: ${som} so'm`);
+    lines.push(`Адрес: ${pickupAddress}`);
+    lines.push(`Часы работы: ${workingHours}`);
     return lines.join('\n');
   },
   notifDelivered: (code) =>

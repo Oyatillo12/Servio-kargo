@@ -58,6 +58,7 @@ export const uz: Strings = {
     cancel: '❌ Bekor qilish',
     recalc: '🧮 Qayta hisoblash',
     photo: '📷 Rasm',
+    openCabinet: '📱 Kabinetda ochish',
   },
   cancelled: 'Bekor qilindi.',
   refreshedNoChange: "O'zgarish yo'q",
@@ -69,7 +70,7 @@ export const uz: Strings = {
     "ℹ️ Bot qanday ishlaydi",
     '',
     "1️⃣ Xitoydagi sotuvchidan trek kodini oling.",
-    "2️⃣ ➕ Trek qo'shish tugmasini bosib, kodni yuboring — bir nechtasini birdaniga ham bo'ladi.",
+    "2️⃣ Trek qo'shish tugmasini bosib, kodni yuboring — bir nechtasini birdaniga ham bo'ladi.",
     "3️⃣ Yuk holati o'zgarganda bot sizga o'zi xabar beradi.",
     '',
     "🔍 Istalgan payt trek kodini shunchaki yozib yuborsangiz, holatini ko'rsataman.",
@@ -99,7 +100,7 @@ export const uz: Strings = {
   // --- §3.4 balance ---
   balanceDebt: (som) => `💰 Qarzingiz: ${som} so'm`,
   balanceAdvance: (som) => `💰 Avans: ${som} so'm`,
-  balanceZero: "💰 Qarzingiz yo'q. ✅",
+  balanceZero: "💰 Qarzingiz yo'q.",
   paymentsHeader: "Oxirgi to'lovlar:",
   noPayments: "To'lovlar tarixi hozircha bo'sh.",
   paymentLine: (date, som, method) => `${date} — ${som} so'm (${method})`,
@@ -120,8 +121,8 @@ export const uz: Strings = {
     if (usdRateSom) lines.push('', `Kurs: 1$ = ${usdRateSom} so'm`);
     if (address || hours || phone) {
       lines.push('');
-      if (address) lines.push(`📍 Manzil: ${address}`);
-      if (hours) lines.push(`🕘 Ish vaqti: ${hours}`);
+      if (address) lines.push(`Manzil: ${address}`);
+      if (hours) lines.push(`Ish vaqti: ${hours}`);
       if (phone) lines.push(`📞 Aloqa: ${phone}`);
     }
     if (infoText) lines.push('', infoText);
@@ -159,16 +160,16 @@ export const uz: Strings = {
     if (kg != null) {
       lines.push(
         actualKg != null
-          ? `⚖️ Hisob vazni: ${kg} kg (hajmiy) · haqiqiy ${actualKg} kg`
-          : `⚖️ Og'irligi: ${kg} kg`,
+          ? `Hisob vazni: ${kg} kg (hajmiy) · haqiqiy ${actualKg} kg`
+          : `Og'irligi: ${kg} kg`,
       );
     }
-    if (som != null) lines.push(`💵 To'lov: ${som} so'm`);
+    if (som != null) lines.push(`To'lov: ${som} so'm`);
     return lines.join('\n');
   },
   lookupNotFound: (code) => `🔍 ${code} — bunday trek topilmadi.`,
   lookupClaimHint:
-    "Bu trek sizga biriktirilmagan. O'zingizniki bo'lsa, ➕ Trek qo'shish orqali yuboring.",
+    "Bu trek sizga biriktirilmagan. O'zingizniki bo'lsa, «Trek qo'shish» orqali yuboring.",
 
   // --- §3.13 tickets (§4.6) ---
   ticketAskCategory: 'Muammo qaysi turga tegishli?',
@@ -185,9 +186,9 @@ export const uz: Strings = {
   ticketRegisterFirst:
     "Murojaat yozish uchun avval ro'yxatdan o'ting — /start bosing.",
   ticketReply: (category, text) =>
-    `💬 Murojaatingizga javob (${category}):\n\n${text}\n\nJavob yozish uchun: ✍️ Murojaat`,
+    `💬 Murojaatingizga javob (${category}):\n\n${text}\n\nJavob yozish uchun: Murojaat`,
   ticketClosedNotice: (category) =>
-    `✅ Murojaatingiz (${category}) yopildi. Yana muammo bo'lsa — ✍️ Murojaat.`,
+    `✅ Murojaatingiz (${category}) yopildi. Yana muammo bo'lsa — Murojaat.`,
 
   // --- §3.9 calculator (§4.5) ---
   calcStepTariff: '🧮 1/3 · Tarifni tanlang',
@@ -210,7 +211,7 @@ export const uz: Strings = {
   chinaAddrHeader:
     '🇨🇳 Xitoy ombori manzili — sotuvchiga (постовщик) shuni yuboring:',
   chinaAddrFooter: (clientCode) =>
-    `❗️ Har bir qutiga shu kodni yozdirishni unutmang: ${clientCode}`,
+    `Har bir qutiga shu kodni yozdirishni unutmang: ${clientCode}`,
   chinaAddrMissing: (contactPhone) =>
     `Manzil hali kiritilmagan. Administrator bilan bog'laning: ${contactPhone}`,
 
@@ -275,13 +276,13 @@ Omborda yoki peshtaxtada shu QR'ni ko'rsating — xodim skanerlaydi. QR o'qilmas
     if (kg != null) {
       lines.push(
         actualKg != null
-          ? `⚖️ Hisob vazni: ${kg} kg (hajmiy) · haqiqiy ${actualKg} kg`
-          : `⚖️ Og'irligi: ${kg} kg`,
+          ? `Hisob vazni: ${kg} kg (hajmiy) · haqiqiy ${actualKg} kg`
+          : `Og'irligi: ${kg} kg`,
       );
     }
-    if (som != null) lines.push(`💵 To'lov: ${som} so'm`);
-    lines.push(`📍 Manzil: ${pickupAddress}`);
-    lines.push(`🕘 Ish vaqti: ${workingHours}`);
+    if (som != null) lines.push(`To'lov: ${som} so'm`);
+    lines.push(`Manzil: ${pickupAddress}`);
+    lines.push(`Ish vaqti: ${workingHours}`);
     return lines.join('\n');
   },
   notifDelivered: (code) =>
