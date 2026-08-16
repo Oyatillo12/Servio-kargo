@@ -131,6 +131,11 @@ export type ImportUndoOutcome =
   | ({ ok: true } & ImportUndoResult)
   | { ok: false; reason: ImportUndoFailure };
 
+/** The transaction's own result: the outcome plus what it looked at. */
+type UndoTxOutcome =
+  | ({ ok: true; trackIds: string[] } & ImportUndoResult)
+  | { ok: false; reason: ImportUndoFailure };
+
 /** Postgres column and cast per restorable field — the undo writes real NULLs. */
 const FIELD_SQL: Record<ImportRunField, { column: string; cast: string }> = {
   currentStatus: { column: 'current_status', cast: 'track_status' },
@@ -199,7 +204,7 @@ export async function undoImportRun(args: {
 }): Promise<ImportUndoOutcome> {
   const db = getDb();
   const outcome = await db.transaction(
-    async (tx): Promise<ImportUndoOutcome> => {
+    async (tx): Promise<UndoTxOutcome> => {
       const [run] = await tx
         .select({
           id: importRuns.id,
@@ -356,7 +361,13 @@ export async function undoImportRun(args: {
         })
         .where(eq(importRuns.id, args.runId));
 
-      return { ok: true, reverted, skipped, notified: 0 };
+      return {
+        ok: true,
+        reverted,
+        skipped,
+        notified: 0,
+        trackIds: items.map((i) => i.trackId),
+      };
     },
   );
 
@@ -364,7 +375,8 @@ export async function undoImportRun(args: {
 
   // Counted after the commit, so it says what actually went out — the jobs
   // still held are dropped by the worker the moment the run reads as undone.
-  return { ...outcome, notified: await countDeliveredForRun(args) };
+  const { trackIds, ...result } = outcome;
+  return { ...result, notified: await countDeliveredForRun(args, trackIds) };
 }
 
 /**
@@ -374,21 +386,23 @@ export async function undoImportRun(args: {
  * these tracks since the run started". One deliberate query on a rare, manual
  * action — the alternative was a column on every message row.
  */
-async function countDeliveredForRun(args: {
-  tenantId: string;
-  runId: string;
-}): Promise<number> {
+async function countDeliveredForRun(
+  args: { tenantId: string; runId: string },
+  trackIds: string[],
+): Promise<number> {
+  if (trackIds.length === 0) return 0;
   const db = getDb();
   const [run] = await db
-    .select({ at: importRuns.createdAt, items: importRuns.items })
+    .select({ at: importRuns.createdAt })
     .from(importRuns)
-    .where(and(eq(importRuns.tenantId, args.tenantId), eq(importRuns.id, args.runId)))
+    .where(
+      and(eq(importRuns.tenantId, args.tenantId), eq(importRuns.id, args.runId)),
+    )
     .limit(1);
-  const items = (run?.items as ImportRunItem[] | null) ?? [];
-  if (!run || items.length === 0) return 0;
+  if (!run) return 0;
 
   let total = 0;
-  for (const chunk of chunked(items, BULK_CHUNK)) {
+  for (const chunk of chunked(trackIds, BULK_CHUNK)) {
     const [row] = await db
       .select({ n: sql<number>`count(*)::int` })
       .from(messageLog)
@@ -398,10 +412,7 @@ async function countDeliveredForRun(args: {
           eq(messageLog.kind, 'notify'),
           eq(messageLog.status, 'sent'),
           gte(messageLog.createdAt, run.at),
-          inArray(
-            messageLog.trackId,
-            chunk.map((i) => i.trackId),
-          ),
+          inArray(messageLog.trackId, chunk),
         ),
       );
     total += row?.n ?? 0;

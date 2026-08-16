@@ -122,7 +122,17 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
   // §7.18 (D-010): an import's deliveries are held a minute; if the import was
   // taken back inside it, nobody is told. Nothing is written to `message_log`
   // either — a message nobody sent is not a delivery outcome (§7.11's rule).
-  if (job.importRunId && !(await isImportRunLive(job.tenantId, job.importRunId))) {
+  //
+  // The status is re-checked before dropping, and that second condition is not
+  // belt-and-braces: an undo leaves rows it SKIPPED at the status the import
+  // gave them, and a queued job's dedupe key (§7.6) can be shared by a manual
+  // change made in the same minute. If the track still stands where this
+  // message says it does, the state is real and the customer should hear it.
+  if (
+    job.importRunId &&
+    track.currentStatus !== job.status &&
+    !(await isImportRunLive(job.tenantId, job.importRunId))
+  ) {
     logger.info({ job }, 'notify: import undone, dropping');
     return;
   }

@@ -1082,7 +1082,10 @@ working until the code is redeemed.
     all. Without the hold the queue drains in seconds and "the pending ones
     are stopped" would be a promise the architecture cannot keep. A held
     message the undo cancels writes nothing to `message_log` (7.11's rule,
-    same reason).
+    same reason). It is dropped only when the track no longer stands where the
+    message says it does — a row the undo SKIPPED keeps the status the import
+    gave it, and so does a manual change that shared the queued job's dedupe
+    key (7.6); in both the state is real and the customer hears it.
   - **`rejected`** keeps the rows the run could not use in full — no longer
     the preview's 200-row sample: each carries its line number, the original
     cells and a reason (`badCode` — dropped; `weight` / `price` — cell
