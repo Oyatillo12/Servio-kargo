@@ -135,6 +135,21 @@ export function parseImportPrice(raw: string): number | null {
  * A cell that means "nothing here": blank, or a bare zero an admin typed as a
  * placeholder. Used to decide whether an unparseable cell is worth reporting.
  */
+/**
+ * `0 → A`, `25 → Z`, `26 → AA` — how a spreadsheet names its columns. Shared by
+ * the mapping screen and the rejected-rows export (§7.18), so the admin reads
+ * the same letter on both.
+ */
+export function columnLetter(index: number): string {
+  let out = '';
+  let n = index;
+  do {
+    out = String.fromCharCode(65 + (n % 26)) + out;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return out;
+}
+
 export function isBlankCell(raw: string): boolean {
   const s = raw.trim().replace(SOFT_SPACE, '').replace(',', '.');
   return s === '' || s === '-' || s === '—' || /^0+(\.0+)?$/.test(s);

@@ -50,12 +50,15 @@ import {
   getTicketDeliveryContext,
   incrementBroadcastSent,
   isBroadcastLive,
+  isImportRunLive,
+  IMPORT_ITEMS_MAX_AGE_DAYS,
   insertMessageOutcome,
   listCustomerPayments,
   listCustomerTracks,
   listTenantDebtorIds,
   listTenants,
   listTrackPhotoPaths,
+  pruneImportRunItems,
   pruneStaleSessions,
   SESSION_MAX_AGE_DAYS,
   type MessageOutcome,
@@ -113,6 +116,14 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
   // Skip soft-deleted or missing tracks (SPEC §7.8: hidden from notifications).
   if (!track || track.deletedAt) {
     logger.warn({ trackId: job.trackId }, 'notify: track missing/deleted, dropping');
+    return;
+  }
+
+  // §7.18 (D-010): an import's deliveries are held a minute; if the import was
+  // taken back inside it, nobody is told. Nothing is written to `message_log`
+  // either — a message nobody sent is not a delivery outcome (§7.11's rule).
+  if (job.importRunId && !(await isImportRunLive(job.tenantId, job.importRunId))) {
+    logger.info({ job }, 'notify: import undone, dropping');
     return;
   }
 
@@ -466,6 +477,12 @@ async function handleSweepJob(): Promise<void> {
   const pruned = await pruneStaleSessions(SESSION_MAX_AGE_DAYS);
   if (pruned > 0) {
     logger.info({ pruned }, 'reminder sweep: pruned stale bot sessions');
+  }
+
+  // §7.18: undo evidence outlives its one-hour window by a week, then goes.
+  const runs = await pruneImportRunItems(IMPORT_ITEMS_MAX_AGE_DAYS);
+  if (runs > 0) {
+    logger.info({ runs }, 'reminder sweep: pruned import run items');
   }
 }
 

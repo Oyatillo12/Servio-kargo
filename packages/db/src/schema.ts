@@ -741,6 +741,72 @@ export const broadcasts = pgTable('broadcasts', {
 });
 
 /**
+ * One applied import (SPEC §7.18, tasks.md M — D-010).
+ *
+ * An import is the one act that writes thousands of rows from a file nobody
+ * re-read, so every apply leaves a row here, written INSIDE the import's own
+ * transaction: a rolled-back import must not leave a run claiming it happened.
+ *
+ * `items` is the undo's evidence — per touched track, what the run wrote and
+ * what stood there before. It cannot be derived from `track_events`: the
+ * fill-if-empty writes (owner, kg, price, marka, description) append no event
+ * at all, and `batch_id` / `deleted_at` are overwrites. Per-track provenance
+ * still lives in the audit log, as `meta.runId` on the events this run appends.
+ * The hourly sweep clears `items` after 7 days — the window is one hour, so
+ * older evidence only grows the table; the run row itself stays as history.
+ */
+export const importRuns = pgTable(
+  'import_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    /** Employee who applied it; the row outlives their account. */
+    createdBy: uuid('created_by').references(() => adminUsers.id, {
+      onDelete: 'set null',
+    }),
+    /** Status every row of the file was moved to (§7.2). */
+    status: trackStatus('status').notNull(),
+    batchId: uuid('batch_id').references(() => batches.id, {
+      onDelete: 'set null',
+    }),
+    /** The .xlsx file name, or empty for pasted text — the run list shows it. */
+    sourceName: text('source_name'),
+    createdCount: integer('created_count').notNull().default(0),
+    updatedCount: integer('updated_count').notNull().default(0),
+    assignedCount: integer('assigned_count').notNull().default(0),
+    enrichedCount: integer('enriched_count').notNull().default(0),
+    /** Notifications this run put on the queue (§7.18: reported by the undo). */
+    queuedCount: integer('queued_count').notNull().default(0),
+    /** `ImportRunItem[]` (@kargotrack/shared) — null once the sweep prunes it. */
+    items: jsonb('items'),
+    /** `ImportRejectedRow[]` — the M3 export, capped at 1 000 rows. */
+    rejected: jsonb('rejected'),
+    rejectedCount: integer('rejected_count').notNull().default(0),
+    undoneAt: timestamp('undone_at', { withTimezone: true }),
+    undoneBy: uuid('undone_by').references(() => adminUsers.id, {
+      onDelete: 'set null',
+    }),
+    /** Rows the undo put back, and rows it left alone (§7.18 reports both). */
+    undoneReverted: integer('undone_reverted'),
+    undoneSkipped: integer('undone_skipped'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // The §5.4 "Oxirgi importlar" card: this tenant's runs, newest first.
+    tenantIdx: index('import_runs_tenant_idx').on(
+      t.tenantId,
+      t.createdAt.desc().nullsFirst(),
+    ),
+  }),
+);
+
+export type ImportRun = typeof importRuns.$inferSelect;
+
+/**
  * Demo requests from the public landing page. Platform-level (a lead is a
  * cargo company that is not a tenant yet), so deliberately no tenant_id.
  */

@@ -65,6 +65,15 @@ export const CAPABILITIES = [
   'batches.manage',
   /** Run an Excel/text import. */
   'import.run',
+  /**
+   * Take back an import inside its window (SPEC §7.18, D-010). Deliberately
+   * NOT gated on `tracks.delete` (owner-only) even though it soft-deletes: the
+   * only rows it can remove are ones this same run created and nobody has
+   * touched since, so it undoes an act rather than deleting someone's data.
+   * Named separately for the `payments.cancel` reason — tightening it later
+   * should be one line in the matrix below.
+   */
+  'import.undo',
   /** Nudge a debtor (single or all) — routine debt-chasing. */
   'reminders.send',
   /** Message every customer at once. A different weight class from a reminder. */
@@ -115,6 +124,7 @@ export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
     'payments.cancel',
     'batches.manage',
     'import.run',
+    'import.undo',
     'reminders.send',
     'export.data',
     'tickets.handle',

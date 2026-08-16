@@ -149,14 +149,29 @@ export function enqueueNotification(job: NotifyJob): Promise<string | null> {
  * writes through its own connection, so jobs sent mid-transaction would survive
  * a rollback and notify about rows that were never written.
  */
-export async function enqueueNotifications(jobs: NotifyJob[]): Promise<void> {
+export async function enqueueNotifications(
+  jobs: NotifyJob[],
+  opts?: {
+    /**
+     * Hold the whole batch this long before the first message leaves (SPEC
+     * §7.18): an import's deliveries wait a minute so its undo can still reach
+     * them. One timestamp for the batch, as with a broadcast fan-out — a hold
+     * that meant something different per row would not be a window.
+     */
+    holdSeconds?: number;
+  },
+): Promise<void> {
   if (jobs.length === 0) return;
   const boss = await getBoss();
+  const startAfter = opts?.holdSeconds
+    ? new Date(Date.now() + opts.holdSeconds * 1000)
+    : undefined;
   for (const chunk of chunked(jobs, BULK_CHUNK)) {
     await boss.insert(
       chunk.map((data) => ({
         name: NOTIFY_QUEUE,
         data,
+        ...(startAfter ? { startAfter } : {}),
         singletonKey: notifyDedupeKey(data.trackId, data.status),
         retryLimit: RETRY_LIMIT,
         retryBackoff: RETRY_BACKOFF,

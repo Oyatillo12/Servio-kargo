@@ -6,7 +6,9 @@ import { Check, UploadCloud, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import {
+  IMPORT_UNDO_WINDOW_MINUTES,
   TRACK_STATUSES,
+  columnLetter,
   type ColumnMapping,
   type ImportField,
   type Lang,
@@ -39,23 +41,13 @@ import {
   type PreviewResult,
   type SourceResult,
 } from '../actions';
+import { UndoImportButton } from './undo-import-button';
 
 const DEFAULT_STATUS: TrackStatus = 'CHINA_WAREHOUSE';
 const NO_BATCH = '__none__';
 const NO_COLUMN = '__none__';
 
 type Step = 1 | 2 | 3 | 4;
-
-/** `0 → A`, `25 → Z`, `26 → AA` — how a spreadsheet names its columns. */
-function columnLetter(index: number): string {
-  let out = '';
-  let n = index;
-  do {
-    out = String.fromCharCode(65 + (n % 26)) + out;
-    n = Math.floor(n / 26) - 1;
-  } while (n >= 0);
-  return out;
-}
 
 /** 1 → 2 → 3 → 4 progress header (design 06–08). */
 function Stepper({ step, labels }: { step: Step; labels: string[] }) {
@@ -361,6 +353,26 @@ export function ImportWizard({
             <Button asChild className="w-full">
               <Link href="/tracks">{t('goToTracks')}</Link>
             </Button>
+            {/* §7.18: the two things this run left behind — the undo while its
+                window is open, and the rows the file could not deliver. */}
+            {applied.runId ? (
+              <UndoImportButton
+                runId={applied.runId}
+                minutesLeft={IMPORT_UNDO_WINDOW_MINUTES}
+                summary={t('runCounts', {
+                  created: applied.created ?? 0,
+                  updated: applied.updated ?? 0,
+                })}
+                variant="button"
+              />
+            ) : null}
+            {applied.runId && applied.rejected ? (
+              <Button asChild variant="secondary" className="w-full">
+                <a href={`/api/import/runs/${applied.runId}/rejected`}>
+                  {t('rejectedDownload', { count: applied.rejected })}
+                </a>
+              </Button>
+            ) : null}
             <Button variant="secondary" className="w-full" onClick={reset}>
               {t('importAgain')}
             </Button>

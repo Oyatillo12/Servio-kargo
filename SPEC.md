@@ -1070,7 +1070,9 @@ working until the code is redeemed.
     `{N} qator qaytarildi · {M} qator o'zgargani uchun tegilmadi`.
   - **Reverting is silent and audited.** A revert appends a `track_events` row
     (rule 7 — history is never rewritten) carrying the restored status and
-    `meta = {source: 'import-undo', runId}`, and sends the customer NOTHING:
+    `meta = {source: 'import-undo', runId}`; a created row that is soft-deleted
+    gets none, exactly as every other soft-delete here (5.3). It sends the
+    customer NOTHING:
     the 7.3 reasoning applies unchanged, a correction message is a second
     message about a parcel whose owner may never have read the first.
     Notifications already delivered are reported as a plain count.

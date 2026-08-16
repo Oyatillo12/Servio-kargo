@@ -15,9 +15,16 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import { enqueueNotifications } from '@kargotrack/db/queue';
-import { tenants, trackEvents, tracks } from '@kargotrack/db/schema';
+import {
+  importRuns,
+  tenants,
+  trackEvents,
+  tracks,
+} from '@kargotrack/db/schema';
 import {
   BULK_CHUNK,
+  IMPORT_NOTIFY_HOLD_SECONDS,
+  MAX_REJECTED_ROWS,
   chunked,
   planAssignCustomer,
   planImportPricing,
@@ -26,6 +33,10 @@ import {
   type AssignEventMeta,
   type ImportCode,
   type ImportPricingContext,
+  type ImportRejectedRow,
+  type ImportRunField,
+  type ImportRunItem,
+  type ImportRunValues,
   type TrackStatus,
 } from '@kargotrack/shared';
 
@@ -129,6 +140,8 @@ export interface ImportRow extends ImportCode {
 }
 
 export interface ImportResult {
+  /** The `import_runs` row this apply left behind (§7.18). */
+  runId: string;
   created: number;
   updated: number;
   queued: number;
@@ -136,6 +149,14 @@ export interface ImportResult {
   assigned: number;
   /** Tracks that gained a weight and/or a price. */
   enriched: number;
+}
+
+/** What the run row records besides the writes themselves (§7.18). */
+export interface ImportRunSource {
+  /** The .xlsx name, or null for pasted text. */
+  sourceName: string | null;
+  /** Rows the file could not deliver as-is — the M3 export (§7.18). */
+  rejected: ImportRejectedRow[];
 }
 
 /** Enrichment write for one existing row; `null` fields are left untouched. */
@@ -172,9 +193,13 @@ export async function applyImport(
   codes: ImportRow[],
   createdBy: string,
   batchId: string | null = null,
+  source: ImportRunSource = { sourceName: null, rejected: [] },
 ): Promise<ImportResult> {
   const db = getDb();
   const result: ImportResult = {
+    // Filled by the run row created inside the transaction below; an import
+    // with nothing to write never gets one (the action refuses it first).
+    runId: '',
     created: 0,
     updated: 0,
     queued: 0,
@@ -182,6 +207,9 @@ export async function applyImport(
     enriched: 0,
   };
   if (codes.length === 0) return result;
+
+  // §7.18: what this run wrote and what stood there before, per touched track.
+  const items: ImportRunItem[] = [];
 
   // Only load tariff/currency when a row actually carries kg or a price.
   const needsPricing = codes.some(
@@ -198,6 +226,24 @@ export async function applyImport(
 
   // All writes in one transaction — an import either fully applies or not at all.
   await db.transaction(async (tx) => {
+    // §7.18: the run row is written INSIDE the transaction, before the events
+    // that reference it. A rolled-back import must not leave a run claiming it
+    // happened, and every event this run appends carries its id.
+    const [run] = await tx
+      .insert(importRuns)
+      .values({
+        tenantId,
+        createdBy,
+        status,
+        batchId,
+        sourceName: source.sourceName,
+        rejected: source.rejected.slice(0, MAX_REJECTED_ROWS),
+        rejectedCount: source.rejected.length,
+      })
+      .returning({ id: importRuns.id });
+    const runId = run!.id;
+    result.runId = runId;
+
     // Preload existing rows for this batch in one query per chunk.
     const existingRows: Array<{
       id: string;
@@ -205,11 +251,16 @@ export async function applyImport(
       currentStatus: TrackStatus;
       customerId: string | null;
       deletedAt: Date | null;
+      batchId: string | null;
       weightGrams: number | null;
       priceTiyin: number | null;
+      priceUsdCents: number | null;
+      usdRateUsed: number | null;
       tariffId: string | null;
+      priceManual: boolean;
       marka: string | null;
       description: string | null;
+      volumetricGrams: number | null;
       lengthCm: number | null;
       widthCm: number | null;
       heightCm: number | null;
@@ -225,11 +276,18 @@ export async function applyImport(
           currentStatus: tracks.currentStatus,
           customerId: tracks.customerId,
           deletedAt: tracks.deletedAt,
+          // §7.18: the undo restores what stood here, so the run has to read
+          // it — `batch_id` and `deleted_at` are overwrites, not fills.
+          batchId: tracks.batchId,
           weightGrams: tracks.weightGrams,
           priceTiyin: tracks.priceTiyin,
+          priceUsdCents: tracks.priceUsdCents,
+          usdRateUsed: tracks.usdRateUsed,
           tariffId: tracks.tariffId,
+          priceManual: tracks.priceManual,
           marka: tracks.marka,
           description: tracks.description,
+          volumetricGrams: tracks.volumetricGrams,
           // §7.16: a parcel measured at the warehouse keeps its volumetric
           // price when a weight arrives by file afterwards.
           lengthCm: tracks.lengthCm,
@@ -254,6 +312,9 @@ export async function applyImport(
     // (not created, not updated this run) instead of aborting the whole import.
     const newCodes = codes.filter((c) => !existingByCode.has(c.normalized));
     for (const chunk of chunked(newCodes, BULK_CHUNK)) {
+      // Each row is planned once and used twice — for the INSERT and for the
+      // run's undo evidence — so the two can never describe different writes.
+      const planned = new Map<string, ImportRunValues>();
       const inserted = await tx
         .insert(tracks)
         .values(
@@ -265,7 +326,7 @@ export async function applyImport(
               },
               pricing,
             );
-            return {
+            const row = {
               tenantId,
               codeNormalized: code.normalized,
               codeOriginal: code.original,
@@ -281,6 +342,12 @@ export async function applyImport(
               marka: code.marka ?? null,
               description: code.description ?? null,
             };
+            // Everything the created row carries, `deleted_at` included: a
+            // parcel claimed, weighed or deleted after the import is one the
+            // undo must leave alone (§7.18).
+            const { tenantId: _t, codeNormalized: _c, codeOriginal: _o, ...written } = row;
+            planned.set(code.normalized, { ...written, deletedAt: null });
+            return row;
           }),
         )
         .onConflictDoNothing({
@@ -301,6 +368,9 @@ export async function applyImport(
               // in `meta` instead of becoming separate audit rows.
               meta: {
                 source: 'import',
+                // §7.18: per-track provenance lives in the audit log, so no
+                // column on `tracks` had to be added to trace a run.
+                runId,
                 ...(row?.customerId ? { customerId: row.customerId } : {}),
                 ...(row?.weightGrams != null
                   ? { weightGrams: row.weightGrams }
@@ -319,6 +389,12 @@ export async function applyImport(
           if (row?.weightGrams != null || row?.priceTiyin != null) {
             result.enriched++;
           }
+          items.push({
+            trackId: t.id,
+            action: 'created',
+            wrote: planned.get(t.codeNormalized) ?? {},
+            prior: {},
+          });
         }
       }
       result.created += inserted.length;
@@ -351,6 +427,11 @@ export async function applyImport(
         customerId: existing.customerId,
         wasDeleted: existing.deletedAt != null,
       });
+
+      // §7.18 undo evidence: filled in beside every write below, so a column
+      // can never be written without recording what stood there.
+      const wrote: ImportRunValues = {};
+      const prior: ImportRunValues = {};
 
       // --- Fill-empty enrichment (§5.4 mapping) ---------------------------
       // Never reassign from a file: an owner already on the track wins, so the
@@ -427,6 +508,27 @@ export async function applyImport(
           description: fillDescription,
           volumetricGrams: fillVolumetric,
         });
+        // A null here means "leave alone" (the COALESCE below), so only the
+        // non-null ones are writes the undo can take back.
+        const fills: Array<
+          [ImportRunField, ImportRunValues[ImportRunField], ImportRunValues[ImportRunField]]
+        > = [
+          ['customerId', fillCustomerId, existing.customerId],
+          ['weightGrams', fillWeight, existing.weightGrams],
+          ['priceTiyin', fillPrice, existing.priceTiyin],
+          ['priceUsdCents', fillUsdCents, existing.priceUsdCents],
+          ['usdRateUsed', fillRate, existing.usdRateUsed],
+          ['tariffId', fillTariffId, existing.tariffId],
+          ['priceManual', fillManual, existing.priceManual],
+          ['marka', fillMarka, existing.marka],
+          ['description', fillDescription, existing.description],
+          ['volumetricGrams', fillVolumetric, existing.volumetricGrams],
+        ];
+        for (const [key, value, before] of fills) {
+          if (value == null) continue;
+          wrote[key] = value;
+          prior[key] = before;
+        }
         if (fillCustomerId != null) {
           result.assigned++;
           // §7.3: an ownership change is its own audit row, carrying the
@@ -445,6 +547,26 @@ export async function applyImport(
           });
         }
         if (fillWeight != null || fillPrice != null) result.enriched++;
+      }
+
+      if (plan.willWrite) {
+        if (existing.currentStatus !== status) {
+          wrote.currentStatus = status;
+          prior.currentStatus = existing.currentStatus;
+        }
+        if (existing.deletedAt != null) {
+          // §7.2 revives a soft-deleted row on import — a write like any other,
+          // and one the undo puts back (§7.18).
+          wrote.deletedAt = null;
+          prior.deletedAt = existing.deletedAt.toISOString();
+        }
+      }
+      if (batchId != null && existing.batchId !== batchId) {
+        wrote.batchId = batchId;
+        prior.batchId = existing.batchId;
+      }
+      if (Object.keys(wrote).length > 0) {
+        items.push({ trackId: existing.id, action: 'updated', wrote, prior });
       }
 
       // §7.2: a selected batch attaches to ALL rows, even ones whose status is
@@ -513,7 +635,7 @@ export async function applyImport(
         chunk.map((trackId) => ({
           trackId,
           status,
-          meta: { source: 'import' },
+          meta: { source: 'import', runId },
           createdBy,
         })),
       );
@@ -523,20 +645,39 @@ export async function applyImport(
         chunk.map((e) => ({
           trackId: e.trackId,
           status: e.status,
-          meta: { ...e.meta, source: 'import' },
+          meta: { ...e.meta, source: 'import', runId },
           createdBy,
         })),
       );
     }
+
+    // Close the run with what it actually did (§7.18). `queued_count` is known
+    // here even though the jobs are sent after the commit — the undo reports
+    // how many notifications this import set in motion, not how many landed.
+    await tx
+      .update(importRuns)
+      .set({
+        createdCount: result.created,
+        updatedCount: result.updated,
+        assignedCount: result.assigned,
+        enrichedCount: result.enriched,
+        queuedCount: toNotify.length,
+        items,
+      })
+      .where(eq(importRuns.id, runId));
   });
 
+  // §7.18: held for a minute, and carrying the run so the worker can drop a
+  // delivery whose import was taken back inside that minute.
   await enqueueNotifications(
     toNotify.map((n) => ({
       tenantId,
       trackId: n.trackId,
       customerId: n.customerId,
       status,
+      importRunId: result.runId,
     })),
+    { holdSeconds: IMPORT_NOTIFY_HOLD_SECONDS },
   );
   result.queued = toNotify.length;
 

@@ -17,6 +17,13 @@ export interface NotifyJob {
   trackId: string;
   customerId: string;
   status: TrackStatus;
+  /**
+   * Set only by an import (SPEC §7.18): the `import_runs` row this delivery
+   * belongs to. The worker re-reads it before sending, so an import taken back
+   * inside its hold minute tells nobody. Absent on every other path — and on
+   * jobs enqueued by an older deploy, which therefore keep sending as before.
+   */
+  importRunId?: string;
 }
 
 /**

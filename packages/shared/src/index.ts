@@ -192,6 +192,7 @@ export {
   isBlankCell,
   clientCodeKey,
   customerNameKey,
+  columnLetter,
   customerRefKeys,
   detectImportLayout,
   classifyMappedRows,
@@ -207,6 +208,25 @@ export {
   type ImportPriceFields,
   type ImportPricingContext,
 } from './services/importMapping';
+// Import runs + undo (SPEC §7.18, D-010)
+export {
+  IMPORT_NOTIFY_HOLD_SECONDS,
+  IMPORT_REJECT_REASONS,
+  IMPORT_RUN_FIELDS,
+  IMPORT_UNDO_WINDOW_MINUTES,
+  MAX_REJECTED_ROWS,
+  importUndoRemainingMs,
+  importUndoState,
+  planImportUndoRow,
+  type ImportRejectReason,
+  type ImportRejectedRow,
+  type ImportRunField,
+  type ImportRunItem,
+  type ImportRunValues,
+  type ImportUndoResult,
+  type ImportUndoRowPlan,
+  type ImportUndoState,
+} from './services/importRun';
 export {
   NOTIFY_QUEUE,
   notifyDedupeKey,
@@ -304,6 +324,7 @@ export {
   buildTracksSheet,
   buildCustomersSheet,
   buildPaymentsSheet,
+  buildRejectedSheet,
   exportFileName,
   EXPORT_FILE_BASE,
   truncationNotice,

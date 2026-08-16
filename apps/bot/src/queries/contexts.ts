@@ -3,13 +3,14 @@
  * trip, plus the broadcast delivery counter the same workers bump.
  */
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, lt, sql } from 'drizzle-orm';
 
 import { getDb } from '@kargotrack/db';
 import {
   batches,
   broadcasts,
   customers,
+  importRuns,
   tenants,
   tracks,
   type Batch,
@@ -133,3 +134,48 @@ export async function isBroadcastLive(
     .limit(1);
   return row?.status === 'queued';
 }
+
+/**
+ * Was the import behind this notification taken back (SPEC §7.18, D-010)?
+ *
+ * The same shape as {@link isBroadcastLive}, and for the same reason: import
+ * deliveries are held a minute, and an undo inside that minute must reach them
+ * before Telegram does. A missing row reads as "do not send" — a job whose run
+ * cannot be found is not one to guess about.
+ */
+export async function isImportRunLive(
+  tenantId: string,
+  runId: string,
+): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ undoneAt: importRuns.undoneAt })
+    .from(importRuns)
+    .where(and(eq(importRuns.tenantId, tenantId), eq(importRuns.id, runId)))
+    .limit(1);
+  return row != null && row.undoneAt == null;
+}
+
+/**
+ * Drop undo evidence older than `maxAgeDays` (SPEC §7.18). Called from the
+ * hourly sweep: the window is one hour, so a week-old `items` blob is dead
+ * weight — the run row itself (who imported what, and when) stays.
+ */
+export async function pruneImportRunItems(maxAgeDays: number): Promise<number> {
+  const rows = await getDb()
+    .update(importRuns)
+    .set({ items: null })
+    .where(
+      and(
+        isNotNull(importRuns.items),
+        lt(
+          importRuns.createdAt,
+          sql`now() - make_interval(days => ${maxAgeDays})`,
+        ),
+      ),
+    )
+    .returning({ id: importRuns.id });
+  return rows.length;
+}
+
+/** How long an import run keeps its undo evidence (SPEC §7.18). */
+export const IMPORT_ITEMS_MAX_AGE_DAYS = 7;

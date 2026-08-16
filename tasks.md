@@ -346,13 +346,13 @@ Qaror qabul qilindi (D-010): undo **to'liq** qaytaradi, xabarlar jim
 ogohlantirishli qatorlar sabab ustuni bilan. Yangi kutubxona YO'Q — `xlsx`
 allaqachon bor (`apps/web/lib/xlsx.ts`, eksport yo'li tayyor).
 
-- [ ] **M1 · `import_runs`** — jadval (migratsiya 0022, additive): tenant_id,
+- [x] **M1 · `import_runs`** ✅ (2026-08-16) — jadval (migratsiya 0022, additive): tenant_id,
       created_by, status, batch_id, source_name, sanoqlar, `items` jsonb
       (har trek uchun: nima YOZILDI / o'rnida nima BOR EDI), `rejected` jsonb,
       `undone_at/by`. Run yozuvi importning O'ZI bilan bitta tranzaksiyada.
       Per-trek iz — `track_events.meta.runId` (yangi ustunsiz, `{source:
       'batch', batchId}` naqshi). `applyImport` runId qaytaradi.
-- [ ] **M2 · Undo** — 60 daqiqa ichida: yaratilganlar soft-delete, status
+- [x] **M2 · Undo** ✅ (2026-08-16) — 60 daqiqa ichida: yaratilganlar soft-delete, status
       ortga (yangi teskari event, `meta.source='import-undo'`), to'ldirilgan
       maydonlar bo'shaydi, biriktirilgan mijoz uziladi, reys avvalgiga,
       tiriltirilgan trek qayta o'chadi. Har qator uchun HOZIRGI qiymat run
@@ -363,11 +363,23 @@ allaqachon bor (`apps/web/lib/xlsx.ts`, eksport yo'li tayyor).
       xabardan oldin run tirikligini tekshiradi (K naqshi). Yangi
       `import.undo` capability. UI: natija ekranida va `Oxirgi importlar`
       kartasida (SPEC 5.4).
-- [ ] **M3 · Rad etilgan qatorlar eksporti** — `rejected` jsonb apply
+- [x] **M3 · Rad etilgan qatorlar eksporti** ✅ (2026-08-16) — `rejected` jsonb apply
       paytida to'liq saqlanadi (namunaning 200 tasi emas, ≤1000 qator), har
       qatorda asl ustunlar + `Sabab` (badCode / weight / price /
       customerMissing / customerAmbiguous). `⬇️ Muammoli qatorlar` → xlsx
-      (mavjud `writeXlsx` + `xlsxResponse` yo'li).
+      (mavjud `writeXlsx` + `xlsxResponse` yo'li,
+      `/api/import/runs/[id]/rejected`, ikkala tilda sarlavhalar).
+      **Halol chegara:** DB-tranzaksiyalar (run yozuvi, undo) va UI testsiz —
+      repoda DB-backed va React test infra yo'q (G4/H4/K3 bilan bir xil
+      ongli chegara); sof qoidalar testlangan (`planImportUndoRow`,
+      `importUndoState` — 15 ta test). Undo'ning xom SQL shakli
+      (`UPDATE … FROM (VALUES …)`, enum/timestamptz/uuid cast'lari va
+      haqiqiy NULL tiklash) toza Postgres 16 da psql bilan alohida
+      tekshirildi. Qo'lda tekshirish deploy'dan keyin: xato fayl import →
+      natija ekranida bekor qilish (yaratilganlar yo'qoladi, statuslar
+      qaytadi) → o'sha treklardan bittasini oldin tortib/topshirib ko'rish
+      (o'sha qator tegilmasligi va hisobotda ko'rinishi), 60 daqiqadan
+      keyin tugma yo'qolishi, muammoli qatorlar xlsx'ini ochish.
 
 ### J · SaaS boshqaruv (pul olishdan oldin — F–M ning oxiri)
 

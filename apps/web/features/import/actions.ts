@@ -14,6 +14,8 @@ import {
   detectImportLayout,
   parseImportText,
   type ColumnMapping,
+  type ImportRejectReason,
+  type ImportRejectedRow,
   type TrackStatus,
 } from '@kargotrack/shared';
 
@@ -22,6 +24,7 @@ import {
   applyImport,
   getImportTargets,
   resolveCustomerRefs,
+  undoImportRun,
   type ImportRow,
 } from '@/lib/queries';
 import { readXlsxGrid } from '@/lib/xlsx';
@@ -51,7 +54,8 @@ async function readSource(
   formData: FormData,
   t: Awaited<ReturnType<typeof getTranslations>>,
 ): Promise<
-  { grid: Grid; sheetName: string; truncated: boolean } | { error: string }
+  | { grid: Grid; sheetName: string; sourceName: string; truncated: boolean }
+  | { error: string }
 > {
   const file = formData.get('file');
   const text = (formData.get('text') as string | null) ?? '';
@@ -65,14 +69,21 @@ async function readSource(
       const buffer = Buffer.from(await file.arrayBuffer());
       const { rows, sheetName, truncated } = readXlsxGrid(buffer);
       if (rows.length === 0) return { error: t('emptyFile') };
-      return { grid: rows, sheetName, truncated };
+      // §7.18: the run list names the file, so a run can be recognized a week
+      // later without opening it.
+      return { grid: rows, sheetName, sourceName: file.name, truncated };
     } catch {
       return { error: t('unreadableFile') };
     }
   }
 
   if (text.trim()) {
-    return { grid: gridFromText(text), sheetName: '', truncated: false };
+    return {
+      grid: gridFromText(text),
+      sheetName: '',
+      sourceName: '',
+      truncated: false,
+    };
   }
   return { error: t('noInput') };
 }
@@ -273,6 +284,12 @@ interface ImportPlan {
   rows: ImportRow[];
   counts: NonNullable<PreviewResult['counts']>;
   samples: NonNullable<PreviewResult['samples']>;
+  /**
+   * Every problem row, whole (§7.18/M3) — not the 200-row display sample. The
+   * apply stores these on the run so the office can be handed back a file to
+   * fix, which is the only form in which a rejected row is worth anything.
+   */
+  rejected: ImportRejectedRow[];
 }
 
 /**
@@ -320,6 +337,21 @@ async function buildPlan(
       .map((w) => ({ line: w.line, text: w.value })),
   };
 
+  // §7.18: a problem row is kept with the cells it arrived in — `line` is
+  // 1-based as the spreadsheet shows it, so the source row is `grid[line - 1]`.
+  const rejected: ImportRejectedRow[] = [];
+  const reject = (line: number, reason: ImportRejectReason, value: string) => {
+    rejected.push({ line, reason, value, cells: [...(grid[line - 1] ?? [])] });
+  };
+  for (const m of parsed.malformed) reject(m.line, 'badCode', m.text);
+  for (const w of parsed.warnings) {
+    // Only kg and price cells warn today; the narrowing keeps the reason list
+    // honest if another mapped column ever starts to.
+    if (w.field === 'weight' || w.field === 'price') {
+      reject(w.line, w.field, w.value);
+    }
+  }
+
   const rows: ImportRow[] = [];
   for (const row of parsed.rows) {
     // The counts describe what will CHANGE, not what the file contains: an
@@ -333,8 +365,14 @@ async function buildPlan(
         customerId = match.id;
         if (!target?.hasCustomer) counts.assign++;
       } else {
-        if (match?.status === 'ambiguous') counts.ambiguous++;
+        const ambiguous = match?.status === 'ambiguous';
+        if (ambiguous) counts.ambiguous++;
         else counts.missing++;
+        reject(
+          row.line,
+          ambiguous ? 'customerAmbiguous' : 'customerMissing',
+          row.customerRef.raw,
+        );
         if (samples.unresolved.length < SAMPLE_LIMIT) {
           samples.unresolved.push({
             line: row.line,
@@ -370,7 +408,8 @@ async function buildPlan(
     });
   }
 
-  return { rows, counts, samples };
+  rejected.sort((a, b) => a.line - b.line);
+  return { rows, counts, samples, rejected };
 }
 
 /** Step 2→3: classify + resolve, write nothing. */
@@ -414,11 +453,15 @@ export async function previewImportAction(
 export interface ApplyResult {
   error?: string;
   ok?: boolean;
+  /** The run this apply left behind — what the undo and the export address. */
+  runId?: string;
   created?: number;
   updated?: number;
   queued?: number;
   assigned?: number;
   enriched?: number;
+  /** Problem rows the run stored for the export (§7.18). */
+  rejected?: number;
 }
 
 /** Step 4: upsert + fill + append events + enqueue notifications (§7.2). */
@@ -464,9 +507,70 @@ export async function applyImportAction(
     plan.rows,
     admin.id,
     batchId.data,
+    { sourceName: source.sourceName || null, rejected: plan.rejected },
   );
   revalidatePath('/tracks');
   revalidatePath('/customers');
+  // The run list on this page is what carries the undo once the result screen
+  // is gone (§5.4).
+  revalidatePath('/import');
 
-  return { ok: true, ...result };
+  return { ok: true, ...result, rejected: plan.rejected.length };
+}
+
+// --- Undo (SPEC §7.18, D-010) ------------------------------------------------
+
+export interface UndoResult {
+  error?: string;
+  ok?: boolean;
+  /** Rows put back. */
+  reverted?: number;
+  /** Rows left alone because something changed since the import. */
+  skipped?: number;
+  /** Notifications this run had already delivered — nothing recalls those. */
+  notified?: number;
+}
+
+/**
+ * Take back an import inside its window (§7.18).
+ *
+ * `import.undo` rather than `import.run`: the two are the same job today, but
+ * the act of reverting thousands of rows deserves its own name in the matrix
+ * (the `payments.cancel` precedent). Every refusal comes back as finished text
+ * — the client hands it straight to a toast.
+ */
+export async function undoImportAction(runId: string): Promise<UndoResult> {
+  const auth = await authorize('import.undo');
+  if (!auth.ok) return { error: auth.error };
+  const t = await getTranslations('import');
+
+  if (!z.string().uuid().safeParse(runId).success) {
+    return { error: (await getTranslations('common'))('errorGeneric') };
+  }
+
+  const res = await undoImportRun({
+    tenantId: auth.ctx.tenant.id,
+    runId,
+    undoneBy: auth.ctx.admin.id,
+  });
+  if (!res.ok) {
+    return {
+      error:
+        res.reason === 'alreadyUndone'
+          ? t('undoAlready')
+          : res.reason === 'notFound'
+            ? t('undoNotFound')
+            : t('undoExpired'),
+    };
+  }
+
+  revalidatePath('/tracks');
+  revalidatePath('/customers');
+  revalidatePath('/import');
+  return {
+    ok: true,
+    reverted: res.reverted,
+    skipped: res.skipped,
+    notified: res.notified,
+  };
 }

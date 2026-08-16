@@ -608,7 +608,20 @@
     "rowWarnings": "O'qilmagan kg/narx",
     "unresolvedHint": "Bu treklar mijozsiz import qilinadi — keyin qo'lda biriktirasiz.",
     "resultAssigned": "{count, plural, other {# ta trek mijozga biriktirildi}}",
-    "resultEnriched": "{count, plural, other {# ta trekka vazn/narx kiritildi}}"
+    "resultEnriched": "{count, plural, other {# ta trekka vazn/narx kiritildi}}",
+    "runsTitle": "Oxirgi importlar",
+    "runCounts": "Yaratildi {created} · yangilandi {updated}",
+    "runUndone": "Bekor qilindi: {reverted} qaytarildi · {skipped} tegilmadi",
+    "undoWithin": "Importni bekor qilish ({minutes} daq)",
+    "undoTitle": "Importni bekor qilishmi?",
+    "undoBody": "Shu import yozgan hamma narsa qaytariladi ({summary}). Importdan keyin o'zgargan treklarga tegilmaydi. Yuborilgan xabarlar qaytarilmaydi.",
+    "undoConfirm": "Ha, bekor qilinsin",
+    "undoDone": "{reverted} qator qaytarildi · {skipped} qator o'zgargani uchun tegilmadi",
+    "undoNotified": "{count, plural, other {# mijozga xabar ketib bo'lgan edi}}",
+    "undoExpired": "Bekor qilish muddati (60 daqiqa) tugagan.",
+    "undoAlready": "Bu import allaqachon bekor qilingan.",
+    "undoNotFound": "Import topilmadi.",
+    "rejectedDownload": "Muammoli qatorlar ({count})"
   },
   "settings": {
     "pageTitle": "Sozlamalar",

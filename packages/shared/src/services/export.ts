@@ -26,6 +26,8 @@ import type { Lang } from '../i18n';
 import { t } from '../i18n';
 import { STATUS_META, type TrackStatus } from '../status';
 import { tashkentDateKey } from './dashboard';
+import { columnLetter } from './importMapping';
+import type { ImportRejectReason, ImportRejectedRow } from './importRun';
 
 /** A single spreadsheet cell. `null` renders as an empty cell. */
 export type ExportCell = string | number | null;
@@ -87,8 +89,14 @@ export function exportFileName(base: string, at: Date): string {
   return `${base}-${tashkentDateKey(at)}.xlsx`;
 }
 
-/** The four exports the panel offers, keyed for {@link EXPORT_FILE_BASE}. */
-export type ExportKind = 'tracks' | 'customers' | 'debtors' | 'payments';
+/** The exports the panel offers, keyed for {@link EXPORT_FILE_BASE}. */
+export type ExportKind =
+  | 'tracks'
+  | 'customers'
+  | 'debtors'
+  | 'payments'
+  /** Rows an import could not use, handed back for fixing (§7.18, M3). */
+  | 'rejected';
 
 /**
  * Download-name stem per locale. Transliterated on purpose — `exportFileName`
@@ -101,25 +109,40 @@ export const EXPORT_FILE_BASE: Record<Lang, Record<ExportKind, string>> = {
     customers: 'mijozlar',
     debtors: 'qarzdorlar',
     payments: 'tolovlar',
+    rejected: 'muammoli-qatorlar',
   },
   ru: {
     tracks: 'treki',
     customers: 'klienty',
     debtors: 'dolzhniki',
     payments: 'platezhi',
+    rejected: 'problemnye-stroki',
   },
 };
 
 // --- Labels (uz default, ru secondary — CLAUDE.md rule 5) -------------------
 
 interface ExportLabels {
-  sheet: { tracks: string; customers: string; payments: string };
+  sheet: {
+    tracks: string;
+    customers: string;
+    payments: string;
+    rejected: string;
+  };
   tracks: string[];
   customers: string[];
   payments: string[];
+  /** §7.18/M3: `Qator` + `Sabab` + `Qiymat`, then the source columns. */
+  rejected: string[];
+  /** Why each row is in that file — the column that makes it actionable. */
+  rejectReason: Record<ImportRejectReason, string>;
+  /** Source column header, numbered as the spreadsheet numbers them. */
+  sourceColumn(letter: string): string;
   yes: string;
   no: string;
   truncated(total: number, exported: number): string;
+  /** The run stored only the first N problem rows (§7.18 cap). */
+  rejectedTruncated(total: number, exported: number): string;
 }
 
 /**
@@ -130,7 +153,12 @@ interface ExportLabels {
  */
 export const EXPORT_LABELS: Record<Lang, ExportLabels> = {
   uz: {
-    sheet: { tracks: 'Treklar', customers: 'Mijozlar', payments: "To'lovlar" },
+    sheet: {
+      tracks: 'Treklar',
+      customers: 'Mijozlar',
+      payments: "To'lovlar",
+      rejected: 'Muammoli qatorlar',
+    },
     tracks: [
       'Trek kodi',
       'Holat',
@@ -162,13 +190,30 @@ export const EXPORT_LABELS: Record<Lang, ExportLabels> = {
       'Qabul qildi',
       'Izoh',
     ],
+    rejected: ['Qator', 'Sabab', 'Qiymat'],
+    rejectReason: {
+      badCode: "Trek kodi yaroqsiz — qator import qilinmadi",
+      weight: "Vazn o'qilmadi — trek vaznsiz kiritildi",
+      price: "Narx o'qilmadi — trek narxsiz kiritildi",
+      customerMissing: 'Mijoz topilmadi — trek biriktirilmadi',
+      customerAmbiguous:
+        "Bir nechta mijozga to'g'ri keldi — trek biriktirilmadi",
+    },
+    sourceColumn: (letter) => `Ustun ${letter}`,
     yes: 'Ha',
     no: "Yo'q",
     truncated: (total, exported) =>
       `⚠️ Juda ko'p qator: ${total} tadan faqat birinchi ${exported} tasi eksport qilindi. Filtrni torroq qiling.`,
+    rejectedTruncated: (total, exported) =>
+      `⚠️ ${total} ta muammoli qatordan faqat birinchi ${exported} tasi saqlangan.`,
   },
   ru: {
-    sheet: { tracks: 'Треки', customers: 'Клиенты', payments: 'Платежи' },
+    sheet: {
+      tracks: 'Треки',
+      customers: 'Клиенты',
+      payments: 'Платежи',
+      rejected: 'Проблемные строки',
+    },
     tracks: [
       'Трек-код',
       'Статус',
@@ -200,10 +245,22 @@ export const EXPORT_LABELS: Record<Lang, ExportLabels> = {
       'Принял',
       'Примечание',
     ],
+    rejected: ['Строка', 'Причина', 'Значение'],
+    rejectReason: {
+      badCode: 'Некорректный трек-код — строка не импортирована',
+      weight: 'Вес не распознан — трек добавлен без веса',
+      price: 'Цена не распознана — трек добавлен без цены',
+      customerMissing: 'Клиент не найден — трек не привязан',
+      customerAmbiguous:
+        'Совпало несколько клиентов — трек не привязан',
+    },
+    sourceColumn: (letter) => `Столбец ${letter}`,
     yes: 'Да',
     no: 'Нет',
     truncated: (total, exported) =>
       `⚠️ Слишком много строк: из ${total} экспортированы только первые ${exported}. Сузьте фильтр.`,
+    rejectedTruncated: (total, exported) =>
+      `⚠️ Из ${total} проблемных строк сохранены только первые ${exported}.`,
   },
 };
 
@@ -327,6 +384,43 @@ export function buildPaymentsSheet(
       // cashier's name the statement cannot be reconciled against a shift.
       r.authorName,
       r.note,
+    ]),
+  };
+}
+
+// --- Rejected import rows (SPEC §7.18, tasks.md M3) -------------------------
+
+/**
+ * The rows an import could not use, handed back as a file the office can fix
+ * and re-send.
+ *
+ * Two things make it worth more than the on-screen list it replaces: the
+ * ORIGINAL cells travel with each row (a line number alone is not something
+ * anyone can act on in Guangzhou), and every row names its reason — including
+ * the ones that were imported anyway, with a weight or an owner missing. A
+ * warning is not an error, but it is still work somebody has to redo.
+ */
+export function buildRejectedSheet(
+  rows: readonly ImportRejectedRow[],
+  opts: { lang?: Lang; notice?: string } = {},
+): ExportSheet {
+  const lang = opts.lang ?? 'uz';
+  const L = EXPORT_LABELS[lang];
+  // As wide as the widest problem row — the file gives back what it was given.
+  const width = rows.reduce((max, r) => Math.max(max, r.cells.length), 0);
+
+  return {
+    name: L.sheet.rejected,
+    header: [
+      ...L.rejected,
+      ...Array.from({ length: width }, (_, i) => L.sourceColumn(columnLetter(i))),
+    ],
+    notice: opts.notice,
+    rows: rows.map((r) => [
+      r.line,
+      L.rejectReason[r.reason],
+      r.value,
+      ...Array.from({ length: width }, (_, i) => r.cells[i] ?? null),
     ]),
   };
 }
