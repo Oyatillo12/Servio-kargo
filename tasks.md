@@ -434,13 +434,13 @@ tegmaydi. Har bosqich oxirida `pnpm typecheck && lint && test`.
       holat ranglari `--st-*` ga ko'chdi; dev-only `/design`.
       **Ochiq risk yopildi:** uchala shrift ham `oʻ/gʻ` (U+02BB) va kirillni
       ko'taradi (`document.fonts.check`, brauzerda tekshirildi).
-- [ ] **N2 · Primitivlar** — `components/ui` to'plami yangi tizimga; yangi
+- [x] **N2 · Primitivlar** — `components/ui` to'plami yangi tizimga; yangi
       `Tabs` (URL-param), `SegmentedControl`, `StatTile`, `DataList`.
-- [ ] **N3 · Shell** — header, sidebar, bottom-nav, page-header, billing
+- [x] **N3 · Shell** — header, sidebar, bottom-nav, page-header, billing
       banner, brand mark. `/` skaner fokusi va oqimdagi tab bar saqlanadi.
-- [ ] **N4 · Ro'yxatlar** — tracks, customers, debtors, batches, tickets:
+- [x] **N4 · Ro'yxatlar** — tracks, customers, debtors, batches, tickets:
       desktopda zich jadval, mobilda karta qator; filtr/chip/pagination/bulk.
-- [ ] **N5 · Detail shablon** — bitta `DetailShell` + tab'lar (SPEC 5.0);
+- [x] **N5 · Detail shablon** — bitta `DetailShell` + tab'lar (SPEC 5.0);
       tracks/[id], customers/[id], batches/[id] unga o'tadi.
 - [ ] **N6 · Uzun formalar** — import wizard, settings (+team), broadcast,
       handover, weigh konsoli.
