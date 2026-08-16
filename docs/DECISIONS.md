@@ -321,3 +321,92 @@ yuboring" deb beradigan hech narsa qolmaydi.
   o'zi (kim, qachon, nechta) tarixda qoladi.
 - Import hech qachon tarixsiz bo'lmaydi: har apply, hatto undo qilinmagani
   ham, /import sahifasida ko'rinadigan qator qoldiradi.
+
+---
+
+## D-011 · SaaS boshqaruv: tenant o'chirish + billing-lite (J-epic) — 2026-08-16 (egasi)
+
+**Kontekst.** Pul olishdan oldin platforma ikkita narsani bilishi kerak:
+to'lamagan kompaniyani qanday to'xtatish va muddat tugayotganini qanday
+payqash. Hozir `tenants` da na `active`, na `paid_until` bor — yagona
+"o'chirish" usuli bot tokenini buzish yoki qatorni o'chirish, ya'ni mijoz
+ma'lumoti bilan birga. SPEC §6 disable/enable uchun joyni allaqachon ochib
+qo'ygan (J1), lekin xulqi yozilmagan.
+
+**Qaror (egasi, 4 savol).**
+
+1. **Bot jim qolmaydi — javob beradi.** O'chirilgan tenant'ning boti har
+   update'ga "vaqtincha ishlamayapti, kargo bilan bog'laning" deb javob
+   qaytaradi (ikkala tilda). Webhook o'z joyida qoladi, to'siq bitta bot
+   middleware'ida.
+   *Rad etilgan:* `deleteWebhook` — Telegram update'larni ~24 soat navbatga
+   qo'yadi, qayta yoqish `setWebhook` va "eski navbatni tashlaymizmi" degan
+   yana bitta qarorni talab qiladi; mijoz esa nima bo'lganini bilmay
+   kargoga bo'lgan ishonchini yo'qotadi.
+   **tasks.md J1 eskizidan chetlashish ochiq qayd etiladi:** eskizda
+   `deleteWebhook` yozilgan edi; qaror raundi uni almashtirdi (D-001 bo'yicha
+   eskiz qaror emas).
+2. **Panel: login ishlaydi, lekin faqat qulf ekrani.** Har sahifa o'rniga
+   bitta ekran: owner'ga to'lov ma'lumoti va aloqa, boshqa xodimga
+   "kompaniya vaqtincha o'chirilgan". Ma'lumot joyida ekani ko'rinib turadi.
+   *Rad etilgan:* faqat o'qish rejimi (bosim eng zaif — "ishlayapti-ku" deb
+   to'lov cho'ziladi); loginni butunlay bloklash (birinchi qo'ng'iroq
+   "ma'lumotim yo'qoldimi?" bo'ladi).
+3. **Grace tugagach avto-o'chirish, avtomatik.** `paid_until` + 7 kun
+   o'tgach mavjud soatlik sweep tenant'ni o'chiradi; /sa'da istalgan payt
+   qo'lda qayta yoqiladi.
+   *Rad etilgan:* qo'lda ro'yxat — 10 mijozdan keyin unutiladi va bepul
+   ishlatish odatga aylanadi.
+4. **Ogohlantirish — faqat panel banner.** Hech kimga xabar yuborilmaydi;
+   panelga kirgan xodim doimiy banner ko'radi.
+   *Rad etilgan:* owner'ga bot xabari (tavsiya etilgan edi); hamma xodimga
+   yuborish.
+
+**Oqibat, ochiq tan olinadi (4-savolda tavsiyadan chetlashildi).** Banner +
+avto-o'chirish birgalikda **jim o'chib qolish** holatini yaratadi: panelga
+bir hafta kirmagan owner hech qanday ogohlantirishsiz o'chib qoladi.
+Egasining javobi buzilmaydi — kargoga hech qanday xabar YUBORILMAYDI — lekin
+ogohlantirish PLATFORMA egasiga boradi: **/sa'da "muddati tugayapti"
+ro'yxati** (7 kun ichida tugaydiganlar va grace'dagilar tepada, bo'yalgan).
+Ya'ni qo'ng'iroqni odam qiladi, tizim emas. Bu keyin bot xabariga
+kengaytirilishi mumkin — matn va holat allaqachon tayyor bo'ladi.
+
+**Yon foyda.** Banner — hisoblanadigan holat, yuborilgan hodisa emas.
+Shuning uchun "ogohlantirish ikki marta ketmasin" degan butun idempotentlik
+muammosi, sent-stamp ustuni va yangi `message_log` kind — hech biri kerak
+emas. 3-band ham shundan foyda ko'radi: sweep faqat `active` ni o'zgartiradi,
+ya'ni o'zi idempotent.
+
+**Texnik shakl (egasi qarorining ichida, men).**
+
+- **`tenants.active boolean NOT NULL DEFAULT true` + `tenants.paid_until date`
+  (nullable).** `paid_until = NULL` = **billing hali qo'yilmagan**: hech
+  qachon ogohlantirmaydi, hech qachon avto-o'chirmaydi. Mavjud tenantlar
+  (va pilot) deploy paytida o'chib qolmasligi uchun shu shart.
+- **`billingState(paidUntil, now)`** — `packages/shared/services/billing.ts`,
+  sof funksiya, Tashkent kalendar kuni bo'yicha (mavjud `tashkentDateKey`
+  bilan bir xil manba, ya'ni dashboard bilan bir kunni ko'radi). Holatlar:
+  `none | ok | due-soon | grace | expired`. Muddat — `paid_until` KUNINING
+  OXIRI (o'sha kun hali to'langan hisoblanadi). Bu J ning yagona
+  testlanadigan yadrosi — M dagi `importRun.ts` bilan bir xil rol.
+- **Har sirt uchun bitta choke point:** panel — `lib/auth.ts` (sessiya),
+  TWA — `lib/twa/auth.ts`, bot — bitta middleware, ishchi — jo'natishdan
+  oldingi tekshiruv. Sahifama-sahifa emas.
+- **`authorize()` ham to'sadi.** Qulf ekrani — UI; Server Action esa tizimga
+  kirgan har kim chaqira oladigan POST (qoida 9). O'chirilgan tenant'da
+  mutatsiya umuman o'tmaydi, hatto qulf ekranini aylanib o'tsa ham.
+- **Navbatdagi xabarlar to'xtaydi.** Ishchi har xabardan oldin tenant
+  tirikligini tekshiradi (K `isBroadcastLive` / M `isImportRunLive` naqshi) —
+  aks holda o'chirilgan tenant navbat bo'shaguncha mijozlarga yozib turadi.
+
+**Oqibatlar.**
+- O'chirish **qaytariladi va ma'lumot yo'qotmaydi**: `active=false` — eshik,
+  o'chirgich emas. Bot tokeni, treklar, fotolar — hammasi joyida.
+- O'chirilgan tenant'ning mijozlari javob oladi, ya'ni kargo o'z mijozidan
+  bosim ko'radi. Bu ataylab: to'lovni tezlashtiradigan yagona kuch shu.
+- Hisob-faktura, onlayn to'lov, tarif rejalari YO'Q — `paid_until` ni /sa'da
+  odam qo'yadi. "Lite" ning ma'nosi shu; kerak bo'lsa alohida qaror bilan
+  kengaytiriladi.
+- `plan` (basic/premium) va `active` — **ikki xil narsa**: birinchisi qaysi
+  funksiya ochiq, ikkinchisi eshik umuman ochiqmi. `planIncludes` ga
+  tegilmaydi.

@@ -295,6 +295,7 @@ texts below are canonical.
 - no_tracks — uz: `Hozircha yuklaringiz yo'q. ➕ Trek qo'shish tugmasi orqali trek kodingizni yuboring.`
 - help_fallback — uz: `Tushunmadim 🤔\nTrek kodini yuboring yoki quyidagi tugmalardan birini tanlang.`
 - error_generic — uz: `Xatolik yuz berdi, birozdan so'ng qayta urinib ko'ring.`
+- service_disabled (7.19) — uz: `⏸ Xizmat vaqtincha ishlamayapti.\nIltimos, kargo kompaniyasi bilan bog'laning.` — the single answer a disabled tenant's bot gives to anything; a callback press gets it as a toast, not a new message
 - lang_choose — uz/ru (identical, both scripts): `Tilni tanlang / Выберите язык:`
 - cancelled — uz: `Bekor qilindi.`
 - refreshed / refreshed_no_change — callback-answer toasts, uz:
@@ -767,11 +768,33 @@ controls:
 
 Dashboard (5.10) shows an open-tickets count linking here (H4).
 
+### 5.17 Lock screen & billing banner (tasks.md J — D-011)
+
+Two surfaces for one flag (7.19), both tenant-wide, both in uz + ru.
+
+**Lock screen** (`/locked`) — where every panel page lands while the tenant is
+inactive. Login still works and the session survives: the point is to show that
+the data is intact, not to make the owner wonder whether it was deleted.
+- **Owner** sees the company name, `Xizmat vaqtincha to'xtatilgan`, the
+  `paid_until` date if there is one, and the platform contact.
+- **Manager / warehouse** see the same heading without the billing detail —
+  whose invoice it is is not their business — and "contact the company's
+  owner".
+- The only working control is logout. Nothing else is reachable: any Server
+  Action refuses anyway (rule 9, 7.19).
+
+**Banner** — a persistent bar above the panel content while `billingState` is
+`due-soon` (amber) or `grace` (red), on every page, for every role:
+`To'lov muddati {date} da tugaydi — {n} kun qoldi` /
+`To'lov muddati {date} da tugadi — xizmat {n} kundan keyin to'xtaydi`.
+It is not dismissible and it is not sent anywhere (D-011): the banner IS the
+warning channel.
+
 ## 6. Super-admin (`/sa`, guarded by SUPERADMIN_TOKEN env)
 
 Tenants table: nomi, bot, treklar soni, mijozlar soni, yaratilgan sana,
 holat. Actions per row: re-set webhook, plan toggle, owner password reset,
-disable/enable (disable/enable ships with tasks.md J1). Create form: company
+disable/enable, set `paid_until` (J1/J2 — D-011). Create form: company
 name, bot token, code prefix (2–4 latin letters), currency (UZS/USD) + kurs
 if USD, default tariff (name + price per kg), pickup address, working hours,
 contact phone, first admin phone + password.
@@ -785,6 +808,17 @@ Webhooks (F3): URL is `/webhook/t/{tenantId}`; every update carries
 `telegram-webhook:{tenantId}`), verified by the bot server in constant time.
 The bot token NEVER appears in a URL. The legacy `/webhook/{botToken}` path
 is transitional (see tasks.md F3-b) and warns on every hit.
+
+Tenant state (J — D-011): each row shows `Faol` / `O'chirilgan` plus the
+`paid_until` date and its `billingState` (7.19), and carries two controls —
+a disable/enable toggle (confirm on disable; it names what stops: the bot
+answers "temporarily unavailable", the panel locks, queued messages are
+dropped) and a date field for `paid_until`. Above the table, a **`Muddati
+tugayapti`** list — every tenant in `due-soon` or `grace`, soonest first, with
+the days left. That list is the platform owner's warning channel: the tenants
+themselves are never messaged about billing (D-011), so this is where a call
+gets made before the hourly sweep closes the door. Enabling a tenant does not
+change `paid_until`, and setting `paid_until` does not enable a tenant.
 
 Owner password reset (F5): "Parol tiklash" issues a fresh invite code for the
 tenant's earliest active owner via the ordinary invite flow (5.12) — the
@@ -1098,6 +1132,70 @@ working until the code is redeemed.
     run is undoable only by the tenant that owns it. `items` is pruned after
     7 days by the hourly sweep — the window is an hour, so keeping the
     evidence longer only grows the table; the run row itself stays.
+
+- **7.19 Tenant state & billing-lite (tasks.md J — D-011):** a tenant that has
+  not paid is **closed, never erased**. `tenants.active` is a door, not a
+  delete: the bot token, the tracks, the photos and the debts all stay exactly
+  where they were, and flipping it back restores service in the time it takes
+  to load a page.
+  - **`tenants.active boolean NOT NULL DEFAULT true`** and
+    **`tenants.paid_until date`** (nullable). `paid_until = NULL` means
+    **billing is not set for this tenant**: it never warns and never
+    auto-disables. Existing tenants — and the pilot — must not lock themselves
+    the hour this ships.
+  - **`billingState(paid_until, now)`** (packages/shared) is the only answer to
+    "where does this tenant stand", by the **Asia/Tashkent calendar day**, the
+    same day the dashboard counts (7.9):
+    - `none` — no `paid_until`.
+    - `ok` — today ≤ `paid_until`, more than 7 days left.
+    - `due-soon` — today ≤ `paid_until`, 7 days or fewer left (the banner).
+    - `grace` — `paid_until` has passed, within 7 days of it. Everything still
+      works; the banner turns red.
+    - `expired` — more than 7 days past `paid_until`. The hourly sweep sets
+      `active = false`.
+    `paid_until` is paid THROUGH the end of that day — a tenant paid until
+    today is not in grace today.
+  - **Disabling is one flag read at four choke points**, never per page:
+    - **Panel** — the session check (`lib/auth.ts`) sends every request to the
+      lock screen (5.17). Login itself still works: an owner must be able to
+      see that the data is there.
+    - **Server Actions** — `authorize()` refuses every capability while
+      `active = false`. The lock screen is UI; a Server Action is a POST any
+      signed-in user can call (rule 9), so the flag is enforced where the write
+      happens, not where the button is hidden.
+    - **Mini App** — the TWA session check (`lib/twa/auth.ts`) answers with the
+      same notice, in the customer's language.
+    - **Bot** — one middleware, before the session and the handlers. The
+      webhook is NOT deleted (D-011): a deleted webhook cannot explain itself,
+      it queues updates on Telegram's side for a day, and re-enabling it needs
+      a second decision about what to do with them.
+  - **What the customer sees** — `service_disabled` (4.1), one line in their
+    language: the service is temporarily unavailable, contact the company. A
+    message gets a reply, a button press gets the same text as a callback
+    answer (a toast, not a new message — a customer tapping through an old
+    keyboard must not be able to fill their own chat).
+  - **Queued messages stop.** The notify worker re-reads the tenant before each
+    send and drops everything — notifications, reminders, broadcasts, ticket
+    replies — for a disabled tenant, the same liveness re-read as 7.11 and
+    7.18. Otherwise a tenant that was just closed keeps writing to its
+    customers until the queue drains. A dropped send writes nothing to
+    `message_log`.
+  - **The warning is a banner, not a message** (D-011). While `due-soon` or
+    `grace`, every panel page shows a persistent bar with the date and the days
+    left; nothing is sent to anyone. Because a banner is computed on render,
+    there is no "was it already sent" state to keep, and no way to warn twice.
+    The honest cost: an owner who does not open the panel gets no warning at
+    all before the auto-disable, which is why `/sa` carries the expiring list
+    (§6) — the platform owner makes that call by phone.
+  - **Auto-disable is automatic** and lives in the existing hourly sweep: every
+    `active` tenant whose state is `expired` is set inactive. Idempotent by
+    construction — it only ever clears a flag. Re-enabling is manual, in `/sa`,
+    and does not touch `paid_until`: turning the service back on and paying for
+    it are two separate acts.
+  - **`plan` and `active` are different questions.** `plan` (basic/premium)
+    answers which features are unlocked and is owned by `planIncludes`
+    (§10); `active` answers whether the door is open at all. Neither reads the
+    other.
 
 ## 8. Non-functional requirements
 

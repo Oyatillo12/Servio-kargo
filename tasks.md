@@ -381,13 +381,34 @@ allaqachon bor (`apps/web/lib/xlsx.ts`, eksport yo'li tayyor).
       (o'sha qator tegilmasligi va hisobotda ko'rinishi), 60 daqiqadan
       keyin tugma yo'qolishi, muammoli qatorlar xlsx'ini ochish.
 
-### J · SaaS boshqaruv (pul olishdan oldin — F–M ning oxiri)
+### J · SaaS boshqaruv (D-011; SPEC 5.17, 6, 7.19)
 
-- [ ] **J1 · Tenant disable** — `tenants.active`; o'chirilganda webhook
-      deleteWebhook, panel login qulfi, TWA gate. /sa'da toggle.
-- [ ] **J2 · Billing-lite** — `paid_until` sana + /sa'da belgilash;
-      tugashidan 7/1 kun oldin owner'ga ogohlantirish; grace 7 kun,
-      keyin auto-disable. Hisob-faktura YO'Q (kerak bo'lsa alohida qaror).
+Qaror raundi bo'lib o'tdi (D-011). **Eskizdan ikkita chetlashish** ochiq
+qayd etiladi: (a) `deleteWebhook` O'RNIGA bot javob beradigan middleware —
+o'chirilgan bot o'zini tushuntira olishi kerak; (b) owner'ga bot
+ogohlantirishi O'RNIGA faqat panel banner + /sa'dagi "muddati tugayapti"
+ro'yxati (egasi tanlovi).
+
+- [ ] **J1 · Tenant disable** — `tenants.active`; to'rtta choke point:
+      panel sessiyasi (`lib/auth.ts` → `/locked`), `authorize()` (qoida 9 —
+      Server Action POST), TWA sessiyasi, bot middleware'i
+      (`service_disabled`, callback'ka toast). Ishchi jo'natishdan oldin
+      tenant tirikligini tekshiradi (K/M naqshi). /sa'da toggle.
+- [ ] **J2 · Billing-lite** — `paid_until` date + /sa'da qo'yish;
+      `billingState` sof funksiya (Tashkent kuni, `none|ok|due-soon|grace|
+      expired`); panelda banner (7 kun qolganda amber, grace'da qizil);
+      grace 7 kun, keyin soatlik sweep avto-o'chiradi; /sa'da "muddati
+      tugayapti" ro'yxati. Hisob-faktura va onlayn to'lov YO'Q.
+
+**Halol chegara.** Banner + avto-o'chirish = panelga kirmagan owner
+ogohlantirishsiz o'chib qolishi mumkin (D-011 da ochiq yozilgan). Yumshatish
+— /sa ro'yxati, ya'ni qo'ng'iroqni odam qiladi.
+
+**Deploy'dan keyin qo'lda:** /sa'da tenant'ni o'chirish → o'sha tenant botiga
+yozish (javob keladi, karta ochilmaydi) → panelga kirish (login o'tadi,
+`/locked`) → xodim bilan ham kirish (billing detali ko'rinmaydi) → qayta
+yoqish (hammasi tiklanadi) → `paid_until` ni 3 kun keyinga qo'yish (banner
+amber) → kechagi sanaga qo'yish (banner qizil, /sa ro'yxatida).
 
 ---
 
