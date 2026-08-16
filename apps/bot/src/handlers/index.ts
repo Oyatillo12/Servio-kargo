@@ -11,6 +11,7 @@
  *   `track:{id}:refresh` re-read that card
  *   `photo:{id}`         send the warehouse photo as its own message
  *   `calc:{tariffId}`    pick a tariff · `calc:restart` re-runs the calculator
+ *   `calc:skipdims`      skip the optional dimensions step (§7.16)
  *   `addmore` `balance` `help` `cancel`
  */
 
@@ -20,6 +21,7 @@ import type { KargoContext } from '../context';
 import { addMoreCallback } from './addTrack';
 import {
   calcRestartCallback,
+  calcSkipDimsCallback,
   calcTariffCallback,
   showCalculator,
 } from './calculator';
@@ -61,9 +63,10 @@ export function registerHandlers(bot: Bot<KargoContext>): void {
   bot.callbackQuery(/^mytracks:(\d+)(?::(refresh))?$/, myTracksPageCallback);
   bot.callbackQuery(/^track:([^:]+)(?::(refresh))?$/, trackDetailCallback);
   bot.callbackQuery(/^photo:(.+)$/, trackPhotoCallback);
-  // `calc:restart` must be matched before the generic tariff pattern, which
-  // would otherwise capture "restart" as a tariff id.
+  // `calc:restart` and `calc:skipdims` must be matched before the generic
+  // tariff pattern, which would otherwise capture them as a tariff id.
   bot.callbackQuery(/^calc:restart$/, calcRestartCallback);
+  bot.callbackQuery(/^calc:skipdims$/, calcSkipDimsCallback);
   bot.callbackQuery(/^calc:(.+)$/, calcTariffCallback);
   bot.callbackQuery(/^addmore$/, addMoreCallback);
   bot.callbackQuery(/^balance$/, balanceCallback);

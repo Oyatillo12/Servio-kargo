@@ -87,6 +87,17 @@ export function calcTariffsKeyboard(
   return kb;
 }
 
+/**
+ * Dimensions step (§3.9, §7.16): skip is a button rather than an instruction to
+ * type something, so the optional step costs one tap to leave.
+ */
+export function calcSkipDimsKeyboard(s: Strings): InlineKeyboard {
+  return new InlineKeyboard()
+    .text(s.calcSkipDims, 'calc:skipdims')
+    .row()
+    .text(s.nav.cancel, 'cancel');
+}
+
 /** After a calculation: run it again without re-opening the menu (§3.11). */
 export function calcResultKeyboard(s: Strings): InlineKeyboard {
   return new InlineKeyboard().text(s.nav.recalc, 'calc:restart');

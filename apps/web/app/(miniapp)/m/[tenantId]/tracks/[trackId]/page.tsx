@@ -5,6 +5,7 @@ import {
   formatDateTime,
   formatKg,
   formatSom,
+  storedChargeableWeight,
   STATUS_META,
   isTerminalStatus,
 } from '@kargotrack/shared';
@@ -41,6 +42,12 @@ export default async function TwaTrackDetailPage({
   const lost =
     isTerminalStatus(detail.currentStatus) &&
     detail.currentStatus !== 'DELIVERED';
+  // §7.16: the frozen columns, never a recomputation — this is what the parcel
+  // was charged for, whatever the tariff's coefficient says today.
+  const charged = storedChargeableWeight(
+    detail.weightGrams,
+    detail.volumetricGrams,
+  );
 
   return (
     <Screen
@@ -97,14 +104,27 @@ export default async function TwaTrackDetailPage({
                 </dd>
               </div>
             ) : null}
-            {detail.weightGrams != null ? (
+            {charged != null ? (
               <div
                 className="flex justify-between py-2 text-[13.5px]"
                 style={{ borderColor: 'var(--twa-border)' }}
               >
-                <dt className="twa-hint">{t('trackWeight')}</dt>
-                <dd className="font-mono font-semibold tabular-nums">
-                  {formatKg(detail.weightGrams)} kg
+                {/* §7.16: when volume set the price, the customer sees both
+                    numbers and the word for why — never a bare bigger figure. */}
+                <dt className="twa-hint">
+                  {charged.basis === 'volumetric'
+                    ? t('trackChargeableWeight')
+                    : t('trackWeight')}
+                </dt>
+                <dd className="text-right font-mono font-semibold tabular-nums">
+                  {formatKg(charged.grams)} kg
+                  {charged.basis === 'volumetric' ? (
+                    <span className="twa-hint ml-1.5 font-sans text-[12px] font-medium">
+                      {t('trackVolumetricNote', {
+                        actual: formatKg(detail.weightGrams ?? 0),
+                      })}
+                    </span>
+                  ) : null}
                 </dd>
               </div>
             ) : null}

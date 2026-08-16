@@ -130,6 +130,7 @@ export const uz: Strings = {
     batchName,
     batchEta,
     kg,
+    actualKg,
     som,
     description,
   }) => {
@@ -146,7 +147,15 @@ export const uz: Strings = {
           : `🚚 Reys: ${batchName}`,
       );
     }
-    if (kg != null) lines.push(`⚖️ Og'irligi: ${kg} kg`);
+    // §7.16: when volume set the price, the customer is told the number AND
+    // why it is bigger than what the scale said — the alternative is a ticket.
+    if (kg != null) {
+      lines.push(
+        actualKg != null
+          ? `⚖️ Hisob vazni: ${kg} kg (hajmiy) · haqiqiy ${actualKg} kg`
+          : `⚖️ Og'irligi: ${kg} kg`,
+      );
+    }
     if (som != null) lines.push(`💵 To'lov: ${som} so'm`);
     return lines.join('\n');
   },
@@ -174,11 +183,17 @@ export const uz: Strings = {
     `✅ Murojaatingiz (${category}) yopildi. Yana muammo bo'lsa — ✍️ Murojaat.`,
 
   // --- §3.9 calculator (§4.5) ---
-  calcStepTariff: '🧮 1/2 · Tarifni tanlang',
-  calcStepKg: "🧮 2/2 · Og'irlikni kiriting (kg), masalan: 3.2",
-  calcResult: ({ tariffName, kg, som, usd }) =>
-    `🧮 ${tariffName}\n${kg} kg ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nAniq summa yuk tortilganda hisoblanadi.`,
+  calcStepTariff: '🧮 1/3 · Tarifni tanlang',
+  calcStepKg: "🧮 2/3 · Og'irlikni kiriting (kg), masalan: 3.2",
+  calcStepDims:
+    "🧮 3/3 · O'lchamlarni kiriting (sm): uzunlik×kenglik×balandlik, masalan: 50x40x30\nO'lchamsiz hisoblash uchun — o'tkazib yuboring.",
+  calcSkipDims: "⏭ O'tkazib yuborish",
+  calcResult: ({ tariffName, kg, som, usd, actualKg }) =>
+    actualKg != null
+      ? `🧮 ${tariffName}\nHisob vazni: ${kg} kg (hajmiy) · haqiqiy ${actualKg} kg\n≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nAniq summa yuk tortilganda hisoblanadi.`
+      : `🧮 ${tariffName}\n${kg} kg ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nAniq summa yuk tortilganda hisoblanadi.`,
   calcInvalid: 'Raqam kiriting, masalan: 2.5',
+  calcDimsInvalid: "O'lchamlarni shunday kiriting: 50x40x30 (sm)",
   calcNoTariffs:
     "Hozircha tarif mavjud emas. Iltimos, administrator bilan bog'laning.",
   calcNoRate:
@@ -198,6 +213,8 @@ export const uz: Strings = {
   // --- §3.8 staff mode (weighing + photo) / §4.5 staff strings ---
   staffPhotoNoCaption:
     "Rasmni yuborishda izoh (caption) sifatida trek kodini yozing.",
+  staffVolumetricNote: (chargeableKg) =>
+    `📐 Hajmiy vazn bo'yicha hisoblandi: ${chargeableKg} kg`,
   staffSaved: (code, kg, som) => `✅ ${code}: ${kg} kg → ${som} so'm`,
   staffSavedNew: (code, kg, som) =>
     `🆕 ${code}: yangi trek yaratildi (${kg} kg → ${som} so'm). Mijoz hali biriktirilmagan.`,
@@ -233,9 +250,22 @@ export const uz: Strings = {
     (eta ? `\n📅 Taxminiy yetib kelishi: ${eta}` : ''),
   notifTashkentWarehouse: (code) =>
     `🇺🇿 ${code} — yukingiz Toshkentga yetib keldi. Tez orada olib ketishga tayyor bo'ladi.`,
-  notifReadyForPickup: ({ code, kg, som, pickupAddress, workingHours }) => {
+  notifReadyForPickup: ({
+    code,
+    kg,
+    actualKg,
+    som,
+    pickupAddress,
+    workingHours,
+  }) => {
     const lines = [`✅ ${code} — yukingiz tayyor!`];
-    if (kg != null) lines.push(`⚖️ Og'irligi: ${kg} kg`);
+    if (kg != null) {
+      lines.push(
+        actualKg != null
+          ? `⚖️ Hisob vazni: ${kg} kg (hajmiy) · haqiqiy ${actualKg} kg`
+          : `⚖️ Og'irligi: ${kg} kg`,
+      );
+    }
     if (som != null) lines.push(`💵 To'lov: ${som} so'm`);
     lines.push(`📍 Manzil: ${pickupAddress}`);
     lines.push(`🕘 Ish vaqti: ${workingHours}`);

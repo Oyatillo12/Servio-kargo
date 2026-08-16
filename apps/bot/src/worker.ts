@@ -27,6 +27,7 @@ import {
   formatKg,
   formatSom,
   statusNotification,
+  storedChargeableWeight,
   STATUS_META,
   TICKET_CATEGORY_META,
   t,
@@ -132,10 +133,22 @@ async function handleNotifyJob(job: NotifyJob, meta: JobMeta): Promise<void> {
     eta = d && m && y ? `${d}.${m}.${y}` : batch.etaDate;
   }
 
+  // §7.16: the "ready" message carries the weight the price was built on. When
+  // volume beat the scale it says so in the same line — a customer who reads
+  // "5.2 kg → 300 600 so'm" and does the arithmetic writes a ticket.
+  const charged = storedChargeableWeight(
+    track.weightGrams,
+    track.volumetricGrams,
+  );
+
   const s = t(customer.lang);
   const message = statusNotification(s, job.status, {
     code: track.codeOriginal,
-    kg: track.weightGrams != null ? formatKg(track.weightGrams) : undefined,
+    kg: charged != null ? formatKg(charged.grams) : undefined,
+    actualKg:
+      charged?.basis === 'volumetric' && track.weightGrams != null
+        ? formatKg(track.weightGrams)
+        : undefined,
     som: track.priceTiyin != null ? formatSom(track.priceTiyin) : undefined,
     pickupAddress: tenant.pickupAddress ?? '',
     workingHours: tenant.workingHours ?? '',

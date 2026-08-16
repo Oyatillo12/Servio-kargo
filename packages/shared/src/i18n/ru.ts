@@ -130,6 +130,7 @@ export const ru: Strings = {
     batchName,
     batchEta,
     kg,
+    actualKg,
     som,
     description,
   }) => {
@@ -146,7 +147,14 @@ export const ru: Strings = {
           : `🚚 Рейс: ${batchName}`,
       );
     }
-    if (kg != null) lines.push(`⚖️ Вес: ${kg} кг`);
+    // §7.16: the customer hears the bigger number together with its reason.
+    if (kg != null) {
+      lines.push(
+        actualKg != null
+          ? `⚖️ Расчётный вес: ${kg} кг (объёмный) · фактический ${actualKg} кг`
+          : `⚖️ Вес: ${kg} кг`,
+      );
+    }
     if (som != null) lines.push(`💵 К оплате: ${som} so'm`);
     return lines.join('\n');
   },
@@ -174,11 +182,17 @@ export const ru: Strings = {
     `✅ Ваше обращение (${category}) закрыто. Если проблема появится снова — ✍️ Обращение.`,
 
   // --- §3.9 calculator (§4.5) ---
-  calcStepTariff: '🧮 1/2 · Выберите тариф',
-  calcStepKg: '🧮 2/2 · Введите вес (кг), например: 3.2',
-  calcResult: ({ tariffName, kg, som, usd }) =>
-    `🧮 ${tariffName}\n${kg} кг ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nТочная сумма рассчитывается при взвешивании.`,
+  calcStepTariff: '🧮 1/3 · Выберите тариф',
+  calcStepKg: '🧮 2/3 · Введите вес (кг), например: 3.2',
+  calcStepDims:
+    '🧮 3/3 · Укажите габариты (см): длина×ширина×высота, например: 50x40x30\nЧтобы посчитать без габаритов — пропустите.',
+  calcSkipDims: '⏭ Пропустить',
+  calcResult: ({ tariffName, kg, som, usd, actualKg }) =>
+    actualKg != null
+      ? `🧮 ${tariffName}\nРасчётный вес: ${kg} кг (объёмный) · фактический ${actualKg} кг\n≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nТочная сумма рассчитывается при взвешивании.`
+      : `🧮 ${tariffName}\n${kg} кг ≈ ${som} so'm${usd ? ` (${usd})` : ''}\n\nТочная сумма рассчитывается при взвешивании.`,
   calcInvalid: 'Введите число, например: 2.5',
+  calcDimsInvalid: 'Укажите габариты так: 50x40x30 (см)',
   calcNoTariffs:
     'Пока нет доступных тарифов. Пожалуйста, свяжитесь с администратором.',
   calcNoRate:
@@ -198,6 +212,8 @@ export const ru: Strings = {
   // --- §3.8 staff mode (weighing + photo) / §4.5 staff strings ---
   staffPhotoNoCaption:
     'Отправьте фото, указав трек-код в подписи (caption).',
+  staffVolumetricNote: (chargeableKg) =>
+    `📐 Посчитано по объёмному весу: ${chargeableKg} кг`,
   staffSaved: (code, kg, som) => `✅ ${code}: ${kg} кг → ${som} сум`,
   staffSavedNew: (code, kg, som) =>
     `🆕 ${code}: создан новый трек (${kg} кг → ${som} сум). Клиент пока не привязан.`,
@@ -233,9 +249,22 @@ export const ru: Strings = {
     (eta ? `\n📅 Ожидаемое прибытие: ${eta}` : ''),
   notifTashkentWarehouse: (code) =>
     `🇺🇿 ${code} — ваша посылка прибыла в Ташкент. Скоро будет готова к выдаче.`,
-  notifReadyForPickup: ({ code, kg, som, pickupAddress, workingHours }) => {
+  notifReadyForPickup: ({
+    code,
+    kg,
+    actualKg,
+    som,
+    pickupAddress,
+    workingHours,
+  }) => {
     const lines = [`✅ ${code} — ваша посылка готова!`];
-    if (kg != null) lines.push(`⚖️ Вес: ${kg} кг`);
+    if (kg != null) {
+      lines.push(
+        actualKg != null
+          ? `⚖️ Расчётный вес: ${kg} кг (объёмный) · фактический ${actualKg} кг`
+          : `⚖️ Вес: ${kg} кг`,
+      );
+    }
     if (som != null) lines.push(`💵 К оплате: ${som} so'm`);
     lines.push(`📍 Адрес: ${pickupAddress}`);
     lines.push(`🕘 Часы работы: ${workingHours}`);

@@ -43,12 +43,18 @@ export interface InfoCardVars {
 
 export interface CalcResultVars {
   tariffName: string;
-  /** Formatted kg, e.g. "3.2". */
+  /** Formatted kg the price was built on — chargeable when volume won (§7.16). */
   kg: string;
   /** Formatted so'm (no suffix), e.g. "176 000". */
   som: string;
   /** Formatted USD amount incl. `$` (e.g. "3.5$"), present only in USD mode. */
   usd?: string;
+  /**
+   * The typed weight, present ONLY when volume beat it (§7.16). Its presence is
+   * what makes the answer say "hajmiy": a customer told a bigger number than
+   * they typed is owed the reason in the same breath.
+   */
+  actualKg?: string;
 }
 
 export interface LookupCardVars {
@@ -61,8 +67,10 @@ export interface LookupCardVars {
   batchName?: string;
   /** Batch ETA, DD.MM.YYYY — present only when the batch has an eta_date. */
   batchEta?: string;
-  /** Formatted kg, present only when weight is set. */
+  /** Formatted kg, present only when weight is set. Chargeable when volume won. */
   kg?: string;
+  /** The scale reading, present only when volume set the price (§7.16). */
+  actualKg?: string;
   /** Formatted so'm (no suffix), present only when price is set. */
   som?: string;
   /**
@@ -75,6 +83,8 @@ export interface LookupCardVars {
 export interface ReadyNotifVars {
   code: string;
   kg?: string;
+  /** The scale reading, present only when volume set the price (§7.16). */
+  actualKg?: string;
   som?: string;
   pickupAddress: string;
   workingHours: string;
@@ -205,12 +215,18 @@ export interface Strings {
   ticketClosedNotice(category: string): string;
 
   // --- §3.9 calculator (§4.5) ---
-  /** `1/2 · …` step prefix shown above the tariff picker (§3.11). */
+  /** `1/3 · …` step prefix shown above the tariff picker (§3.11). */
   calcStepTariff: string;
-  /** `2/2 · …` step prefix shown above the weight prompt (§3.11). */
+  /** `2/3 · …` step prefix shown above the weight prompt (§3.11). */
   calcStepKg: string;
+  /** `3/3 · …` — optional dimensions, skippable (§3.9, D-007). */
+  calcStepDims: string;
+  /** Label of the button that skips the dimensions step. */
+  calcSkipDims: string;
   calcResult(v: CalcResultVars): string;
   calcInvalid: string;
+  /** The dimensions line could not be read as three sides (§3.9). */
+  calcDimsInvalid: string;
   /** Calculator opened but the tenant has no active tariff to price against. */
   calcNoTariffs: string;
   /** USD tenant with no kurs set — can't price (config problem, not user error). */
@@ -226,6 +242,12 @@ export interface Strings {
 
   // --- §3.8 staff mode (weighing + photo) / §4.5 staff strings ---
   staffPhotoNoCaption: string;
+  /**
+   * Extra line under a staff weighing reply when volume, not the scale, set the
+   * price (§7.16). Its own string rather than a variant of every `staffSaved*`
+   * form: the fallback channel says the same thing the console shows as a tag.
+   */
+  staffVolumetricNote(chargeableKg: string): string;
   /** `CODE kg → price` saved onto an existing track. */
   staffSaved(code: string, kg: string, som: string): string;
   /** Weighing an unknown code created a new, unattached track. */
@@ -305,6 +327,8 @@ export function statusNotification(
   vars: {
     code: string;
     kg?: string;
+    /** The scale reading, present only when volume set the price (§7.16). */
+    actualKg?: string;
     som?: string;
     pickupAddress: string;
     workingHours: string;
@@ -325,6 +349,7 @@ export function statusNotification(
       return s.notifReadyForPickup({
         code: vars.code,
         kg: vars.kg,
+        actualKg: vars.actualKg,
         som: vars.som,
         pickupAddress: vars.pickupAddress,
         workingHours: vars.workingHours,

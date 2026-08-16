@@ -119,6 +119,8 @@ export interface TwaTariff {
   id: string;
   name: string;
   pricePerKgMinor: number;
+  /** kg per m³ (§7.16) — lets the calculator quote what the warehouse charges. */
+  volumetricCoef: number;
   isDefault: boolean;
 }
 
@@ -130,6 +132,7 @@ export async function listTwaTariffs(tenantId: string): Promise<TwaTariff[]> {
       id: tariffs.id,
       name: tariffs.name,
       pricePerKgMinor: tariffs.pricePerKgMinor,
+      volumetricCoef: tariffs.volumetricCoef,
       isDefault: tariffs.isDefault,
     })
     .from(tariffs)
@@ -224,6 +227,8 @@ export interface TwaTrackDetail {
   codeOriginal: string;
   currentStatus: TrackStatus;
   weightGrams: number | null;
+  /** Frozen volumetric weight (§7.16) — drives the "hajmiy" weight line. */
+  volumetricGrams: number | null;
   priceTiyin: number | null;
   /** Goods description (§7.13) — customer-visible; marka/note never are. */
   description: string | null;
@@ -247,6 +252,7 @@ export async function getTwaTrackDetail(
       codeOriginal: tracks.codeOriginal,
       currentStatus: tracks.currentStatus,
       weightGrams: tracks.weightGrams,
+      volumetricGrams: tracks.volumetricGrams,
       priceTiyin: tracks.priceTiyin,
       description: tracks.description,
       createdAt: tracks.createdAt,
@@ -289,6 +295,7 @@ export async function getTwaTrackDetail(
     codeOriginal: row.codeOriginal,
     currentStatus: row.currentStatus,
     weightGrams: row.weightGrams,
+    volumetricGrams: row.volumetricGrams,
     priceTiyin: row.priceTiyin,
     description: row.description,
     photoIds: photoRows.map((p) => p.id),

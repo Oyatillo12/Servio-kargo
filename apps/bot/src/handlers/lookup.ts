@@ -15,6 +15,7 @@ import {
   formatSom,
   isValidTrackCode,
   normalizeCode,
+  storedChargeableWeight,
   STATUS_META,
 } from '@kargotrack/shared';
 
@@ -83,6 +84,13 @@ export async function renderTrackCard(
     }
   }
 
+  // §7.16: read the FROZEN volumetric column, never a recomputation — a tariff
+  // whose coefficient changed since must not restate what this parcel paid for.
+  const charged = storedChargeableWeight(
+    track.weightGrams,
+    track.volumetricGrams,
+  );
+
   // §3.6 (F1): a limited card — for anyone who is not the track's owner and
   // not staff — carries status-class data only. Weight, price and the photo
   // are commercial data between the company and THAT customer; a track code
@@ -94,8 +102,15 @@ export async function renderTrackCard(
     date: formatDate(lastAt),
     batchName,
     batchEta,
+    // §7.16: the owner sees the weight the price was built on. When volume
+    // beat the scale, `actualKg` comes with it and the card says why — the
+    // whole point of showing a number bigger than the customer expects.
     kg:
-      !opts.limited && track.weightGrams != null
+      !opts.limited && charged != null ? formatKg(charged.grams) : undefined,
+    actualKg:
+      !opts.limited &&
+      charged?.basis === 'volumetric' &&
+      track.weightGrams != null
         ? formatKg(track.weightGrams)
         : undefined,
     som:

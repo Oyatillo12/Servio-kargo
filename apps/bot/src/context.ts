@@ -18,11 +18,14 @@ export interface SessionData {
     | 'awaiting_phone'
     | 'awaiting_tracks'
     | 'awaiting_calc_kg'
+    | 'awaiting_calc_dims'
     | 'awaiting_ticket_text';
   /** Calculator (§3.9): the tariff chosen before entering a weight. */
   calcTariffId?: string;
   /** Calculator: whether we've already re-asked once after a bad number (§3.9). */
   calcRetried?: boolean;
+  /** Calculator (§7.16): the weight typed at step 2, kept for the dims step. */
+  calcGrams?: number;
   /** Ticket flow (§3.13): the ticket the next message appends to. */
   ticketId?: string;
   /** Ticket flow: category picked for a NEW ticket (no ticketId yet). */

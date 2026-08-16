@@ -105,18 +105,25 @@ function weighingReply(
   const kg = formatKg(result.track.weightGrams ?? weighing.weightGrams);
   const som = formatSom(result.track.priceTiyin ?? 0);
   const owner = result.ownerClientCode;
+  // §7.16: the price came from the parcel's stored volume, not the scale. The
+  // console shows this as a tag; the fallback channel says it in words, so an
+  // operator is never surprised by a price they cannot explain to a customer.
+  const volumetric =
+    result.basis === 'volumetric'
+      ? `\n${s.staffVolumetricNote(formatKg(result.chargeableGrams))}`
+      : '';
 
   if (result.created) {
     const base =
-      result.marka === 'attached' && owner
+      (result.marka === 'attached' && owner
         ? s.staffSavedNewOwned(code, kg, som, owner)
-        : s.staffSavedNew(code, kg, som);
+        : s.staffSavedNew(code, kg, som)) + volumetric;
     return result.marka === 'notFound' && weighing.marka
       ? `${base}\n${s.staffMarkaNotFound(weighing.marka)}`
       : base;
   }
 
-  const base = s.staffSaved(code, kg, som);
+  const base = s.staffSaved(code, kg, som) + volumetric;
   switch (result.marka) {
     case 'attached':
       return owner ? `${base}\n${s.staffMarkaAttached(owner)}` : base;

@@ -330,6 +330,7 @@ uz: `Assalomu alaykum, {name}! {tenant_name} bo'yicha qarzingiz: {debt} so'm.\nI
 - china_addr_footer — uz: `❗️ Har bir qutiga shu kodni yozdirishni unutmang: {client_code}`
 - china_addr_missing — uz: `Manzil hali kiritilmagan. Administrator bilan bog'laning: {contact_phone}`
 - staff_saved — uz: `✅ {code}: {kg} kg → {price} so'm`
+- staff_volumetric_note — uz: `📐 Hajmiy vazn bo'yicha hisoblandi: {kg} kg` — appended to any staff weighing reply the parcel's stored volume priced (7.16), so the fallback channel says what the console shows as a tag
 - staff_saved_new — uz: `🆕 {code}: yangi trek yaratildi ({kg} kg → {price} so'm). Mijoz hali biriktirilmagan.`
 - staff_photo_ok — uz: `📷 {code}: rasm biriktirildi.`
 - staff_not_found — uz: `❓ {code} topilmadi. Vazn bilan yuborsangiz, yangi trek sifatida yarataman, masalan: {code} 3.2`

@@ -10,7 +10,7 @@ import { parseStaffWeighing } from '@kargotrack/shared';
 import type { KargoContext } from '../context';
 import { langKeyboard } from '../keyboards';
 import { askForTracks, handleAddTracks } from './addTrack';
-import { handleCalcWeight, showCalculator } from './calculator';
+import { handleCalcDims, handleCalcWeight, showCalculator } from './calculator';
 import { showChinaAddress } from './china';
 import { matchMenuAction } from './common';
 import { handleLookup } from './lookup';
@@ -67,6 +67,11 @@ export async function textRouter(ctx: KargoContext): Promise<void> {
   if (ctx.session.step === 'awaiting_calc_kg') {
     // Consumed → done; not consumed (second bad number) → fall through to lookup.
     if (await handleCalcWeight(ctx, text)) return;
+  }
+
+  if (ctx.session.step === 'awaiting_calc_dims') {
+    // §7.16 step 3 — optional, so it always answers with a price in the end.
+    if (await handleCalcDims(ctx, text)) return;
   }
 
   if (ctx.session.step === 'awaiting_tracks') {
