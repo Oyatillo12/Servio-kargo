@@ -418,11 +418,11 @@ large tabular figures. No decorative colour: every coloured pixel means a state.
 | `--ink-2` | `#5A5F66` | secondary text |
 | `--ink-3` | `#8B9099` | placeholders, zero values, chevrons |
 | `--rule` | `#DAD6CC` | hairline borders |
-| `--accent` | `#DC5A22` | the ONE action colour |
+| `--signal` | `#DC5A22` | the ONE action colour |
 
 **Colour is semantics, never decoration** — unchanged from the previous system:
 red `#C1272D` = debt, amber `#C77E10` = needs attention, green `#1F8A4C` = done,
-`--accent` = action and selection. Because accent and amber sit close on the
+`--signal` = action and selection. Because signal and amber sit close on the
 eye, an attention state is NEVER carried by colour alone: it always pairs with
 an icon and a hatch fill (`.hatch`). A colour-blind warehouse hand and a
 grayscale print must both read the same screen.
@@ -432,8 +432,12 @@ grayscale print must both read the same screen.
 read as prose, JetBrains Mono for anything compared down a column: track
 codes, kg, som, dates, client codes. All three carry Cyrillic; the Uzbek
 `oʻ/gʻ` (U+02BB) is verified on the `/design` page rather than assumed, and a
-face that lacks it is replaced, not patched. `font-variant-numeric:
-tabular-nums` stays global.
+face that lacks it is replaced, not patched.
+
+Mono is the alignment MECHANISM, not a flavour: Golos Text's `tnum` table is
+incomplete (it snaps 1/4/7 and leaves the rest), so a figure that will be read
+down a column goes in mono — a som total, a weight, a count in a table. The
+global `tabular-nums` only tidies the digits inside running text.
 
 **Density is adaptive** (D-012). One scale, two settings — the same admin uses
 a desk browser in the office and a phone in the warehouse:

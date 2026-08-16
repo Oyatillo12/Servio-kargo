@@ -189,8 +189,14 @@
     font-size: var(--fs-body);
     line-height: var(--lh-body);
   }
-  /* Every figure in the panel is a quantity that gets compared down a column —
-   * counts, weights, som totals. Proportional digits make those columns jitter. */
+  /*
+   * Tightens the incidental digits in running text. It is NOT what keeps
+   * columns aligned: Golos Text ships an incomplete `tnum` table — measured in
+   * the browser, it snaps 1/4/7 to the tabular advance and leaves 2/3/5/6/8/9
+   * where they were, so a column of som totals still drifts by ~0.5px a digit.
+   * Anything compared down a column therefore goes in mono (SPEC 5.0), which
+   * is monospaced by construction rather than by a font feature.
+   */
   .theme-panel body {
     font-variant-numeric: tabular-nums;
   }

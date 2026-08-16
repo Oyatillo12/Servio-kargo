@@ -427,11 +427,13 @@ yo'naltirish). Landing ataylab tashqarida.
 o'zgarmaydi — redesign ruxsat xaritasiga ham, biznes qoidalariga (SPEC 7) ham
 tegmaydi. Har bosqich oxirida `pnpm typecheck && lint && test`.
 
-- [ ] **N1 · Tokenlar + shriftlar + `/design`** — `globals.css` bitta token
-      manbasiga; Oswald + Golos Text + JetBrains Mono; `.theme-landing`
-      himoyalanadi; adaptiv tipografika/zichlik shkalasi; dev-only `/design`
-      sahifasi (uz/ru, kirill, `oʻ/gʻ` render tekshiruvi, urg'u vs
-      ogohlantirish ziddiyati).
+- [x] **N1 · Tokenlar + shriftlar + `/design`** ✅ — `globals.css` bitta token
+      manbasiga (`:root`); Oswald + Golos Text + JetBrains Mono;
+      `.theme-landing` redesigndan oldingi qiymatlarni aynan ushlab turadi
+      (radius 10px ham); adaptiv `--fs-*` / `--h-control` 768px da almashadi;
+      holat ranglari `--st-*` ga ko'chdi; dev-only `/design`.
+      **Ochiq risk yopildi:** uchala shrift ham `oʻ/gʻ` (U+02BB) va kirillni
+      ko'taradi (`document.fonts.check`, brauzerda tekshirildi).
 - [ ] **N2 · Primitivlar** — `components/ui` to'plami yangi tizimga; yangi
       `Tabs` (URL-param), `SegmentedControl`, `StatTile`, `DataList`.
 - [ ] **N3 · Shell** — header, sidebar, bottom-nav, page-header, billing
