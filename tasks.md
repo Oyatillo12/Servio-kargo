@@ -317,15 +317,20 @@ boshlanishida SPEC.md tegishli bo'limi YOZILADI, keyin kod.
       keyin to'xtatish (qolgani ketmasligi), bloklaganlar kartasi va
       filtri.
 
-### L · QR klient-karta (Cargou pariteti)
+### L · QR klient-karta (Cargou pariteti; D-009, SPEC 3.14)
 
-Kichik qaror (epic boshlanishida, DECISIONS'ga): QR payload — oddiy
-client_code (o'qilishi oson, soxtalash mumkin) vs imzolangan token.
+Qaror qabul qilindi (D-009): QR ichida **oddiy client_code** (imzolangan
+token emas) va `qrcode` kutubxonasi qo'shiladi.
 
-- [ ] **L1 · Mijoz QR'i** — botda "Mening kartam" (rasm) + TWA'da ekran;
-      client_code + QR.
-- [ ] **L2 · Skan** — /weigh va /handover'da mavjud `BarcodeDetector`
-      infra bilan QR o'qish → mijoz avto-tanlanadi.
+- [ ] **L1 · Mijoz QR'i** — botda `🪪 Mening kartam` (+ `/karta`): QR rasm,
+      izohda kod monospace bilan; Mini App'da `/card` ekrani (server tomonda
+      chiziladi). Ro'yxatdan o'tmaganga — "avval /start".
+- [ ] **L2 · Skan** — skan tugmasi `CustomerPickerSheet` ichiga qo'shiladi,
+      ya'ni peshtaxta, biriktirish va trek detali birdan oladi; /weigh'da
+      bitta skaner ikkalasini o'qiydi — shakli bo'yicha
+      (`looksLikeClientCode`) trek kodi kod maydoniga, mijoz QR'i marka
+      maydoniga tushadi. Skan infratuzilmasi `features/weigh` dan
+      `components/shared` ga ko'chadi (cross-feature).
 
 ### M · Import himoyasi
 
@@ -441,7 +446,9 @@ EMAS); frontend — rasmiy `telegram-web-app.js` + tor typed wrapper,
 
 ## Kutubxonalar siyosati
 
-Hozir qo'shiladigan YANGI kutubxona YO'Q. `@aws-sdk/client-s3` — faqat B8
+`qrcode` — QO'SHILDI (2026-08-16, D-009: QR standartini qo'lda yozish bir
+necha yuz qator va o'zi bitta bug manbai; sof JS, Node'da PNG, brauzerda
+data-URL). Boshqa yangi kutubxona YO'Q. `@aws-sdk/client-s3` — faqat B8
 triggeri otilganda. Click uchun SDK olinmaydi (oddiy HTTPS + imzo, `fetch`
 yetadi). Shtrix-kod skan (W3) — native `BarcodeDetector` API, kutubxonasiz;
 tashqi lib faqat pilot telefonlari qo'llamasa. Ataylab olinmaydi:
