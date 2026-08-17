@@ -183,24 +183,24 @@ export default async function TracksPage({
            are hidden rather than shown inactive: a worklist already implies a
            status, so a chip tapped on top of it would look like a second filter
            and return nothing. One obvious way out instead. */
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[#f0e0c2] bg-[#fffbf3] px-3 py-2.5">
-          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#fdf0d8] text-warning">
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-warning/30 bg-[var(--st-china-bg)] px-3 py-2.5">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--st-china-bg)] text-warning">
             {(() => {
               const Icon = WORKLIST_ICONS[work];
               return <Icon className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />;
             })()}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold text-foreground">
+            <p className="truncate text-small font-semibold text-foreground">
               {worklistLabel(work, locale).label}
             </p>
-            <p className="truncate text-[11px] text-muted-foreground">
+            <p className="truncate text-micro text-muted-foreground">
               {worklistLabel(work, locale).hint}
             </p>
           </div>
           <Link
             href={chipHref()}
-            className="flex flex-none items-center gap-1 rounded-full border border-input bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-secondary"
+            className="flex flex-none items-center gap-1 rounded-full border border-input bg-surface px-3 py-1.5 text-xs font-medium text-ink-2 transition-colors hover:bg-secondary"
           >
             <X className="h-3.5 w-3.5" aria-hidden />
             {t('clearFilter')}

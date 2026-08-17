@@ -9,18 +9,21 @@ import { HowItWorks } from './how-it-works';
 import { LandingFooter } from './landing-footer';
 import { LandingHeader } from './landing-header';
 import { LandingJsonLd } from './json-ld';
+import { PipelineBoard } from './pipeline-board';
 import { Pricing } from './pricing';
+import { WeighFeature } from './weigh-feature';
 import { WhatYouGet } from './what-you-get';
 
 /**
  * The whole landing page, shared by `/` (uz) and `/ru`. Locale arrives as a
  * prop — never from the cookie — so both pages stay statically rendered.
  *
- * The spine is two symmetric picture sections: three panel captures for what
- * the owner does (`HowItWorks`), three bot captures for what their customer
- * gets (`CustomerView`). Everything else is short text between them. It used
- * to be eight prose sections of icon grids, which is what made it read as
- * filler — the screenshots now make the claims the copy used to assert.
+ * TERMINAL at marketing scale (D-013): the page reads as one numbered
+ * document. The spine is picture sections of the real product — panel
+ * captures for the owner (`HowItWorks`), Telegram captures for their customer
+ * (`CustomerView`), the weigh console for the China warehouse
+ * (`WeighFeature`) — with the pipeline board separating claim from evidence.
+ * Everything else is short text between them.
  */
 export function LandingPage({ locale }: { locale: Lang }) {
   return (
@@ -28,8 +31,10 @@ export function LandingPage({ locale }: { locale: Lang }) {
       <LandingHeader locale={locale} />
       <main>
         <Hero locale={locale} />
+        <PipelineBoard locale={locale} />
         <HowItWorks locale={locale} />
         <CustomerView locale={locale} />
+        <WeighFeature locale={locale} />
         <DemoSection locale={locale} />
         <WhatYouGet locale={locale} />
         <Pricing locale={locale} />

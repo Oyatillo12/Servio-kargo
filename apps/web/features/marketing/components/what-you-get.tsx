@@ -5,45 +5,53 @@ import type { Lang } from '@kargotrack/shared';
 import { SectionHeading } from './section-heading';
 
 /**
- * Everything the three steps did not already show. Debt and import are
- * deliberately absent — they are steps 01 and 03 of "Qanday ishlaydi", and
- * repeating them here is what turned this into an eight-card grid before.
+ * Everything the picture sections did not already show. Import, notifications
+ * and debt are deliberately absent — they are the steps of "Qanday ishlaydi";
+ * the weigh console has its own section. What remains is the long tail a
+ * cargo owner asks about on a demo call, including what shipped since the
+ * first version of this page: tickets, the QR client card, import undo.
  */
 const ITEMS = [
   'getBot',
   'getBatch',
   'getPrice',
-  'getWarehouse',
   'getExcel',
   'getStaff',
+  'getTickets',
+  'getQr',
+  'getUndo',
 ] as const;
 
 /**
- * What the product actually does, as a definition list.
- *
- * Replaces an eight-card icon grid. Every capability had a rounded tile and a
- * lucide glyph, which made eight different things look like one repeating
- * texture; a term and its explanation on a ruled line reads faster and does
- * not pretend that "Excel export" needs an illustration.
+ * A definition list on ruled lines — a waybill's field table, not an icon
+ * grid. A term and its explanation read faster than eight rounded tiles, and
+ * do not pretend that "Excel export" needs an illustration.
  */
 export async function WhatYouGet({ locale }: { locale: Lang }) {
   const t = await getTranslations({ locale, namespace: 'landing' });
 
   return (
-    <section className="border-t border-[#E4E6EA] bg-white py-16 sm:py-20">
-      <div className="mx-auto w-full max-w-5xl px-5 sm:px-6">
-        <SectionHeading title={t('getTitle')} />
+    <section className="border-t border-rule bg-surface py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-6xl px-5 sm:px-6">
+        <SectionHeading
+          index="04"
+          kicker={t('getKicker')}
+          title={t('getTitle')}
+        />
 
-        <dl className="mt-8 divide-y divide-[#E4E6EA] border-y border-[#E4E6EA]">
-          {ITEMS.map((item) => (
+        <dl className="mt-10 border-t border-rule">
+          {ITEMS.map((item, i) => (
             <div
               key={item}
-              className="grid gap-1 py-5 sm:grid-cols-[15rem_1fr] sm:gap-8"
+              className="grid gap-1.5 border-b border-rule py-5 sm:grid-cols-[3.5rem_16rem_1fr] sm:gap-8"
             >
-              <dt className="text-[15px] font-bold text-[#1A1D21]">
+              <dt className="hidden font-mono text-[12px] leading-6 text-ink-3 sm:block">
+                {String(i + 1).padStart(2, '0')}
+              </dt>
+              <dt className="font-display text-[16px] font-semibold uppercase tracking-[0.03em] text-ink">
                 {t(`${item}Title`)}
               </dt>
-              <dd className="text-[14px] leading-relaxed text-[#5C6270]">
+              <dd className="text-[14.5px] leading-relaxed text-ink-2">
                 {t(`${item}Desc`)}
               </dd>
             </div>

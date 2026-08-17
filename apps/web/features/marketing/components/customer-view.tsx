@@ -6,52 +6,67 @@ import type { ShotKey } from '../images';
 import { Screenshot } from './screenshot';
 import { SectionHeading } from './section-heading';
 
-/**
- * The other half of the product: what the cargo company's own customer sees.
- *
- * Three real captures of the bot rather than a paragraph promising a good
- * experience — status messages, the price calculator, and the China warehouse
- * address carrying the customer's client code. "Mijozlarimiz nimani ko'radi?"
- * is the question every owner asks, and this answers it without being read.
- */
-const VIEWS: { key: string; shot: ShotKey }[] = [
+interface Card {
+  key: 'cust1' | 'cust2' | 'cust3';
+  shot: ShotKey;
+}
+
+/** What the customer sees: notifications, the calculator, the China address. */
+const CARDS: Card[] = [
   { key: 'cust1', shot: 'botChat' },
   { key: 'cust2', shot: 'botCalculator' },
   { key: 'cust3', shot: 'botAddress' },
 ];
 
+/**
+ * The other half of the product: three real Telegram captures of the
+ * customer's side, under the tenant's own brand. Closed by the Mini App line —
+ * the premium cabinet is real and in production, so it may be named.
+ */
 export async function CustomerView({ locale }: { locale: Lang }) {
   const t = await getTranslations({ locale, namespace: 'landing' });
 
   return (
-    <section className="border-t border-[#E4E6EA] bg-white py-16 sm:py-24">
-      <div className="mx-auto w-full max-w-5xl px-5 sm:px-6">
-        <SectionHeading title={t('custTitle')} lead={t('custLead')} />
+    <section className="border-t border-rule bg-surface py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-6xl px-5 sm:px-6">
+        <SectionHeading
+          index="02"
+          kicker={t('custKicker')}
+          title={t('custTitle')}
+          lead={t('custLead')}
+        />
 
-        {/* Captions above the captures, not below. The three chats are
-            genuinely different lengths, and labelling them underneath would
-            leave the headings on three different baselines — cropping them to
-            a common height instead would cut the calculator's result line,
-            which is the whole point of that shot. */}
-        <ul className="mt-10 grid items-start gap-10 sm:grid-cols-3 sm:gap-8">
-          {VIEWS.map(({ key, shot }) => (
-            <li key={key}>
-              <h3 className="text-[15px] font-bold text-[#1A1D21]">
-                {t(`${key}Title`)}
-              </h3>
-              <p className="mt-1.5 min-h-[3.75rem] text-[13.5px] leading-relaxed text-[#5C6270]">
-                {t(`${key}Desc`)}
-              </p>
+        <div className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-6 lg:gap-10">
+          {CARDS.map((card) => (
+            <figure key={card.key}>
               <Screenshot
-                shot={shot}
+                shot={card.shot}
                 locale={locale}
-                alt={t(`${key}Alt`)}
+                alt={t(`${card.key}Alt`)}
                 variant="phone"
-                className="mt-4"
               />
-            </li>
+              <figcaption className="mt-5 border-t border-rule pt-3.5">
+                <p className="font-display text-[16px] font-semibold uppercase tracking-[0.03em] text-ink">
+                  {t(`${card.key}Title`)}
+                </p>
+                <p className="mt-1.5 text-[14px] leading-relaxed text-ink-2">
+                  {t(`${card.key}Desc`)}
+                </p>
+              </figcaption>
+            </figure>
           ))}
-        </ul>
+        </div>
+
+        {/* The premium cabinet, stated as fact — it runs in production. */}
+        <div className="mt-12 flex flex-col gap-3 rounded-lg border border-rule bg-paper px-5 py-5 sm:flex-row sm:items-center sm:gap-5 sm:px-6">
+          <span className="inline-flex w-max shrink-0 items-center rounded-[3px] bg-ink px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-white">
+            {t('pricePremiumName')}
+          </span>
+          <p className="text-[14.5px] leading-relaxed text-ink-2">
+            <span className="font-semibold text-ink">{t('miniappTitle')}</span>{' '}
+            {t('miniappDesc')}
+          </p>
+        </div>
       </div>
     </section>
   );

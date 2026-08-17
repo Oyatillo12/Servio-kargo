@@ -33,32 +33,34 @@ export default async function LockedPage() {
   const isOwner = role === 'owner';
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-7 px-5 py-10">
+    <main className="flex min-h-svh flex-col items-center justify-center gap-7 bg-paper px-5 py-10">
       <div className="flex flex-col items-center gap-2.5 text-center">
         <Wordmark className="h-9" />
         <RouteDots />
       </div>
 
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-5 shadow-sm">
+      <div className="w-full max-w-sm border-y border-rule bg-surface p-5 sm:rounded-lg sm:border">
         <div className="flex flex-col items-center gap-2 text-center">
-          <PauseCircle className="h-8 w-8 text-amber-600" aria-hidden />
-          <p className="text-[13px] font-medium text-muted-foreground">
+          <PauseCircle className="h-8 w-8 text-warning" aria-hidden />
+          <p className="text-small font-medium text-muted-foreground">
             {tenant.name}
           </p>
-          <h1 className="text-lg font-bold">{t('lockedTitle')}</h1>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <h1 className="font-display text-lead font-semibold uppercase tracking-[0.04em] text-ink">
+            {t('lockedTitle')}
+          </h1>
+          <p className="text-small leading-relaxed text-muted-foreground">
             {isOwner ? t('lockedOwner') : t('lockedStaff')}
           </p>
         </div>
 
         {isOwner && tenant.paidUntil ? (
-          <p className="mt-4 rounded-lg bg-muted px-3 py-2 text-center text-[13px] tabular-nums">
+          <p className="mt-4 rounded-sm border border-warning/30 bg-[var(--st-china-bg)] px-3 py-2 text-center font-mono text-small tabular-nums text-warning">
             {t('lockedPaidUntil', { date: tenant.paidUntil })}
           </p>
         ) : null}
 
         {isOwner ? (
-          <div className="mt-4 space-y-1.5 text-center text-[13px]">
+          <div className="mt-4 space-y-1.5 text-center text-small">
             <p className="font-medium">{t('lockedContact')}</p>
             {CONTACT_PHONE ? (
               <a
@@ -83,7 +85,7 @@ export default async function LockedPage() {
         <form action={logoutAction} className="mt-5">
           <button
             type="submit"
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+            className="h-control w-full rounded-md border border-input text-small font-medium text-muted-foreground transition-colors hover:bg-surface-alt hover:text-foreground"
           >
             {tNav('logout')}
           </button>

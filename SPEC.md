@@ -286,6 +286,31 @@ dates `DD.MM.YYYY`; display timezone Asia/Tashkent. `{var}` = template
 variables. Keep every string in `packages/shared/i18n/{uz,ru}.ts` — the
 texts below are canonical.
 
+**Emoji discipline (D-012).** An emoji is a label, never punctuation:
+
+- **At most one per line, always leading.** The message's own mark opens the
+  first line and names what the message is about; a value line carries none —
+  `⚖️ Og'irligi:` becomes `Og'irligi:`, because the scale says nothing the word
+  does not, and four of them in one notification make it a ransom note. A list
+  whose lines are separate things (the help card's steps, the menu tour) may
+  mark each line, still one and still leading.
+- **One per button**, leading, and never reused by a second button in the same
+  keyboard: in an inline keyboard the emoji is what the thumb aims at.
+- **A status always wears its own mark** — `STATUS_META[status].emoji`, the one
+  the panel and the Mini App show for that status. A template never spells an
+  emoji for a state inline; three surfaces, one mark.
+- Flags mean a country or its language (`🇺🇿`, `🇨🇳`, `🇷🇺`), never decoration,
+  and nothing else is ever a flag.
+
+**Cabinet hand-off (D-012).** Where a premium tenant's answer summarises
+something the Mini App shows in full — the track list, the balance, the
+calculator — the keyboard's last row is a Web App button into that exact
+screen (`/m/{tenantId}/{tracks|finance|calc}`). The chat keeps the quick look;
+the app takes over when there is more to see, instead of the bot growing
+another paging flow inside a conversation. Basic tenants simply do not get the
+row (`miniAppUrlFor` returns undefined), and nothing else about the answer
+changes.
+
 ### 4.1 Onboarding & service texts
 - welcome — uz: `Assalomu alaykum! {tenant_name} botiga xush kelibsiz.\nTilni tanlang / Выберите язык:`
 - ask_phone — uz: `Ro'yxatdan o'tish uchun telefon raqamingizni yuboring 👇`
@@ -384,6 +409,95 @@ Panel strings live in `apps/web/messages/{uz,ru}.json`. Domain vocabulary the
 bot also sends to customers (status names, worklist labels, payment methods,
 Excel headers) stays in `packages/shared` and is read with the panel's locale —
 two copies would drift the moment one side is edited.
+
+### 5.0 Design system — TERMINAL (D-012)
+
+One token set in `apps/web/app/globals.css` serves the panel, the auth screens
+and the Mini App — and, since D-013, the public landing too. The landing wears
+the same palette, faces and semantics but at *marketing scale*: larger type,
+more air, a sales-page reading rhythm. `.theme-landing` therefore no longer
+freezes an old palette; it only carries the landing's scale additions on top
+of `:root`. The landing's evidence rule is unchanged: real screenshots of the
+real product, re-shot from the TERMINAL panel in the page's own locale, never
+mockups (D-013).
+
+**Ground.** The vocabulary of freight — container markings, airport boards,
+waybills: paper canvas, near-black ink, hairline rules, uppercase micro-labels,
+large tabular figures. No decorative colour: every coloured pixel means a state.
+
+| Token | Value | Used for |
+| ------------- | --------- | ------------------------------------------ |
+| `--paper` | `#F4F2ED` | page canvas |
+| `--surface` | `#FFFFFF` | cards, rows, sheets |
+| `--ink` | `#14171A` | primary text |
+| `--ink-2` | `#5A5F66` | secondary text |
+| `--ink-3` | `#8B9099` | placeholders, zero values, chevrons |
+| `--rule` | `#DAD6CC` | hairline borders |
+| `--signal` | `#DC5A22` | the ONE action colour |
+
+**Colour is semantics, never decoration** — unchanged from the previous system:
+red `#C1272D` = debt, amber `#C77E10` = needs attention, green `#1F8A4C` = done,
+`--signal` = action and selection. Because signal and amber sit close on the
+eye, an attention state is NEVER carried by colour alone: it always pairs with
+an icon and a hatch fill (`.hatch`). A colour-blind warehouse hand and a
+grayscale print must both read the same screen.
+
+**Type.** Oswald for headings and uppercase micro-labels (condensed — a
+`RAIL / CN-4821` eyebrow costs almost no width), Golos Text for everything
+read as prose, JetBrains Mono for anything compared down a column: track
+codes, kg, som, dates, client codes. All three carry Cyrillic; the Uzbek
+`oʻ/gʻ` (U+02BB) is verified on the `/design` page rather than assumed, and a
+face that lacks it is replaced, not patched.
+
+Mono is the alignment MECHANISM, not a flavour: Golos Text's `tnum` table is
+incomplete (it snaps 1/4/7 and leaves the rest), so a figure that will be read
+down a column goes in mono — a som total, a weight, a count in a table. The
+global `tabular-nums` only tidies the digits inside running text.
+
+**Density is adaptive** (D-012). One scale, two settings — the same admin uses
+a desk browser in the office and a phone in the warehouse:
+
+| | Mobile (< `md`) | Desktop (≥ `md`) |
+| -------------- | --------------- | ---------------- |
+| Body text | 15px | 13.5px |
+| Control height | 44px | 34px |
+| List row | 56px | 40px |
+
+**Shells.** Full-width 52px top bar over a 184px collapsible rail; content in a
+centred column. On phones the rail is replaced by the in-flow bottom tab bar
+(never `fixed` — it must not cover the last row of a list), sections run edge to
+edge on white separated by 8px bands, and `/weigh` keeps its own chrome-less
+full-screen shell (5.14).
+
+**Detail screens are tabbed** (D-012). `/tracks/[id]`, `/customers/[id]` and
+`/batches/[id]` share one shell: a sticky head (back link, identifier, status,
+and for a track the route rail), then a tab strip:
+
+| Screen | Tabs |
+| ----------------- | -------------------------------------------- |
+| `/tracks/[id]` | Umumiy · Suratlar · Tarix · Xabarlar |
+| `/customers/[id]` | Umumiy · Treklar · To'lovlar · Xabarlar |
+| `/batches/[id]` | Umumiy · Treklar |
+
+Rules: the active tab lives in the URL (`?tab=…`) so the screen stays a Server
+Component, survives a reload and can be linked to; an unknown value falls back
+to the first tab rather than 404-ing (same degradation as `?status=`); a tab
+carries a count when the count is the reason to open it; the first tab holds
+everything needed to act on the record, so the primary actions are never behind
+a tab; on desktop that first tab is two columns (record left, owner + actions
+right), on phones one. `/tickets/[id]` stays a single column — a conversation
+does not tab.
+
+**Motion** is confined to state changes: entrance stagger on first paint, and
+the pipeline "now" dot. Everything respects `prefers-reduced-motion`.
+
+**Dark mode: panel and auth screens are light-only.** The Mini App is dark-aware
+because Telegram tells it which theme the chat is in (10.3) — that is following
+the host, not a theme of ours.
+
+**`/design`** renders the whole system on one page (tokens, type, density,
+every primitive, both locales) and is available in development only. It is the
+review surface for design changes: a token is changed there first.
 
 - **5.1 /login** — telefon + parol. One generic error for any bad pair
   (`auth.invalidCredentials`).
@@ -1292,3 +1406,12 @@ the bot (3.1); the Mini App never asks for a phone.
 `telegram-web-app.js` script plus a thin typed wrapper. TWA cookies are
 domain-separated from admin session cookies (same secret, disjoint HMAC
 context): one token family can never verify as the other.
+
+**10.4 Look.** The Mini App wears the same design system as the panel (5.0) in
+two layers, and the split is the point. SURFACES — page, card, text, hint —
+follow the live Telegram `themeParams`, so the app reads as a continuation of
+the chat it opened from and is dark whenever that chat is. IDENTITY — the
+accent, the status colours, the pipeline, the type — is ours and does not flip
+with the host. The fallbacks render correctly before (and without) the theme
+bridge, because the app must not flash the wrong colours while Telegram is
+still handing them over.

@@ -92,7 +92,7 @@ export function BatchAssignDialog({
           </Select>
         </div>
 
-        <p className="rounded-lg border border-[#dfe4f2] bg-[#f3f5fb] px-3 py-2.5 text-[13px] text-slate-700">
+        <p className="rounded-lg border border-signal/25 bg-signal-soft px-3 py-2.5 text-small text-ink-2">
           {t('tracksSelected', { count: trackIds.length })}
         </p>
 

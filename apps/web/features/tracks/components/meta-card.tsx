@@ -120,7 +120,7 @@ export function MetaCard({
               rows={3}
               onChange={(e) => setDraftNote(e.target.value)}
             />
-            <p className="text-[12px] text-muted-foreground">
+            <p className="text-micro text-muted-foreground">
               {t('metaNoteHint')}
             </p>
           </div>
@@ -140,7 +140,7 @@ export function MetaCard({
           </div>
         </div>
       ) : (
-        <dl className="space-y-2 text-[13.5px]">
+        <dl className="space-y-2 text-small">
           <MetaRow label={t('metaMarka')} value={marka} mono />
           <MetaRow label={t('metaDescription')} value={description} />
           <MetaRow label={t('metaNote')} value={note} />

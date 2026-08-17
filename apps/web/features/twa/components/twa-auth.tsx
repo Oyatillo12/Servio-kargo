@@ -31,7 +31,7 @@ function CenterNote({
 }) {
   return (
     <div className="twa-rise flex min-h-[70vh] flex-col items-center justify-center gap-3 px-2 text-center">
-      {title ? <p className="text-[17px] font-extrabold">{title}</p> : null}
+      {title ? <p className="text-lead font-extrabold">{title}</p> : null}
       <p className="twa-hint text-sm leading-relaxed">{body}</p>
       {children}
     </div>

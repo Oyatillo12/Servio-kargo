@@ -109,9 +109,9 @@ export function WeightForm({
             }
           }}
           placeholder="0"
-          className="min-w-0 flex-1 bg-white px-3 py-2.5 font-mono text-[17px] font-semibold outline-none"
+          className="min-w-0 flex-1 bg-surface px-3 py-2.5 font-mono text-lead font-semibold outline-none"
         />
-        <span className="border-l border-border bg-[#f7f8fa] px-3.5 py-2.5 text-[13px] text-muted-foreground">
+        <span className="border-l border-border bg-surface-alt px-3.5 py-2.5 text-small text-muted-foreground">
           {tCommon('kg')}
         </span>
       </div>
@@ -124,7 +124,7 @@ export function WeightForm({
           {(['lengthCm', 'widthCm', 'heightCm'] as const).map((side, i) => (
             <div key={side} className="flex min-w-0 flex-1 items-center gap-1.5">
               {i > 0 ? (
-                <span className="flex-none text-[13px] text-muted-foreground">
+                <span className="flex-none text-small text-muted-foreground">
                   ×
                 </span>
               ) : null}
@@ -143,20 +143,20 @@ export function WeightForm({
                 }}
                 placeholder={['50', '40', '30'][i]}
                 aria-label={[t('dimLength'), t('dimWidth'), t('dimHeight')][i]}
-                className="min-w-0 flex-1 rounded-lg border border-input bg-white px-2.5 py-2 font-mono text-[15px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="min-w-0 flex-1 rounded-lg border border-input bg-surface px-2.5 py-2 font-mono text-body outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
           ))}
-          <span className="flex-none text-[13px] text-muted-foreground">
+          <span className="flex-none text-small text-muted-foreground">
             {tCommon('cm')}
           </span>
         </div>
         {chargeableText ? (
-          <p className="text-[11.5px] font-medium text-primary">
+          <p className="text-micro font-medium text-primary">
             {chargeableText}
           </p>
         ) : (
-          <p className="text-[11.5px] text-muted-foreground">
+          <p className="text-micro text-muted-foreground">
             {t('dimensionsHint')}
           </p>
         )}
@@ -166,7 +166,7 @@ export function WeightForm({
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="tariff">{t('tariff')}</Label>
         {tariffs.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-input px-3 py-2 text-[12.5px] text-muted-foreground">
+          <p className="rounded-lg border border-dashed border-input px-3 py-2 text-micro text-muted-foreground">
             {t('noTariff')}
           </p>
         ) : (
@@ -188,10 +188,10 @@ export function WeightForm({
       {/* Manual override */}
       <label className="flex cursor-pointer items-center justify-between rounded-lg border border-border px-3 py-2">
         <span>
-          <span className="block text-[13px] font-semibold">
+          <span className="block text-small font-semibold">
             {t('manualToggle')}
           </span>
-          <span className="block text-[11.5px] text-muted-foreground">
+          <span className="block text-micro text-muted-foreground">
             {t('manualToggleHint')}
           </span>
         </span>
@@ -208,9 +208,9 @@ export function WeightForm({
               value={manualPrice}
               onChange={(e) => setManualPrice(e.target.value)}
               placeholder="0"
-              className="min-w-0 flex-1 bg-white px-3 py-2.5 font-mono text-[17px] font-semibold outline-none"
+              className="min-w-0 flex-1 bg-surface px-3 py-2.5 font-mono text-lead font-semibold outline-none"
             />
-            <span className="border-l border-border bg-[#f7f8fa] px-3.5 py-2.5 text-[13px] text-muted-foreground">
+            <span className="border-l border-border bg-surface-alt px-3.5 py-2.5 text-small text-muted-foreground">
               {tCommon('som')}
             </span>
           </div>
@@ -218,19 +218,19 @@ export function WeightForm({
       ) : (
         <>
           <div className="flex items-baseline justify-between">
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-small text-muted-foreground">
               {t('price')}
             </span>
-            <span className="font-mono text-[17px] font-semibold text-primary">
+            <span className="font-mono text-lead font-semibold text-primary">
               {priceText}
               {priceUsdText ? (
-                <span className="ml-1.5 text-[13px] text-muted-foreground">
+                <span className="ml-1.5 text-small text-muted-foreground">
                   {priceUsdText}
                 </span>
               ) : null}
             </span>
           </div>
-          <p className="-mt-1 text-right text-[11.5px] text-muted-foreground">
+          <p className="-mt-1 text-right text-micro text-muted-foreground">
             {t('priceAutoHint')}
           </p>
         </>

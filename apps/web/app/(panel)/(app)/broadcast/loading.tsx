@@ -5,7 +5,7 @@ export default function BroadcastLoading() {
   return (
     <div className="mx-auto max-w-md space-y-4">
       <Skeleton className="h-6 w-32" />
-      <Skeleton className="h-52 w-full rounded-xl" />
+      <Skeleton className="h-52 w-full rounded-lg" />
       <ListSkeleton rows={3} />
     </div>
   );

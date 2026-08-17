@@ -31,13 +31,16 @@ export function PageHeader({ title, count, right, className }: PageHeaderProps) 
         className,
       )}
     >
-      <h1 className="min-w-0 truncate text-[20px] font-semibold text-foreground">
+      {/* The screen's name in the system's display voice — the one place a
+          page shouts, and it does it condensed so a long Russian title
+          ("Уведомления") still fits beside two controls on a 360px phone. */}
+      <h1 className="min-w-0 truncate font-display text-title font-semibold uppercase tracking-[0.04em] text-ink">
         {title}
       </h1>
       {count != null || right ? (
         <div className="ml-auto flex flex-none items-center gap-2">
           {count != null ? (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-small text-muted-foreground">
               {t('total')}{' '}
               <span className="font-mono font-semibold tabular-nums">{count}</span>
             </span>

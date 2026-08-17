@@ -46,26 +46,26 @@ export default async function WeighPage() {
 
   return (
     <main className="flex min-h-svh flex-col bg-background">
-      <header className="sticky top-0 z-10 flex h-[52px] items-center gap-2 border-b border-n-200 bg-white px-3">
+      <header className="sticky top-0 z-10 flex h-[52px] items-center gap-2 border-b border-n-200 bg-surface px-3">
         <Scale className="h-5 w-5 flex-none text-primary" strokeWidth={1.5} aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-semibold leading-tight text-foreground">
+          <p className="truncate text-body font-semibold leading-tight text-foreground">
             {t('pageTitle')}
           </p>
-          <p className="truncate text-[11.5px] leading-tight text-muted-foreground">
+          <p className="truncate text-micro leading-tight text-muted-foreground">
             {tenant.name}
           </p>
         </div>
         <Link
           href="/tracks"
-          className="flex h-9 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="flex h-9 items-center gap-1.5 rounded-md px-2.5 text-small font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t('exit')}
         </Link>
       </header>
 
-      <div className="mx-auto w-full max-w-lg flex-1 px-3 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+      <div className="mx-auto w-full max-w-5xl flex-1 px-3 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
         <WeighConsole
           initialRows={rows}
           canAssign={can(role, 'tracks.assign')}

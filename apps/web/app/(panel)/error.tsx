@@ -33,7 +33,7 @@ export default function Error({
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fde8e8] text-2xl">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--st-lost-bg)] text-2xl">
         ⚠️
       </div>
       <div>
@@ -48,7 +48,7 @@ export default function Error({
         Qayta urinish
       </Button>
       {error.digest ? (
-        <p className="font-mono text-[11px] text-muted-foreground">
+        <p className="font-mono text-micro text-muted-foreground">
           Kod: {error.digest}
         </p>
       ) : null}

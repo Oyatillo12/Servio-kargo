@@ -8,8 +8,8 @@ import { onboardTenantAction, type OnboardState } from './actions';
 const initialState: OnboardState = {};
 
 const inputClass =
-  'w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
-const labelClass = 'mb-1 block text-sm font-medium text-slate-700';
+  'w-full rounded-md border border-input px-3 py-2.5 text-small outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
+const labelClass = 'mb-1 block text-small font-medium text-ink-2';
 
 function Field({
   name,
@@ -27,7 +27,7 @@ function Field({
         {label}
       </label>
       <input id={name} name={name} className={inputClass} {...props} />
-      {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-faint">{hint}</p> : null}
     </div>
   );
 }
@@ -38,7 +38,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+      className="w-full rounded-md bg-ink px-4 py-2.5 text-small font-semibold text-white transition hover:bg-ink/90 disabled:opacity-60"
     >
       {pending ? 'Yaratilmoqda…' : 'Kompaniyani yaratish'}
     </button>
@@ -53,7 +53,7 @@ export function OnboardForm() {
   return (
     <form action={formAction} className="space-y-5">
       {state.ok ? (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">
+        <div className="rounded-md bg-green-50 px-4 py-3 text-small text-green-800">
           <p className="font-semibold">
             ✅ {state.ok.name} yaratildi va webhook o‘rnatildi.
           </p>
@@ -78,13 +78,13 @@ export function OnboardForm() {
       ) : null}
 
       {state.error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-md bg-red-50 px-3 py-2 text-small text-red-700">
           {state.error}
         </p>
       ) : null}
 
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-faint">
           Kompaniya
         </p>
         <Field
@@ -148,7 +148,7 @@ export function OnboardForm() {
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-faint">
           Telegram bot
         </p>
         <Field
@@ -162,7 +162,7 @@ export function OnboardForm() {
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-faint">
           Ma'lumot kartasi (ixtiyoriy)
         </p>
         <Field
@@ -186,7 +186,7 @@ export function OnboardForm() {
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-faint">
           Birinchi admin
         </p>
         <div className="grid grid-cols-2 gap-4">

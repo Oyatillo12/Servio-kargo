@@ -6,9 +6,19 @@ import { can } from '@kargotrack/shared';
 import { DebtCell } from '@/components/shared/debt-cell';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ExportButton } from '@/components/shared/export-button';
+import { FilterChips } from '@/components/shared/filter-chips';
 import { Pagination } from '@/components/shared/pagination';
 import { SearchField } from '@/components/shared/search-field';
 import { PageHeader } from '@/components/layout/page-header';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  tableHeadRowClass,
+} from '@/components/ui/table';
 import { requireCapability } from '@/lib/auth';
 import { CUSTOMERS_PAGE_SIZE, listCustomersWithDebt } from '@/lib/queries';
 import { NewCustomerButton } from '@/features/customers/components/new-customer-button';
@@ -92,30 +102,16 @@ export default async function CustomersPage({
         />
       </div>
 
-      <div className="mb-4 flex gap-2">
-        <Link
-          href={filterHref(false)}
-          aria-current={onlyBlocked ? undefined : 'page'}
-          className={
-            onlyBlocked
-              ? 'rounded-full border border-input px-3 py-1.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-secondary'
-              : 'rounded-full bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-foreground'
-          }
-        >
-          {t('filterAll')}
-        </Link>
-        <Link
-          href={filterHref(true)}
-          aria-current={onlyBlocked ? 'page' : undefined}
-          className={
-            onlyBlocked
-              ? 'rounded-full bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-foreground'
-              : 'rounded-full border border-input px-3 py-1.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-secondary'
-          }
-        >
-          🚫 {t('filterBlocked')}
-        </Link>
-      </div>
+      <FilterChips
+        className="mb-4"
+        label={t('filterLabel')}
+        active={onlyBlocked ? '1' : undefined}
+        buildHref={(v) => filterHref(v === '1')}
+        chips={[
+          { value: undefined, label: t('filterAll') },
+          { value: '1', label: t('filterBlocked'), emoji: '🚫' },
+        ]}
+      />
 
       {customers.length === 0 ? (
         <EmptyState
@@ -129,40 +125,100 @@ export default async function CustomersPage({
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-white">
-          {customers.map((c) => (
-            <Link
-              key={c.id}
-              href={`/customers/${c.id}`}
-              className="flex items-center justify-between gap-3 border-b border-[#eef0f4] px-4 py-3 transition-colors last:border-0 hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground">
-                  {c.botBlocked ? (
-                    <span title={t('blockedBadge')} aria-label={t('blockedBadge')}>
-                      🚫{' '}
+        <>
+          {/* Phone: one tappable row per customer, edge to edge. */}
+          <div className="-mx-4 border-y border-rule bg-surface md:hidden">
+            {customers.map((c) => (
+              <Link
+                key={c.id}
+                href={`/customers/${c.id}`}
+                className="flex items-center justify-between gap-3 border-b border-rule-soft px-4 py-3 transition-colors last:border-0 active:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-body font-semibold text-foreground">
+                    {c.botBlocked ? (
+                      <span title={t('blockedBadge')} aria-label={t('blockedBadge')}>
+                        🚫{' '}
+                      </span>
+                    ) : null}
+                    {c.fullName ?? tCommon('noName')}{' '}
+                    <span className="font-mono text-micro font-medium text-faint">
+                      {c.clientCode}
                     </span>
-                  ) : null}
-                  {c.fullName ?? tCommon('noName')}{' '}
-                  <span className="font-mono text-[12px] font-medium text-muted-foreground">
-                    {c.clientCode}
-                  </span>
-                </p>
-                <p className="truncate font-mono text-[12px] text-muted-foreground">
-                  {c.phone ?? tCommon('dash')}
-                </p>
-              </div>
-              <div className="flex-none text-right">
-                <p className="text-[12px] text-muted-foreground">
-                  {t('trackCount', { count: c.trackCount })}
-                </p>
-                <p className="text-[12.5px]">
-                  <DebtCell tiyin={c.debtTiyin} />
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
+                  </p>
+                  <p className="truncate font-mono text-micro text-faint">
+                    {c.phone ?? tCommon('dash')}
+                  </p>
+                </div>
+                <div className="flex-none text-right">
+                  <p className="text-micro text-faint">
+                    {t('trackCount', { count: c.trackCount })}
+                  </p>
+                  <p className="text-small">
+                    <DebtCell tiyin={c.debtTiyin} />
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop: the columns SPEC 5.5 names. The phone row folds five
+              values into two lines because a thumb-width screen has no other
+              option; a desk browser has the width, and a column of debts that
+              can be scanned top to bottom is the whole point of the screen. */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <tr className={tableHeadRowClass}>
+                  <TableHead>{t('colCode')}</TableHead>
+                  <TableHead>{t('colName')}</TableHead>
+                  <TableHead>{t('colPhone')}</TableHead>
+                  <TableHead className="text-right">{t('colTracks')}</TableHead>
+                  <TableHead className="text-right">{t('colDebt')}</TableHead>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {customers.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="px-4">
+                      <Link
+                        href={`/customers/${c.id}`}
+                        className="font-mono font-semibold text-foreground underline-offset-2 hover:underline"
+                      >
+                        {c.clientCode}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-ink-2">
+                      <Link
+                        href={`/customers/${c.id}`}
+                        className="underline-offset-2 hover:underline"
+                      >
+                        {c.botBlocked ? (
+                          <span
+                            title={t('blockedBadge')}
+                            aria-label={t('blockedBadge')}
+                          >
+                            🚫{' '}
+                          </span>
+                        ) : null}
+                        {c.fullName ?? tCommon('noName')}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-mono text-ink-2">
+                      {c.phone ?? <span className="text-faint">{tCommon('dash')}</span>}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums text-ink-2">
+                      {c.trackCount}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DebtCell tiyin={c.debtTiyin} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       <Pagination page={page} pages={pages} buildHref={pageHref} />

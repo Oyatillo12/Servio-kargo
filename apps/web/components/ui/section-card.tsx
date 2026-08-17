@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * The white bordered card block used across the panel — replaces the repeated
- * `rounded-xl border border-border bg-white p-3.5` + `text-[13.5px] font-semibold`
+ * `rounded-lg border border-border bg-surface p-3.5` + `text-small font-semibold`
  * heading pattern. Pass `title` (optional) for a heading row with an optional
  * `action` on the right and a `description` under it.
  */
@@ -22,7 +22,7 @@ const SectionCard = React.forwardRef<HTMLDivElement, SectionCardProps>(
     <div
       ref={ref}
       className={cn(
-        'rounded-lg border border-border bg-white',
+        'rounded-lg border border-border bg-surface',
         !flush && 'p-4',
         className,
       )}
@@ -38,12 +38,15 @@ const SectionCard = React.forwardRef<HTMLDivElement, SectionCardProps>(
         >
           <div className="min-w-0">
             {title ? (
-              <h2 className="text-[15px] font-semibold text-foreground">
+              /* Card headings speak in the system's display voice — condensed
+                 uppercase — so a stack of cards reads as sections of one
+                 document rather than as a pile of widgets. */
+              <h2 className="font-display text-body font-semibold uppercase tracking-[0.06em] text-ink">
                 {title}
               </h2>
             ) : null}
             {description ? (
-              <p className="mt-1 text-[13px] text-muted-foreground">
+              <p className="mt-1 text-small text-muted-foreground">
                 {description}
               </p>
             ) : null}

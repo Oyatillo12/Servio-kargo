@@ -134,7 +134,7 @@ export function CustomerPickerSheet({
         </SheetHeader>
 
         {hint ? (
-          <div className="rounded-lg border border-[#dfe4f2] bg-[#f3f5fb] px-3 py-2.5 text-[13px] text-slate-700">
+          <div className="rounded-lg border border-signal/25 bg-signal-soft px-3 py-2.5 text-small text-ink-2">
             {hint}
           </div>
         ) : null}
@@ -161,7 +161,7 @@ export function CustomerPickerSheet({
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder={t('pickerSearchPlaceholder')}
-                  className="bg-[#f7f8fa] pl-9"
+                  className="bg-surface-alt pl-9"
                   aria-label={t('pickerSearchLabel')}
                 />
               </div>
@@ -173,7 +173,7 @@ export function CustomerPickerSheet({
                   type="button"
                   onClick={() => setScanning(true)}
                   aria-label={t('pickerScan')}
-                  className="flex h-10 w-10 flex-none items-center justify-center rounded-lg border border-input bg-white text-primary active:bg-accent"
+                  className="flex h-10 w-10 flex-none items-center justify-center rounded-lg border border-input bg-surface text-primary active:bg-accent"
                 >
                   <ScanLine className="h-5 w-5" strokeWidth={1.5} aria-hidden />
                 </button>
@@ -194,28 +194,28 @@ export function CustomerPickerSheet({
                   {t('pickerEmpty')}
                 </p>
               ) : (
-                <ul className="overflow-hidden rounded-xl border border-border">
+                <ul className="overflow-hidden rounded-lg border border-border">
                   {results.map((c) => (
                     <li key={c.id}>
                       <button
                         type="button"
                         onClick={() => onPick(c)}
-                        className="flex w-full items-center gap-3 border-b border-[#eef0f4] bg-white px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                        className="flex w-full items-center gap-3 border-b border-rule-soft bg-surface px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13.5px] font-semibold text-foreground">
+                          <p className="truncate text-small font-semibold text-foreground">
                             {c.fullName ?? tCommon('noName')}{' '}
-                            <span className="font-mono text-[12px] font-medium text-muted-foreground">
+                            <span className="font-mono text-micro font-medium text-muted-foreground">
                               {c.clientCode}
                             </span>
                           </p>
-                          <p className="truncate font-mono text-[12px] text-muted-foreground">
+                          <p className="truncate font-mono text-micro text-muted-foreground">
                             {c.phone ?? tCommon('dash')}
                           </p>
                         </div>
                         {!c.hasTelegram ? (
                           <span
-                            className="flex-none rounded-md bg-[#fdf1e3] px-1.5 py-0.5 text-[10.5px] font-semibold text-[#9a5b12]"
+                            className="flex-none rounded-md bg-[var(--st-china-bg)] px-1.5 py-0.5 text-[10.5px] font-semibold text-warning"
                             title={t('noBotHint')}
                           >
                             {t('noBot')}
@@ -311,15 +311,15 @@ export function CreateCustomerForm({
         />
       </div>
 
-      <p className="text-[12px] text-muted-foreground">{t('formHint')}</p>
+      <p className="text-micro text-muted-foreground">{t('formHint')}</p>
 
       {duplicate ? (
         <button
           type="button"
           onClick={() => onCreated(duplicate)}
           className={cn(
-            'rounded-lg border border-[#f0d3aa] bg-[#fdf6ec] px-3 py-2.5 text-left text-[13px] text-[#7a4a0d]',
-            'transition-colors hover:bg-[#fbeed9]',
+            'rounded-lg border border-warning/30 bg-[var(--st-china-bg)] px-3 py-2.5 text-left text-small text-warning',
+            'transition-colors hover:bg-[var(--st-china-bg)]',
           )}
         >
           {t('formDuplicate', {

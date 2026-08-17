@@ -32,7 +32,7 @@ function ErrorBanner({ message }: { message: string }) {
     // above the button the user just pressed, out of their line of sight.
     <p
       role="alert"
-      className="rounded-lg bg-[#fde8e8] px-3 py-2 text-sm text-[#b3261e]"
+      className="rounded-sm border-l-[3px] border-destructive bg-[var(--st-lost-bg)] px-3 py-2 text-small font-medium text-destructive"
     >
       {message}
     </p>
@@ -73,6 +73,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
           inputMode="tel"
           autoComplete="username"
           placeholder={t('phonePlaceholder')}
+          className="font-mono"
           required
         />
       </div>
@@ -105,7 +106,7 @@ function InviteForm({ onSwitch }: { onSwitch: () => void }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-3.5">
-      <p className="text-[13px] text-muted-foreground">{tTeam('inviteIntro')}</p>
+      <p className="text-small text-muted-foreground">{tTeam('inviteIntro')}</p>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="invite-phone">{t('phone')}</Label>
@@ -148,7 +149,7 @@ function InviteForm({ onSwitch }: { onSwitch: () => void }) {
           required
           aria-describedby="invite-password-hint"
         />
-        <p id="invite-password-hint" className="text-[12px] text-muted-foreground">
+        <p id="invite-password-hint" className="text-micro text-muted-foreground">
           {tTeam('passwordHint', { min: MIN_PASSWORD_LENGTH })}
         </p>
       </div>
@@ -173,7 +174,7 @@ function SwitchLink({
     <button
       type="button"
       onClick={onClick}
-      className="mt-1 self-center rounded-sm text-[13px] font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="mt-1 self-center rounded-sm text-small font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {label}
     </button>

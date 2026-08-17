@@ -146,6 +146,9 @@ export interface Strings {
     cancel: string;
     recalc: string;
     photo: string;
+    /** Premium deep link into the cabinet (D-012) — set on answers that
+     *  summarise something the Mini App shows in full. */
+    openCabinet: string;
   };
 
   /** Confirmation after a flow is abandoned via the inline cancel button. */

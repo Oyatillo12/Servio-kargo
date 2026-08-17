@@ -49,7 +49,7 @@ export function InviteCode({
         className,
       )}
     >
-      <span className="font-mono text-[15px] font-bold tracking-[0.12em] text-primary">
+      <span className="font-mono text-body font-bold tracking-[0.12em] text-primary">
         {formatInviteCode(code)}
       </span>
       {copied ? (

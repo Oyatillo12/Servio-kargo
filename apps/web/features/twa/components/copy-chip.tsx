@@ -48,7 +48,7 @@ export function CopyChip({
     <button
       type="button"
       onClick={onCopy}
-      className="twa-press inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+      className="twa-press inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-micro font-semibold"
       style={{
         background: 'var(--twa-brand-soft)',
         color: 'var(--twa-brand-ink)',

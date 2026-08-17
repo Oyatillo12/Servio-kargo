@@ -101,7 +101,7 @@ export function TariffsCard({
       }
     >
       {tariffs.length === 0 ? (
-        <p className="border-t border-n-divider px-4 py-4 text-[13px] text-muted-foreground">
+        <p className="border-t border-n-divider px-4 py-4 text-small text-muted-foreground">
           {t('tariffsEmpty')}
         </p>
       ) : (
@@ -148,19 +148,19 @@ export function TariffsCard({
             >
               <span className="min-w-0 flex-1 md:flex md:items-center md:gap-2">
                 <span className="flex items-center gap-1.5">
-                  <span className="truncate text-[15px] font-medium text-foreground">
+                  <span className="truncate text-body font-medium text-foreground">
                     {tf.name}
                   </span>
                   {tf.isDefault ? (
-                    <span className="flex-none rounded-sm border border-primary/30 px-1.5 py-px text-[11px] font-semibold uppercase tracking-[0.05em] text-primary">
+                    <span className="flex-none rounded-sm border border-primary/30 px-1.5 py-px text-micro font-semibold uppercase tracking-[0.05em] text-primary">
                       {t('tariffDefault')}
                     </span>
                   ) : null}
                 </span>
                 {/* Under the name on phones, pushed to the right on desktop. */}
-                <span className="mt-0.5 block text-[13px] text-muted-foreground md:ms-auto md:mt-0 md:text-[15px] md:font-semibold md:text-foreground">
+                <span className="mt-0.5 block text-small text-muted-foreground md:ms-auto md:mt-0 md:text-body md:font-semibold md:text-foreground">
                   {tf.priceValue}{' '}
-                  <span className="text-faint md:text-[12px] md:font-medium">
+                  <span className="text-faint md:text-micro md:font-medium">
                     {tf.priceUnit}
                   </span>
                 </span>
@@ -197,7 +197,7 @@ export function TariffsCard({
         ))
       )}
 
-      <p className="border-t border-n-divider px-4 py-3 text-[13px] text-faint">
+      <p className="border-t border-n-divider px-4 py-3 text-small text-faint">
         {t('tariffsHint')}
       </p>
 
@@ -340,12 +340,12 @@ function TariffDialog({
               placeholder="167"
               className="font-mono"
             />
-            <p className="text-[11.5px] text-muted-foreground">
+            <p className="text-micro text-muted-foreground">
               {t('tariffCoefHint')}
             </p>
           </div>
           {showDefault ? (
-            <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <label className="flex items-center gap-2 text-small text-muted-foreground">
               <input
                 type="checkbox"
                 checked={isDefault}

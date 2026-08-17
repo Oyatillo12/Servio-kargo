@@ -414,3 +414,136 @@ ya'ni o'zi idempotent.
 - `plan` (basic/premium) va `active` — **ikki xil narsa**: birinchisi qaysi
   funksiya ochiq, ikkinchisi eshik umuman ochiqmi. `planIncludes` ga
   tegilmaydi.
+
+---
+
+## D-012 · To'liq redesign: TERMINAL dizayn tizimi — 2026-08-16 (egasi)
+
+**Kontekst.** Panel mobile-first qurildi va telefonda yaxshi ishlaydi, lekin
+uchta narsa yig'ilib qoldi:
+
+1. **Desktop yo'q.** Detail sahifalar (`/tracks/[id]`, `/customers/[id]`)
+   `max-w-md` — ya'ni 24" monitorda ham telefon ustuni bo'lib qoladi, o'ng
+   tomonda bo'sh joy. Dashboard (`md:grid-cols-6`) yagona istisno.
+2. **Uzun skroll.** O'sha detail sahifalar 8 ta kartani ustma-ust qo'yadi
+   (rail, vazn, marka, foto, tarix, xabarlar, mijoz, amallar) — peshtaxtada
+   turgan admin "statusni o'zgartirish" tugmasiga yetguncha skroll qiladi.
+3. **Uchta bir-biriga qarama-qarshi token to'plami.** `:root` (indigo
+   #2B2687 + mis), `.theme-panel` (boshqa indigo #3B45B8, boshqa neytral
+   ramp), `twa.css` (uchinchi to'plam). Yagona manba yo'q, shuning uchun
+   "rangni o'zgartirish" har safar uch joyni qidirish demak.
+
+**Variantlar.** (a) nuqtaviy tuzatish — `max-w` ni kengaytirish va bir nechta
+grid qo'shish; (b) mavjud indigo identitetni saqlab, uchta tizimni bittaga
+yig'ish; (c) yangi brend tili + to'liq redesign (panel, TWA, bot).
+
+**Qaror (egasi).** (c). Tafsilotlari:
+
+- **Yuzalar:** admin panel + auth ekranlari, Telegram Mini App, bot.
+  **Marketing landing ataylab tashqarida** — u hozirgi indigo brendi bilan
+  qoladi (pastdagi "Oqibatlar" ga qarang).
+- **Bot tarafida faqat uchtasi:** emoji intizomi (har status/bo'lim uchun
+  bitta belgilangan emoji), klaviatura va menyu tuzilishi, uzun flow'lar
+  o'rniga Mini App yo'naltirishlari. **Xabar matnlarining tuzilishi
+  tegilmaydi** — ular ishlaydi va mijoz ko'zi o'rgangan.
+- **Yo'nalish: TERMINAL** — sanoat/logistika tili (konteyner markirovkasi,
+  aeroport tablosi). Shrift: Oswald (sarlavha, condensed), Golos Text
+  (matn), JetBrains Mono (kod/summa/vazn). Palitra: qog'oz `#F4F2ED`,
+  siyoh `#14171A`, hairline `#DAD6CC`, urg'u `#DC5A22`.
+  *Rad etilgan:* "SIGNAL" (to'q ramka + elektr urg'u — ko'p SaaS'da bor),
+  "KARTA" (chipta estetikasi — iliq, lekin ma'lumot zichligi pasayadi).
+- **Uzun detail sahifalar — tab'lar.** URL parametri (`?tab=…`) bilan, ya'ni
+  Server Component'lar bilan ishlaydi, link ulashsa bo'ladi va "orqaga"
+  tugmasi to'g'ri yuradi. *Rad etilgan:* yopishqoq yon panel (tavsiya
+  etilgan edi), keng bitta ustun + anchor nav, 12-ustunli "kokpit" grid.
+- **Zichlik — adaptiv:** desktopda zich (ofis ishi, ko'p qator), mobilda
+  kattaroq matn va 44px tegish maydoni (ombor, bir qo'l).
+- **Panel uchun dark mode YO'Q.** Qorong'i rejim faqat Mini App'da qoladi va
+  u yerda ham o'zimizniki emas — Telegram temasiga ergashadi.
+- **Logotip saqlanadi**, faqat yangi palitra va shriftga moslashtiriladi.
+
+**Texnik shakl (egasi qarori ichida, men).**
+
+- **Bitta token manbasi** — `apps/web/app/globals.css`. Panel, auth ekranlari
+  va TWA bir xil primitivlarni o'qiydi; TWA'da faqat *sirt* qatlami
+  (fon/karta/matn) Telegram temasidan keladi, identitet ranglari umumiy.
+- **`.theme-landing` daxlsiz.** Landing shu stylesheet'ni baham ko'radi,
+  shuning uchun u o'zining to'liq override blokini oladi — redesign uni
+  bir piksel ham o'zgartirmasligi kerak.
+- **Faqat ko'rinish.** `can()` / `authorize()` / `requireCapability()`,
+  querylar va Server Action'lar tegilmaydi (qoida 9 saqlanadi). Redesign
+  ruxsatlar xaritasini o'zgartirmaydi.
+- **Har bir yangi satr uz + ru** — `messages.test.ts` parity'ni tekshiradi.
+- **Ombor ergonomikasi saqlanadi:** `/` skaner fokusi, oqimdagi (fixed emas)
+  bottom-nav, safe-area, to'liq kenglikdagi mobil bo'limlar.
+
+**Oqibatlar.**
+
+- ~40 ekran va ~20 primitiv qayta yoziladi. Bu — pilotdan oldingi eng katta
+  ko'rinish o'zgarishi; regressiya riski real, shuning uchun bosqichma-bosqich
+  (tokenlar → primitivlar → shell → ro'yxatlar → detail → formalar → auth →
+  TWA → bot) va har bosqichda DoD.
+- **Landing va panel endi bir-biriga o'xshamaydi.** Landing panel
+  skrinshotlari bilan tirik (o'sha paytdagi qaror: sahifa mahsulotning o'z
+  ranglarini kiyadi), ya'ni skrinshotlar yangilangach landing ham TERMINAL'ga
+  o'tishi kerak bo'ladi. Bu alohida qaror bilan, keyin.
+- **Ochiq risk — shrift qamrovi.** Oswald'da o'zbek `oʻ/gʻ` (U+02BB) va
+  kirill belgilari real render bilan tekshiriladi; bo'lmasa sarlavhalar ham
+  Golos Text'ga o'tadi. Bu 1-bosqichning birinchi tekshiruvi.
+- **Ochiq ziddiyat — to'q sariq ikki ma'noda.** Urg'u `#DC5A22` (harakat) va
+  ogohlantirish `#C77E10` (diqqat) ko'zga yaqin. Yechim: diqqat holati hech
+  qachon faqat rang bilan aytilmaydi — ikona + shtrix (hatch) fon bilan
+  birga. Rang semantikasi o'zgarmaydi: qizil = qarz, sariq = diqqat,
+  yashil = bajarilgan.
+- Redesign **hech qanday biznes qoidasini o'zgartirmaydi** — SPEC'ning 7-qismi
+  (biznes qoidalari) bu qarordan mutlaqo ta'sirlanmaydi.
+
+---
+
+## D-013 · Landing TERMINAL'ga o'tadi — marketing varianti — 2026-08-17 (egasi)
+
+**Kontekst.** D-012 landing'ni ataylab tashqarida qoldirgan edi: sahifa panel
+skrinshotlari bilan tirik, skrinshotlar esa eski indigo paneldan. N1–N9
+bajarildi — panel endi TERMINAL'da, ya'ni landing'dagi "dalil" (iyul
+skrinshotlari) mahsulotga o'xshamay qoldi. Demo video sloti bo'sh, ba'zi
+rasmlar ruscha bo'lib o'zbek sahifasida turibdi. D-012 "Oqibatlar"da bu
+qadam alohida qaror bilan kelishi yozilgan — bu o'sha qaror.
+
+**Variantlar.** (a) indigo qoladi, faqat skrinshot almashadi; (b) landing
+panel bilan AYNAN bir tizimga o'tadi (bir xil zichlik, bir xil masshtab);
+(c) TERMINAL asosi — o'sha tokenlar, shriftlar, semantika — lekin marketing
+masshtabida: kattaroq tip, ko'proq havo, sahifa o'qish ritmi sotuv sahifasi
+kabi.
+
+**Qaror (egasi).** (c) — TERMINAL-marketing.
+
+- **Tokenlar `:root`dan olinadi**, `.theme-landing` endi to'liq muzlatilgan
+  nusxa emas — faqat landing'ga xos qo'shimchalar (masshtab, hero fon
+  effektlari) qoladi. Shriftlar panelniki: Oswald / Golos Text / JetBrains
+  Mono (Manrope + IBM Plex Mono chiqadi).
+- **Skrinshotlar qayta olinadi** — TERMINAL panelidan, har ikki tilda
+  (uz sahifada uz panel, ru sahifada ru panel). "Faqat real skrinshot,
+  hech qachon mockup" qoidasi o'zgarmaydi.
+- **Narx — ikki tarif:** basic va premium (`tenants.plan` haqiqati).
+  Raqamlar hali kelishilmagan — `PRICE` konfiglari null bo'lsa "hajmga
+  qarab kelishamiz" ko'rinadi. Premium ustuni Mini App kabinetni ko'rsatadi.
+- **Roadmap halol:** bugun bor narsa "bor" sifatida (Mini App, QR karta,
+  tarozi rejimi, murojaatlar, import undo); rejadagilar — onlayn to'lov
+  (C), referral (D3), viloyat yetkazish (E) — aniq "rejada" belgisi bilan,
+  sana va'dasisiz. Egasi tanlovi: referral + yetkazish ko'rsatiladi.
+- **Demo video sloti saqlanadi** (`DEMO_VIDEO` konfigi) — egasi yozuvni
+  beradi (P2), sahifa o'zi o'ynatadi.
+- **O'zgarmaydiganlar:** statik render (locale prop orqali, cookie
+  o'qilmaydi — uchta root layout tuzilishi), lead-form + throttle + Server
+  Action, metadata/JSON-LD/sitemap, `#demo` yakori.
+
+**Oqibatlar.**
+
+- SPEC 5.0 dagi ".theme-landing — yagona istisno" bandi yangilanadi:
+  istisno endi "boshqa palitra" emas, "boshqa masshtab" (marketing
+  zichligi panelnikiga ergashmaydi).
+- Iyul skrinshotlari (`public/images/`) yangilariga almashadi; eski fayllar
+  o'chiriladi.
+- Landing endi `:root` tokenlariga bog'liq — panel palitrasi o'zgarsa
+  landing ham ergashadi. Bu endi xato emas, maqsad: sahifa mahsulotning
+  o'zini kiyadi.

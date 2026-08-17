@@ -21,10 +21,10 @@ export async function ImportRunsCard({ runs }: { runs: ImportRunSummary[] }) {
 
   return (
     <div>
-      <h2 className="mb-2 text-[13.5px] font-semibold text-foreground">
+      <h2 className="mb-2 text-small font-semibold text-foreground">
         {t('runsTitle')}
       </h2>
-      <div className="overflow-hidden rounded-xl border border-border bg-white">
+      <div className="overflow-hidden rounded-lg border border-border bg-surface">
         {runs.map((run) => {
           const summary = t('runCounts', {
             created: run.created,
@@ -33,26 +33,26 @@ export async function ImportRunsCard({ runs }: { runs: ImportRunSummary[] }) {
           return (
             <div
               key={run.id}
-              className="border-b border-[#eef0f4] px-4 py-3 last:border-0"
+              className="border-b border-rule-soft px-4 py-3 last:border-0"
             >
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[11.5px] text-muted-foreground">
+                <span className="text-micro text-muted-foreground">
                   {formatDateTime(run.createdAt)}
                   {run.createdByName ? ` · ${run.createdByName}` : ''}
                 </span>
-                <span className="shrink-0 text-[11.5px] font-semibold text-primary">
+                <span className="shrink-0 text-micro font-semibold text-primary">
                   {summary}
                 </span>
               </div>
 
               {run.sourceName ? (
-                <p className="mt-0.5 truncate text-[13px] text-foreground">
+                <p className="mt-0.5 truncate text-small text-foreground">
                   {run.sourceName}
                 </p>
               ) : null}
 
               {run.undoneAt ? (
-                <p className="mt-1 text-[11.5px] font-semibold text-[#b3261e]">
+                <p className="mt-1 text-micro font-semibold text-destructive">
                   {t('runUndone', {
                     reverted: run.undoneReverted ?? 0,
                     skipped: run.undoneSkipped ?? 0,
@@ -64,7 +64,7 @@ export async function ImportRunsCard({ runs }: { runs: ImportRunSummary[] }) {
                 {run.rejected > 0 ? (
                   <a
                     href={`/api/import/runs/${run.id}/rejected`}
-                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11.5px] font-semibold text-primary transition-colors hover:bg-primary/10"
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-micro font-semibold text-primary transition-colors hover:bg-primary/10"
                   >
                     <Download className="h-3.5 w-3.5" aria-hidden />
                     {t('rejectedDownload', { count: run.rejected })}

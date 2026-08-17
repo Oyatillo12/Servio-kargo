@@ -416,6 +416,56 @@ amber) → kechagi sanaga qo'yish (banner qizil, /sa ro'yxatida).
 
 ---
 
+## N — Redesign: TERMINAL dizayn tizimi (D-012; SPEC 5.0, 4 emoji, 10.4)
+
+Uchta og'riq (D-012): detail sahifalar desktopda `max-w-md` telefon ustuni;
+o'sha sahifalar 8 kartalik uzun skroll; uchta bir-biriga qarama-qarshi token
+to'plami. Yuzalar: panel + auth, Mini App, bot (emoji/klaviatura/TWA
+yo'naltirish). Landing ataylab tashqarida.
+
+**Faqat ko'rinish.** Hech bir `can()`/`authorize()`, query yoki Server Action
+o'zgarmaydi — redesign ruxsat xaritasiga ham, biznes qoidalariga (SPEC 7) ham
+tegmaydi. Har bosqich oxirida `pnpm typecheck && lint && test`.
+
+- [x] **N1 · Tokenlar + shriftlar + `/design`** ✅ — `globals.css` bitta token
+      manbasiga (`:root`); Oswald + Golos Text + JetBrains Mono;
+      `.theme-landing` redesigndan oldingi qiymatlarni aynan ushlab turadi
+      (radius 10px ham); adaptiv `--fs-*` / `--h-control` 768px da almashadi;
+      holat ranglari `--st-*` ga ko'chdi; dev-only `/design`.
+      **Ochiq risk yopildi:** uchala shrift ham `oʻ/gʻ` (U+02BB) va kirillni
+      ko'taradi (`document.fonts.check`, brauzerda tekshirildi).
+- [x] **N2 · Primitivlar** — `components/ui` to'plami yangi tizimga; yangi
+      `Tabs` (URL-param), `SegmentedControl`, `StatTile`, `DataList`.
+- [x] **N3 · Shell** — header, sidebar, bottom-nav, page-header, billing
+      banner, brand mark. `/` skaner fokusi va oqimdagi tab bar saqlanadi.
+- [x] **N4 · Ro'yxatlar** — tracks, customers, debtors, batches, tickets:
+      desktopda zich jadval, mobilda karta qator; filtr/chip/pagination/bulk.
+- [x] **N5 · Detail shablon** — bitta `DetailShell` + tab'lar (SPEC 5.0);
+      tracks/[id], customers/[id], batches/[id] unga o'tadi.
+- [x] **N6 · Uzun formalar** — import wizard, settings (+team), broadcast,
+      handover, weigh konsoli.
+- [x] **N7 · Auth ekranlari** — login (parol + taklif kodi), invite, locked,
+      /sa.
+- [x] **N8 · Mini App** — `twa.css` umumiy identitetga ulanadi; sirt Telegram
+      temasidan (SPEC 10.4); 9 ta ekran.
+- [x] **N9 · Bot** — emoji intizomi (SPEC 4), `keyboards.ts` tugma tartibi va
+      menyu ierarxiyasi, uzun flow'lar o'rniga TWA deep-link tugmalari.
+- [x] **N10 · Landing TERMINAL-marketing** ✅ (2026-08-17, D-013) — D-012
+      "landing tashqarida" sharti yechildi: skrinshotlar TERMINAL panelidan
+      har ikki tilda qayta olindi (`public/images/panel-*-{uz,ru}.png`,
+      headless CDP 1600×900 @2x), `.theme-landing` endi `:root` tokenlari +
+      faqat shrift-mapping; sahifa qayta qurildi: waybill-hero (marshrut
+      qatori + 3 fakt), pipeline-tablo (STATUS_META'dan), 3 qadam, bot
+      ekranlari + Mini App callout, tarozi bo'limi (Xitoyda Telegram yo'q —
+      asosiy differensiator), imkoniyatlar dl (tickets/QR/undo qo'shildi),
+      2-tarifli narx (premium'da REJADA shtamplari: referal, viloyat
+      yetkazish), 6 FAQ, TERMINAL og.png. Lead-form/throttle/SEO va statik
+      render tegilmadi. Ochiq: bot skrinshotlari bitta nusxada (uz sahifada
+      ruscha kadrlar bor) — yangi bot kadri tushganda `images.ts` da almashadi;
+      `DEMO_VIDEO` (P2) va `PRICE_*_SOM` hali bo'sh.
+
+---
+
 ## C — Onlayn to'lov (premium) — SHAKLI P6 javobiga bog'liq
 
 Muhim prinsip: pul HAR DOIM tenant'ning O'Z hisobiga tushadi — platforma

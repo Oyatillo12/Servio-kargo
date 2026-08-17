@@ -1,44 +1,64 @@
 /**
- * Shared next/font instances. The app has multiple root layouts (panel +
- * the two marketing locales) and each must apply the same font variables;
- * next/font dedupes per-module, so they all import from here.
+ * Shared next/font instances. The app has several root layouts (panel,
+ * Mini App, the two marketing locales) and each must apply the same font
+ * variables; next/font dedupes per-module, so they all import from here.
+ *
+ * One family of typography since D-013: TERMINAL (SPEC 5.0) — the panel, the
+ * auth screens, the Mini App AND the public landing. Oswald sets headings and
+ * uppercase micro-labels, Golos Text carries everything read as prose,
+ * JetBrains Mono every figure compared down a column. All three ship
+ * Cyrillic, which `/ru` and every Russian-speaking office needs. The landing
+ * used to be frozen on Manrope + IBM Plex Mono; its screenshots were re-shot
+ * from the TERMINAL panel, so the page now wears the product's own faces.
  */
 
-import { IBM_Plex_Mono, IBM_Plex_Sans, Manrope } from 'next/font/google';
+import { Golos_Text, JetBrains_Mono, Oswald } from 'next/font/google';
 
 /**
- * The public landing's typeface. Manrope rather than the panel's Plex Sans:
- * the landing is read once by a stranger on a phone, so it wants a warmer,
- * higher-contrast headline face than the dense data screens do. Cyrillic is
- * in the subset because `/ru` renders the same components.
+ * TERMINAL headings and eyebrows. Condensed on purpose: `TREK / CN-4821` sits
+ * above a value in the width a normal grotesque needs for half of it, which is
+ * what makes a dense screen readable without shrinking the data.
  */
-export const manrope = Manrope({
-  subsets: ['latin', 'latin-ext', 'cyrillic'],
-  variable: '--font-sans',
+export const oswald = Oswald({
+  subsets: ['latin', 'cyrillic'],
+  variable: '--font-panel-display',
   display: 'swap',
 });
 
 /**
- * The admin panel's typeface. It ships its own variable rather than reusing
- * `--font-sans` so the marketing pages never download it — `.theme-panel`
- * points `--font-sans` at this one, and only the panel root layout sets it.
+ * TERMINAL body face. Golos Text is drawn for interfaces in both scripts by the
+ * same hand, so a Russian office and an Uzbek one get the same texture rather
+ * than a Latin face with a bolted-on Cyrillic.
  */
-export const plexSans = IBM_Plex_Sans({
+export const golosText = Golos_Text({
   subsets: ['latin', 'cyrillic'],
-  weight: ['400', '500', '600', '700'],
   variable: '--font-panel-sans',
   display: 'swap',
 });
 
-export const plexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-mono',
+/**
+ * Every figure in the panel is a quantity compared down a column — track codes,
+ * kg, som. JetBrains Mono has Cyrillic too, so a mono label never falls back
+ * mid-word in Russian.
+ */
+export const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin', 'cyrillic'],
+  variable: '--font-panel-mono',
   display: 'swap',
 });
 
-/** `className` for the `<html>` element of the marketing root layouts. */
-export const fontVariables = `${manrope.variable} ${plexMono.variable}`;
+/**
+ * `className` for the `<html>` element of the marketing root layouts. The
+ * same three faces as the panel; `.theme-landing` (globals.css) points
+ * `--font-sans` / `--font-mono` / `--font-display` at them, exactly like
+ * `.theme-panel` does — but without the panel's adaptive density scale, so
+ * the landing keeps a marketing-sized 16px base.
+ */
+export const fontVariables = `${golosText.variable} ${oswald.variable} ${jetbrainsMono.variable}`;
 
-/** `className` for the `<html>` element of the panel root layout. */
-export const panelFontVariables = `${plexSans.variable} ${plexMono.variable} theme-panel`;
+/**
+ * `className` for the `<html>` element of the panel root layout. `theme-panel`
+ * points `--font-sans` / `--font-mono` / `--font-display` at the three faces
+ * above (globals.css), so the marketing pages never download them.
+ */
+export const panelFontVariables = `${golosText.variable} ${oswald.variable} ${jetbrainsMono.variable} theme-panel`;

@@ -90,7 +90,7 @@ export function CustomerCard({
               <p className="text-sm font-semibold text-foreground">
                 {customer.fullName ?? tCommon('noName')}
               </p>
-              <p className="truncate font-mono text-[12px] text-muted-foreground">
+              <p className="truncate font-mono text-micro text-muted-foreground">
                 {customer.clientCode}
                 {customer.phone ? ` · ${customer.phone}` : ''}
               </p>
@@ -108,7 +108,7 @@ export function CustomerCard({
               ) : null}
             </div>
           </div>
-          <div className="mt-3 flex gap-2.5 border-t border-[#eef0f4] pt-3">
+          <div className="mt-3 flex gap-2.5 border-t border-rule-soft pt-3">
             <Button
               variant="outline"
               size="sm"

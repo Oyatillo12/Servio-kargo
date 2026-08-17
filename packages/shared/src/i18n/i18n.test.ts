@@ -50,7 +50,7 @@ describe('statusNotification builder (§4.2)', () => {
   it('builds a READY_FOR_PICKUP message, omitting unset weight/price lines', () => {
     const msg = statusNotification(uz, 'READY_FOR_PICKUP', vars)!;
     expect(msg).toContain('AB12345678 — yukingiz tayyor!');
-    expect(msg).toContain('📍 Manzil: Chilonzor 1');
+    expect(msg).toContain('Manzil: Chilonzor 1');
     expect(msg).not.toContain("Og'irligi");
   });
 
@@ -60,8 +60,8 @@ describe('statusNotification builder (§4.2)', () => {
       kg: '1.5',
       som: '82 500',
     })!;
-    expect(msg).toContain("⚖️ Og'irligi: 1.5 kg");
-    expect(msg).toContain("💵 To'lov: 82 500 so'm");
+    expect(msg).toContain("Og'irligi: 1.5 kg");
+    expect(msg).toContain("To'lov: 82 500 so'm");
   });
 
   it('uses the side-state template for LOST', () => {
@@ -107,7 +107,7 @@ describe('volumetric weight is never a bare number (§7.16, D-007)', () => {
       kg: '5.2',
       som: '156 000',
     })!;
-    expect(msg).toContain("⚖️ Og'irligi: 5.2 kg");
+    expect(msg).toContain("Og'irligi: 5.2 kg");
     expect(msg).not.toContain('hajmiy');
   });
 
@@ -133,7 +133,7 @@ describe('volumetric weight is never a bare number (§7.16, D-007)', () => {
         kg: '10.02',
         som: '300 600',
       }),
-    ).toContain('⚖️ Вес: 10.02 кг');
+    ).toContain('Вес: 10.02 кг');
   });
 
   it('the calculator answers with the reason only when volume won', () => {

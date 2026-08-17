@@ -15,7 +15,9 @@ export default function RuMarketingLayout({
 }) {
   return (
     <html lang="ru" className={`${fontVariables} theme-landing`}>
-      <body className="bg-white font-sans">{children}</body>
+      <body className="bg-paper font-sans text-ink antialiased">
+        {children}
+      </body>
     </html>
   );
 }

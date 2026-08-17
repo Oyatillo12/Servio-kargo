@@ -38,9 +38,9 @@ export async function CashByStaff({
       title={t('cashByStaff')}
       meta={periodLabel}
     >
-      <p className="mb-3 font-mono text-[20px] font-semibold tabular-nums text-foreground">
+      <p className="mb-3 font-mono text-title font-semibold tabular-nums text-foreground">
         {formatSom(total)}{' '}
-        <span className="text-[13px] font-normal text-muted-foreground">
+        <span className="text-small font-normal text-muted-foreground">
           {tCommon('som')}
         </span>
       </p>
@@ -51,12 +51,12 @@ export async function CashByStaff({
           return (
             <li key={r.adminUserId ?? 'unattributed'}>
               <div className="flex items-baseline justify-between gap-3">
-                <span className="min-w-0 truncate text-[13.5px] font-medium text-foreground">
+                <span className="min-w-0 truncate text-small font-medium text-foreground">
                   {/* Rows written before the column existed have nobody to
                       name; saying so beats an blank line that reads as a bug. */}
                   {r.name ?? t('cashUnattributed')}
                 </span>
-                <span className="flex-none font-mono text-[13.5px] font-semibold tabular-nums text-foreground">
+                <span className="flex-none font-mono text-small font-semibold tabular-nums text-foreground">
                   {formatSom(r.totalTiyin)}
                 </span>
               </div>
@@ -70,7 +70,7 @@ export async function CashByStaff({
                     style={{ width: `${Math.max(share, 2)}%` }}
                   />
                 </span>
-                <span className="flex-none text-[11.5px] tabular-nums text-faint">
+                <span className="flex-none text-micro tabular-nums text-faint">
                   {t('cashPaymentCount', { count: r.count })}
                 </span>
               </div>

@@ -1,19 +1,25 @@
 import { cn } from '@/lib/utils';
 
 /**
- * A section title, and nothing else.
+ * A section opener in the TERMINAL voice: a mono waybill index
+ * (`01 / IMPORT`), a condensed uppercase title, an optional lead.
  *
- * The previous version stacked a mono index ("01 —") over an uppercase kicker
- * over the title, on every one of eight sections. Repeated that many times the
- * device stops labelling anything and just reads as decoration, so it's gone:
- * a heading and an optional line of lead copy carry the section on their own.
+ * The index earns its place here (it was cut from the previous design as
+ * decoration): the page now reads as one document — a waybill with numbered
+ * fields — and the running index is what carries that reading.
  */
 export function SectionHeading({
+  index,
+  kicker,
   title,
   lead,
   dark = false,
   className,
 }: {
+  /** Two-digit position in the page's running order, e.g. "02". */
+  index?: string;
+  /** Uppercase micro-label after the index, e.g. "IMPORT". */
+  kicker?: string;
   title: string;
   lead?: string;
   dark?: boolean;
@@ -21,10 +27,22 @@ export function SectionHeading({
 }) {
   return (
     <div className={cn('max-w-2xl', className)}>
+      {index || kicker ? (
+        <p
+          className={cn(
+            'mb-3 flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.14em]',
+            dark ? 'text-white/50' : 'text-ink-3',
+          )}
+        >
+          {index ? <span className="text-signal">{index}</span> : null}
+          {index && kicker ? <span aria-hidden>/</span> : null}
+          {kicker ? <span>{kicker}</span> : null}
+        </p>
+      ) : null}
       <h2
         className={cn(
-          'text-[26px] font-extrabold leading-[1.15] tracking-[-0.02em] sm:text-[34px]',
-          dark ? 'text-white' : 'text-[#1A1D21]',
+          'font-display text-[30px] font-semibold uppercase leading-[1.06] tracking-[0.01em] sm:text-[40px]',
+          dark ? 'text-white' : 'text-ink',
         )}
       >
         {title}
@@ -32,8 +50,8 @@ export function SectionHeading({
       {lead ? (
         <p
           className={cn(
-            'mt-3 text-[15px] leading-relaxed',
-            dark ? 'text-[#9CA3AF]' : 'text-[#5C6270]',
+            'mt-4 text-[16px] leading-relaxed',
+            dark ? 'text-white/65' : 'text-ink-2',
           )}
         >
           {lead}

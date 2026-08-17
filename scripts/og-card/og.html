@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Golos+Text:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden;
+    background: #f4f2ed; color: #14171a;
+    font-family: 'Golos Text', sans-serif;
+    display: flex; flex-direction: column;
+  }
+  .top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 44px 64px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand img { width: 44px; height: 44px; border-radius: 6px; }
+  .brand span {
+    font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 26px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .brand span i { font-style: normal; color: #8b9099; font-weight: 400; }
+  .route {
+    font-family: 'JetBrains Mono', monospace; font-size: 17px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: #5a5f66;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .route .dot { width: 10px; height: 10px; background: #dc5a22; border-radius: 2px; }
+  .mid { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 64px; }
+  h1 {
+    font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 92px;
+    line-height: 0.98; text-transform: uppercase; letter-spacing: 0.005em;
+  }
+  h1 .mark {
+    background-image: linear-gradient(to bottom, transparent 72%, rgba(220,90,34,.32) 72%, rgba(220,90,34,.32) 94%, transparent 94%);
+  }
+  .sub { margin-top: 28px; font-size: 27px; line-height: 1.45; color: #5a5f66; max-width: 900px; }
+  .board {
+    background: #14171a; padding: 22px 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .board .st {
+    font-family: 'Oswald', sans-serif; font-size: 19px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: rgba(255,255,255,.55);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .board .st.now { color: #fff; }
+  .board .st .d { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.25); }
+  .board .st.now .d { background: #dc5a22; }
+  .board .arr { color: rgba(255,255,255,.25); font-family: 'JetBrains Mono', monospace; font-size: 15px; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">
+      <img src="http://localhost:3000/favicon.png" />
+      <span>Servio <i>Kargo</i></span>
+    </div>
+    <div class="route"><span class="dot"></span> Guangzhou / Yiwu &#8594; Toshkent</div>
+  </div>
+  <div class="mid">
+    <h1>Yuk qayerdaligini<br />mijozning <span class="mark">o&#699;zi ko&#699;radi</span></h1>
+    <div class="sub">Kargo uchun Telegram bot va boshqaruv paneli — holat, vazn, narx va qarz avtomatik.</div>
+  </div>
+  <div class="board">
+    <span class="st"><span class="d"></span> Ro&#699;yxatga olindi</span><span class="arr">&#8594;</span>
+    <span class="st"><span class="d"></span> Xitoy omborida</span><span class="arr">&#8594;</span>
+    <span class="st now"><span class="d"></span> Yo&#699;lda</span><span class="arr">&#8594;</span>
+    <span class="st"><span class="d"></span> Toshkentda</span><span class="arr">&#8594;</span>
+    <span class="st"><span class="d"></span> Topshirildi</span>
+  </div>
+</body>
+</html>

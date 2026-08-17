@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import {
@@ -16,7 +15,10 @@ import { ExportButton } from '@/components/shared/export-button';
 import { MessageOutcomesCard } from '@/components/shared/message-outcomes';
 import { ReminderButton } from '@/components/shared/reminder-button';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { DetailColumns, DetailShell } from '@/components/layout/detail-shell';
+import { DataItem, DataList } from '@/components/ui/data-list';
 import { SectionCard } from '@/components/ui/section-card';
+import { resolveTab, type TabItem } from '@/components/ui/tabs';
 import { requireCapability } from '@/lib/auth';
 import {
   getCustomerDetail,
@@ -33,22 +35,12 @@ export async function generateMetadata() {
   return { title: `${t('pageTitle')} — SERVIO Kargo` };
 }
 
-/** Two-letter avatar initials, or a dash when the customer has no name yet. */
-function initialsOf(fullName: string | null): string {
-  return (
-    (fullName ?? '')
-      .split(' ')
-      .map((part) => part.charAt(0))
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || '—'
-  );
-}
-
 export default async function CustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { tab?: string };
 }) {
   const { tenant, role } = await requireCapability('customers.view');
   const t = await getTranslations('customerDetail');
@@ -88,76 +80,141 @@ export default async function CustomerDetailPage({
     payments.filter((p) => p.reversalOf != null).map((p) => p.reversalOf),
   );
 
+  // The ledger is a tab of its own, and it only exists for roles that may read
+  // money at all (rule 9). The balance itself stays in the head for everyone —
+  // whoever hands a parcel over the counter has to know whether it is paid for.
+  const tabs: TabItem[] = [
+    { key: 'umumiy', label: t('tabGeneral') },
+    { key: 'tracks', label: t('tabTracks'), count: tracks.length },
+    ...(canSeeMoney
+      ? [{ key: 'payments', label: t('tabPayments'), count: payments.length }]
+      : []),
+    { key: 'messages', label: t('tabMessages'), count: messages.length },
+  ];
+  const tab = resolveTab(tabs, searchParams.tab);
+  const tabHref = (key: string) =>
+    key === 'umumiy'
+      ? `/customers/${customer.id}`
+      : `/customers/${customer.id}?tab=${key}`;
+
   return (
-    <div className="mx-auto max-w-md space-y-3">
-      <Link
-        href="/customers"
-        className="inline-flex items-center gap-1.5 rounded text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        {tCustomers('pageTitle')}
-      </Link>
+    <DetailShell
+      backHref="/customers"
+      backLabel={tCustomers('pageTitle')}
+      eyebrow={t('eyebrow')}
+      title={customer.fullName ?? tCommon('noName')}
+      status={
+        <span className="text-lead">
+          <DebtCell tiyin={debtTiyin} />
+        </span>
+      }
+      tabs={tabs}
+      activeTab={tab}
+      buildTabHref={tabHref}
+    >
+      {tab === 'umumiy' ? (
+        <DetailColumns
+          main={
+            <>
+              <DataList className="overflow-hidden rounded-lg border border-rule">
+                <DataItem label={t('statTracks')} value={tracks.length} />
+                <DataItem label={t('statDelivered')} value={deliveredCount} />
+                <DataItem
+                  label={t('statDebt')}
+                  value={formatSom(debtTiyin)}
+                  unit={tCommon('som')}
+                  tone={debtTiyin > 0 ? 'debt' : undefined}
+                  className="col-span-2"
+                />
+              </DataList>
 
-      {/* Header + stats */}
-      <SectionCard>
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-accent text-sm font-bold text-primary">
-            {initialsOf(customer.fullName)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-bold text-foreground">
-              {customer.fullName ?? tCommon('noName')}
-            </p>
-            {botBlocked ? (
-              <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#92400e]">
-                🚫 {t('botBlocked')}
-              </p>
-            ) : null}
-            <p className="truncate font-mono text-[12.5px] text-muted-foreground">
-              {customer.clientCode}
-              {customer.phone ? ` · ${customer.phone}` : ''}
-            </p>
-          </div>
-          {canManage ? (
-            <EditCustomerButton
-              customerId={customer.id}
-              initialName={customer.fullName}
-              initialPhone={customer.phone}
-            />
-          ) : null}
-        </div>
-        <div className="mt-2.5 flex border-t border-[#eef0f4] pt-2.5 text-center">
-          <div className="flex-1">
-            <p className="font-mono text-base font-semibold tabular-nums">
-              {tracks.length}
-            </p>
-            <p className="text-[11.5px] text-muted-foreground">
-              {t('statTracks')}
-            </p>
-          </div>
-          <div className="flex-1 border-l border-[#eef0f4]">
-            <p className="font-mono text-base font-semibold tabular-nums">
-              {deliveredCount}
-            </p>
-            <p className="text-[11.5px] text-muted-foreground">
-              {t('statDelivered')}
-            </p>
-          </div>
-          <div className="flex-1 border-l border-[#eef0f4]">
-            <div className="text-[13px]">
-              <DebtCell tiyin={debtTiyin} />
-            </div>
-            <p className="text-[11.5px] text-muted-foreground">{t('statDebt')}</p>
-          </div>
-        </div>
-      </SectionCard>
+              {canRecordPayment ? (
+                <SectionCard title={t('addPaymentTitle')}>
+                  <PaymentForm customerId={customer.id} />
+                </SectionCard>
+              ) : null}
+            </>
+          }
+          side={
+            <>
+              <SectionCard>
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-body font-semibold text-ink">
+                      {customer.clientCode}
+                    </p>
+                    <p className="mt-0.5 truncate font-mono text-small text-ink-2">
+                      {customer.phone ?? tCommon('dash')}
+                    </p>
+                    {botBlocked ? (
+                      <p className="mt-2 inline-flex items-center gap-1 rounded-sm border border-warning/30 bg-[var(--st-china-bg)] px-2 py-0.5 text-micro font-semibold text-warning">
+                        🚫 {t('botBlocked')}
+                      </p>
+                    ) : null}
+                  </div>
+                  {canManage ? (
+                    <EditCustomerButton
+                      customerId={customer.id}
+                      initialName={customer.fullName}
+                      initialPhone={customer.phone}
+                    />
+                  ) : null}
+                </div>
+              </SectionCard>
 
-      {/* Payment history. The balance above stays visible to every role — the
-          person handing a parcel over the counter has to know whether it is
-          paid for — but the ledger behind it, and taking money, do not. */}
-      {canSeeMoney ? (
+              {debtTiyin > 0 && canRemind ? (
+                <ReminderButton
+                  action={sendReminderAction.bind(null, customer.id)}
+                  label={t('sendReminder')}
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                />
+              ) : null}
+            </>
+          }
+        />
+      ) : null}
+
+      {tab === 'tracks' ? (
+        <SectionCard title={t('tracksTitle')} flush>
+          {tracks.length === 0 ? (
+            <p className="px-4 pb-4 text-small text-muted-foreground">
+              {t('noTracks')}
+            </p>
+          ) : (
+            <ul>
+              {tracks.map((tr) => (
+                <li key={tr.id} className="border-t border-rule-soft">
+                  <Link
+                    href={`/tracks/${tr.id}`}
+                    className="flex items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-surface-alt"
+                  >
+                    <span className="truncate font-mono text-small font-semibold text-foreground">
+                      {tr.codeOriginal}
+                    </span>
+                    <span className="flex flex-none items-center gap-3">
+                      {tr.priceTiyin != null ? (
+                        <span className="whitespace-nowrap font-mono text-small tabular-nums text-ink-2">
+                          {formatSom(tr.priceTiyin)} {tCommon('som')}
+                        </span>
+                      ) : null}
+                      <StatusBadge status={tr.currentStatus} />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
+      ) : null}
+
+      {/* The ledger behind the balance, and taking money, are money.reports —
+          the tab does not exist for roles that may not read it. */}
+      {tab === 'payments' && canSeeMoney ? (
         <SectionCard
           title={t('paymentsTitle')}
+          flush
           action={
             payments.length > 0 && canExport ? (
               <ExportButton href={`/api/export/payments?customer=${customer.id}`} />
@@ -165,7 +222,9 @@ export default async function CustomerDetailPage({
           }
         >
           {payments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('noPayments')}</p>
+            <p className="px-4 pb-4 text-small text-muted-foreground">
+              {t('noPayments')}
+            </p>
           ) : (
             <ul>
               {payments.map((p) => {
@@ -174,20 +233,20 @@ export default async function CustomerDetailPage({
                 return (
                   <li
                     key={p.id}
-                    className="flex items-center justify-between gap-2 border-t border-[#eef0f4] py-2.5 first:border-0"
+                    className="flex items-center justify-between gap-2 border-t border-rule-soft px-4 py-2.5"
                   >
                     <div className="min-w-0">
-                      <p className="text-[13.5px] font-semibold text-foreground">
+                      <p className="text-small font-semibold text-foreground">
                         {isStorno
                           ? `${t('stornoLabel')} · ${methodLabel[p.method]}`
                           : methodLabel[p.method]}
                         {isReversed ? (
-                          <span className="ms-1.5 rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#92400e]">
+                          <span className="ms-1.5 rounded-sm border border-warning/30 bg-[var(--st-china-bg)] px-1.5 py-0.5 text-micro font-semibold text-warning">
                             {t('stornoCanceledBadge')}
                           </span>
                         ) : null}
                       </p>
-                      <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
+                      <p className="mt-0.5 font-mono text-micro text-faint">
                         {formatDate(p.createdAt)}
                         {/* Who took (or voided) it. The whole reason
                             payments.created_by exists: cash crosses a counter
@@ -201,10 +260,10 @@ export default async function CustomerDetailPage({
                       <span
                         className={
                           isStorno
-                            ? 'font-mono text-[14px] font-semibold text-[#b91c1c]'
+                            ? 'font-mono text-small font-semibold tabular-nums text-destructive'
                             : isReversed
-                              ? 'font-mono text-[14px] font-semibold text-muted-foreground line-through'
-                              : 'font-mono text-[14px] font-semibold text-[#177338]'
+                              ? 'font-mono text-small font-semibold tabular-nums text-faint line-through'
+                              : 'font-mono text-small font-semibold tabular-nums text-success'
                         }
                       >
                         {formatSom(p.amountTiyin)} {tCommon('som')}
@@ -224,57 +283,7 @@ export default async function CustomerDetailPage({
         </SectionCard>
       ) : null}
 
-      {/* Add a payment */}
-      {canRecordPayment ? (
-        <SectionCard title={t('addPaymentTitle')}>
-          <PaymentForm customerId={customer.id} />
-        </SectionCard>
-      ) : null}
-
-      {debtTiyin > 0 && canRemind ? (
-        <ReminderButton
-          action={sendReminderAction.bind(null, customer.id)}
-          label={t('sendReminder')}
-          variant="outline"
-          size="lg"
-          className="w-full"
-        />
-      ) : null}
-
-      {/* Tracks */}
-      <SectionCard title={t('tracksTitle')}>
-        {tracks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('noTracks')}</p>
-        ) : (
-          <ul>
-            {tracks.map((tr) => (
-              <li
-                key={tr.id}
-                className="border-t border-[#eef0f4] py-2.5 first:border-0"
-              >
-                <Link
-                  href={`/tracks/${tr.id}`}
-                  className="flex items-center justify-between gap-3"
-                >
-                  <span className="truncate font-mono text-[13px] font-semibold text-foreground">
-                    {tr.codeOriginal}
-                  </span>
-                  <span className="flex flex-none items-center gap-3">
-                    {tr.priceTiyin != null ? (
-                      <span className="whitespace-nowrap font-mono text-[12.5px] text-slate-600">
-                        {formatSom(tr.priceTiyin)} {tCommon('som')}
-                      </span>
-                    ) : null}
-                    <StatusBadge status={tr.currentStatus} />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
-
-      <MessageOutcomesCard messages={messages} />
-    </div>
+      {tab === 'messages' ? <MessageOutcomesCard messages={messages} /> : null}
+    </DetailShell>
   );
 }

@@ -62,7 +62,7 @@ function SaveButton({ label }: { label: string }) {
       <Button
         type="submit"
         disabled={pending}
-        className="w-full md:h-8 md:w-auto md:px-3 md:text-[13px]"
+        className="w-full md:h-8 md:w-auto md:px-3 md:text-small"
       >
         {pending ? <Spinner /> : null}
         {label}
@@ -131,7 +131,7 @@ export function SettingsForm({ initial: init }: { initial: SettingsInitial }) {
             {t('chinaTitle')}
             <span
               aria-hidden
-              className="rounded-sm border border-n-200 px-1.5 py-px font-mono text-[11px] font-medium text-faint"
+              className="rounded-sm border border-n-200 px-1.5 py-px font-mono text-micro font-medium text-faint"
             >
               CN
             </span>
@@ -144,10 +144,10 @@ export function SettingsForm({ initial: init }: { initial: SettingsInitial }) {
           rows={5}
           placeholder={t('chinaPlaceholder', { token: CLIENT_CODE_TOKEN })}
           aria-label={t('chinaTitle')}
-          className="rounded-sm font-mono text-[13px] leading-[1.7]"
+          className="rounded-sm font-mono text-small leading-[1.7]"
         />
-        <p className="mt-2 text-[13px] text-muted-foreground">
-          <code className="rounded-sm border border-n-200 bg-secondary px-1.5 py-px font-mono text-[12px]">
+        <p className="mt-2 text-small text-muted-foreground">
+          <code className="rounded-sm border border-n-200 bg-secondary px-1.5 py-px font-mono text-micro">
             {CLIENT_CODE_TOKEN}
           </code>{' '}
           {t('chinaHint')}
@@ -200,9 +200,9 @@ export function SettingsForm({ initial: init }: { initial: SettingsInitial }) {
           rows={5}
           placeholder={t('infoPlaceholder')}
           aria-label={t('infoTitle')}
-          className="rounded-sm text-[13px]"
+          className="rounded-sm text-small"
         />
-        <p className="mt-2 text-[13px] text-muted-foreground">{t('infoHint')}</p>
+        <p className="mt-2 text-small text-muted-foreground">{t('infoHint')}</p>
       </PanelSection>
 
       {/* Weekly auto-reminder */}
@@ -217,7 +217,7 @@ export function SettingsForm({ initial: init }: { initial: SettingsInitial }) {
           />
         }
       >
-        <p className="mb-3 text-[13px] text-muted-foreground">
+        <p className="mb-3 text-small text-muted-foreground">
           {t('reminderDescription')}
         </p>
         <div
@@ -264,7 +264,7 @@ export function SettingsForm({ initial: init }: { initial: SettingsInitial }) {
         action={
           <span
             className={cn(
-              'flex flex-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold',
+              'flex flex-none items-center gap-1.5 rounded-full border px-2.5 py-1 text-micro font-semibold',
               init.webhookConnected
                 ? 'border-success/25 bg-success/10 text-success'
                 : 'border-destructive/25 bg-destructive/10 text-destructive',
@@ -282,7 +282,7 @@ export function SettingsForm({ initial: init }: { initial: SettingsInitial }) {
         }
       >
         {init.botUsername ? (
-          <p className="mb-3 font-mono text-[13px] text-muted-foreground">
+          <p className="mb-3 font-mono text-small text-muted-foreground">
             @{init.botUsername}
           </p>
         ) : null}
@@ -290,7 +290,7 @@ export function SettingsForm({ initial: init }: { initial: SettingsInitial }) {
           <Button
             type="button"
             variant={init.webhookConnected ? 'outline' : 'destructive'}
-            className="w-full md:h-8 md:w-auto md:px-3 md:text-[13px]"
+            className="w-full md:h-8 md:w-auto md:px-3 md:text-small"
             onClick={reconnect}
             disabled={connecting}
           >
@@ -313,7 +313,7 @@ function SaveButtonInline({ label }: { label: string }) {
     <Button
       type="submit"
       disabled={pending}
-      className="w-full md:h-8 md:w-auto md:px-3 md:text-[13px]"
+      className="w-full md:h-8 md:w-auto md:px-3 md:text-small"
     >
       {pending ? <Spinner /> : null}
       {label}

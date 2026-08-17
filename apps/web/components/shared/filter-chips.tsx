@@ -48,11 +48,11 @@ export function FilterChips({
             href={buildHref(chip.value)}
             aria-current={isActive ? 'true' : undefined}
             className={cn(
-              'flex flex-none items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+              'flex flex-none items-center gap-1.5 rounded-sm border px-2.5 py-1.5 text-small font-medium transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
               isActive
-                ? 'border-primary bg-primary text-white'
-                : 'border-input bg-white text-slate-600 hover:bg-secondary',
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-input bg-surface text-ink-2 hover:bg-surface-alt',
             )}
           >
             {chip.emoji ? <span aria-hidden>{chip.emoji}</span> : null}
@@ -61,7 +61,7 @@ export function FilterChips({
               <span
                 className={cn(
                   'font-mono tabular-nums',
-                  isActive ? 'text-white/70' : 'text-muted-foreground',
+                  isActive ? 'text-primary-foreground/70' : 'text-faint',
                 )}
               >
                 {chip.count}

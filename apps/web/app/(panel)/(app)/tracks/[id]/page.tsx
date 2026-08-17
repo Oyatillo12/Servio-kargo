@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import {
@@ -18,7 +17,9 @@ import {
 
 import { MessageOutcomesCard } from '@/components/shared/message-outcomes';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { DetailColumns, DetailShell } from '@/components/layout/detail-shell';
 import { SectionCard } from '@/components/ui/section-card';
+import { resolveTab, type TabItem } from '@/components/ui/tabs';
 import { requireCapability } from '@/lib/auth';
 import {
   getTrackDetail,
@@ -42,15 +43,23 @@ export async function generateMetadata() {
   return { title: `${t('pageTitle')} — SERVIO Kargo` };
 }
 
-/** The four stages the China→Uzbekistan progress rail shows (design screen 05). */
-const RAIL: { key: TrackStatus; labelKey: string; emoji: string }[] = [
-  { key: 'CHINA_WAREHOUSE', labelKey: 'railChina', emoji: '📦' },
-  { key: 'IN_TRANSIT', labelKey: 'railTransit', emoji: '🚚' },
-  { key: 'TASHKENT_WAREHOUSE', labelKey: 'railTashkent', emoji: '🇺🇿' },
-  { key: 'DELIVERED', labelKey: 'railDelivered', emoji: '✅' },
+/** The four stages the China→Uzbekistan progress rail shows (SPEC §5.3). */
+const RAIL: { key: TrackStatus; labelKey: string }[] = [
+  { key: 'CHINA_WAREHOUSE', labelKey: 'railChina' },
+  { key: 'IN_TRANSIT', labelKey: 'railTransit' },
+  { key: 'TASHKENT_WAREHOUSE', labelKey: 'railTashkent' },
+  { key: 'DELIVERED', labelKey: 'railDelivered' },
 ];
 
-/** Horizontal China→Uzbekistan progress rail (design screen 05). */
+/**
+ * The route rail: four stops on a line, in the colours the status chips use.
+ *
+ * Squares rather than emoji roundels (SPEC 5.0) — the stage a parcel is at is
+ * a state, and states in this system are drawn, not illustrated. A stop that
+ * has been passed is filled with its own status colour, the current one carries
+ * a ring, and what is still ahead is a dashed outline: reachable at a glance in
+ * grayscale, which a warehouse print-out is.
+ */
 function RouteRail({
   status,
   labels,
@@ -64,43 +73,45 @@ function RouteRail({
   const activeIndex = reached.lastIndexOf(true);
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-start">
       {RAIL.map((stage, i) => {
         const isActive = i === activeIndex;
-        const isDone = reached[i] && !isActive;
+        const dot = statusView(stage.key, 'uz').dot;
         return (
           <div key={stage.key} className="contents">
             {i > 0 ? (
               <div
                 className={cn(
-                  'mb-[18px] flex-1 border-t-2',
-                  reached[i]
-                    ? 'border-solid border-primary'
-                    : 'border-dotted border-[#c3c9d6]',
+                  'mt-[13px] flex-1 border-t-2',
+                  reached[i] ? 'border-solid' : 'border-dashed border-rule',
                 )}
+                style={reached[i] ? { borderColor: dot } : undefined}
               />
             ) : null}
-            <div className="flex w-[58px] flex-none flex-col items-center gap-1.5">
-              <div
-                className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] text-[15px]',
-                  isActive &&
-                    'border-primary bg-primary shadow-[0_0_0_4px_#e0e4f4]',
-                  isDone && 'border-primary bg-accent',
-                  !reached[i] &&
-                    'border-[#c3c9d6] bg-white opacity-65 grayscale',
-                )}
-              >
-                {stage.emoji}
-              </div>
+            <div className="flex w-[76px] flex-none flex-col items-center gap-1.5">
               <span
                 className={cn(
-                  'text-[10px]',
+                  'h-7 w-7 rounded-sm border-2',
+                  !reached[i] && 'border-dashed border-rule bg-surface',
+                )}
+                style={
+                  reached[i]
+                    ? {
+                        borderColor: dot,
+                        background: dot,
+                        boxShadow: isActive ? `0 0 0 4px var(--signal-soft)` : undefined,
+                      }
+                    : undefined
+                }
+              />
+              <span
+                className={cn(
+                  'text-center text-micro leading-tight',
                   isActive
-                    ? 'font-bold text-primary'
+                    ? 'font-semibold text-ink'
                     : reached[i]
-                      ? 'font-semibold text-slate-600'
-                      : 'font-medium text-muted-foreground',
+                      ? 'font-medium text-ink-2'
+                      : 'text-faint',
                 )}
               >
                 {labels[stage.labelKey]}
@@ -115,8 +126,10 @@ function RouteRail({
 
 export default async function TrackDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { tab?: string };
 }) {
   const { tenant, role } = await requireCapability('tracks.view');
   const t = await getTranslations('trackDetail');
@@ -214,161 +227,180 @@ export default async function TrackDetailPage({
         })
       : undefined;
 
+  // The split (SPEC 5.0): everything needed to ACT on the parcel is in the
+  // first tab, so weighing it, pricing it and handing it over never costs a
+  // tap. Photos, the audit trail and the delivery log are evidence — opened
+  // when a question is asked, not carried down the screen every time.
+  const tabs: TabItem[] = [
+    { key: 'umumiy', label: t('tabGeneral') },
+    { key: 'photos', label: t('tabPhotos'), count: photos.length },
+    { key: 'history', label: t('tabHistory'), count: events.length },
+    { key: 'messages', label: t('tabMessages'), count: messages.length },
+  ];
+  const tab = resolveTab(tabs, searchParams.tab);
+  const tabHref = (key: string) =>
+    key === 'umumiy' ? `/tracks/${track.id}` : `/tracks/${track.id}?tab=${key}`;
+
   return (
-    <div className="mx-auto max-w-md space-y-3">
-      <Link
-        href="/tracks"
-        className="inline-flex items-center gap-1.5 rounded text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        {tTracks('pageTitle')}
-      </Link>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="font-mono text-xl font-semibold text-foreground">
-          {track.codeOriginal}
-        </h1>
-        <StatusBadge status={track.currentStatus} />
-      </div>
-
-      {/* Route rail */}
-      <SectionCard className="px-3.5 pb-3.5 pt-4">
-        <RouteRail status={track.currentStatus} labels={railLabels} />
-        <p className="mt-2.5 text-center text-xs text-muted-foreground">
-          {statusView(track.currentStatus, locale).label}
-        </p>
-      </SectionCard>
-
-      {/* Batch */}
-      {batch ? (
-        <div className="flex items-center gap-2 rounded-xl border border-border bg-white px-3.5 py-3 text-[13.5px]">
-          <span className="text-muted-foreground">🚚 {t('batch')}</span>
-          <Link
-            href={`/batches/${batch.id}`}
-            className="font-semibold text-primary underline-offset-2 hover:underline"
-          >
-            {batch.name}
-          </Link>
-          {batch.etaDate ? (
-            <span className="ml-auto font-mono text-[12px] text-muted-foreground">
-              {batch.etaDate}
-            </span>
-          ) : null}
+    <DetailShell
+      backHref="/tracks"
+      backLabel={tTracks('pageTitle')}
+      eyebrow={t('eyebrow')}
+      title={<span className="font-mono">{track.codeOriginal}</span>}
+      status={<StatusBadge status={track.currentStatus} />}
+      rail={
+        <div className="rounded-lg border border-rule bg-surface px-3.5 pb-3 pt-4">
+          <RouteRail status={track.currentStatus} labels={railLabels} />
+          <p className="mt-2 text-center text-micro text-faint">
+            {statusView(track.currentStatus, locale).label}
+          </p>
         </div>
-      ) : null}
+      }
+      tabs={tabs}
+      activeTab={tab}
+      buildTabHref={tabHref}
+    >
+      {tab === 'umumiy' ? (
+        <DetailColumns
+          main={
+            <>
+              {batch ? (
+                <div className="flex items-center gap-2 rounded-lg border border-rule bg-surface px-3.5 py-3 text-small">
+                  <span className="eyebrow">{t('batch')}</span>
+                  <Link
+                    href={`/batches/${batch.id}`}
+                    className="font-semibold text-signal-strong underline-offset-2 hover:underline"
+                  >
+                    {batch.name}
+                  </Link>
+                  {batch.etaDate ? (
+                    <span className="ms-auto font-mono text-micro text-faint">
+                      {batch.etaDate}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
 
-      {/* Weight + tariff + price */}
-      <SectionCard>
-        <WeightForm
-          trackId={track.id}
-          defaultWeight={defaultWeight}
-          tariffs={tariffOptions}
-          initialTariffId={track.tariffId}
-          initialManual={track.priceManual}
-          initialManualPriceSom={initialManualPriceSom}
-          priceText={priceText}
-          priceUsdText={priceUsdText}
-          initialDimensions={{
-            lengthCm: track.lengthCm != null ? String(track.lengthCm) : '',
-            widthCm: track.widthCm != null ? String(track.widthCm) : '',
-            heightCm: track.heightCm != null ? String(track.heightCm) : '',
-          }}
-          chargeableText={chargeableText}
+              <SectionCard>
+                <WeightForm
+                  trackId={track.id}
+                  defaultWeight={defaultWeight}
+                  tariffs={tariffOptions}
+                  initialTariffId={track.tariffId}
+                  initialManual={track.priceManual}
+                  initialManualPriceSom={initialManualPriceSom}
+                  priceText={priceText}
+                  priceUsdText={priceUsdText}
+                  initialDimensions={{
+                    lengthCm: track.lengthCm != null ? String(track.lengthCm) : '',
+                    widthCm: track.widthCm != null ? String(track.widthCm) : '',
+                    heightCm: track.heightCm != null ? String(track.heightCm) : '',
+                  }}
+                  chargeableText={chargeableText}
+                />
+              </SectionCard>
+
+              {/* Marka / tavsif / izoh (SPEC §7.13, tasks.md H1). */}
+              <MetaCard
+                trackId={track.id}
+                marka={track.marka}
+                description={track.description}
+                note={track.note}
+                canEdit={can(role, 'tracks.edit')}
+              />
+            </>
+          }
+          side={
+            <>
+              {/* Customer card + attach/detach (SPEC §5.3, §7.3) */}
+              <CustomerCard
+                trackId={track.id}
+                customer={
+                  customer
+                    ? {
+                        id: customer.id,
+                        clientCode: customer.clientCode,
+                        fullName: customer.fullName,
+                        phone: customer.phone,
+                      }
+                    : null
+                }
+              />
+
+              <TrackActions
+                trackId={track.id}
+                code={track.codeOriginal}
+                currentStatus={track.currentStatus}
+                customerId={track.customerId}
+                role={role}
+              />
+            </>
+          }
         />
-      </SectionCard>
-
-      {/* Marka / tavsif / izoh (SPEC §7.13, tasks.md H1). */}
-      <MetaCard
-        trackId={track.id}
-        marka={track.marka}
-        description={track.description}
-        note={track.note}
-        canEdit={can(role, 'tracks.edit')}
-      />
+      ) : null}
 
       {/* Photo gallery (SPEC §7.14): view for everyone, upload/delete behind
           tracks.weigh (the endpoints re-check). */}
-      <PhotoCard
-        trackId={track.id}
-        code={track.codeOriginal}
-        photos={photos}
-        canEdit={can(role, 'tracks.weigh')}
-      />
+      {tab === 'photos' ? (
+        <PhotoCard
+          trackId={track.id}
+          code={track.codeOriginal}
+          photos={photos}
+          canEdit={can(role, 'tracks.weigh')}
+        />
+      ) : null}
 
-      {/* Timeline */}
-      <SectionCard title={t('history')}>
-        {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('noEvents')}</p>
-        ) : (
-          <ol>
-            {events.map((e, i) => {
-              const v = statusView(e.status, locale);
-              const last = i === events.length - 1;
-              // An ownership change reuses the track's unchanged status in the
-              // status column, so read `meta.action` to label it as what it
-              // really was — otherwise the timeline shows the same status twice.
-              const assignLabel = isAssignEventMeta(e.meta)
-                ? assignLabels[e.meta.action]
-                : undefined;
-              return (
-                <li key={e.id} className="flex gap-3">
-                  <div className="flex flex-none flex-col items-center">
-                    <span
-                      className={cn(
-                        'mt-1 h-2.5 w-2.5 rounded-full',
-                        assignLabel && 'ring-2 ring-inset ring-white',
-                      )}
-                      style={{ background: assignLabel ? '#8a93a8' : v.dot }}
-                    />
-                    {!last ? (
-                      <span className="my-1 w-0 flex-1 border-l-2 border-dotted border-input" />
-                    ) : null}
-                  </div>
-                  <div className={cn('min-w-0', last ? 'pb-0' : 'pb-3.5')}>
-                    <p className="text-[13.5px] font-semibold text-foreground">
-                      {assignLabel ?? v.label}
-                    </p>
-                    <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
-                      {formatDateTime(e.createdAt)}
-                    </p>
-                    {actorLine(e.createdBy) ? (
-                      <p className="text-[12px] text-slate-600">
-                        {actorLine(e.createdBy)}
+      {tab === 'history' ? (
+        <SectionCard title={t('history')}>
+          {events.length === 0 ? (
+            <p className="text-small text-muted-foreground">{t('noEvents')}</p>
+          ) : (
+            <ol>
+              {events.map((e, i) => {
+                const v = statusView(e.status, locale);
+                const last = i === events.length - 1;
+                // An ownership change reuses the track's unchanged status in the
+                // status column, so read `meta.action` to label it as what it
+                // really was — otherwise the timeline shows the same status twice.
+                const assignLabel = isAssignEventMeta(e.meta)
+                  ? assignLabels[e.meta.action]
+                  : undefined;
+                return (
+                  <li key={e.id} className="flex gap-3">
+                    <div className="flex flex-none flex-col items-center">
+                      <span
+                        className={cn(
+                          'mt-1 h-2.5 w-2.5 rounded-[1px]',
+                          assignLabel && 'ring-2 ring-inset ring-surface',
+                        )}
+                        style={{ background: assignLabel ? 'var(--ink-3)' : v.dot }}
+                      />
+                      {!last ? (
+                        <span className="my-1 w-0 flex-1 border-l-2 border-dashed border-rule" />
+                      ) : null}
+                    </div>
+                    <div className={cn('min-w-0', last ? 'pb-0' : 'pb-3.5')}>
+                      <p className="text-small font-semibold text-foreground">
+                        {assignLabel ?? v.label}
                       </p>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </SectionCard>
+                      <p className="mt-0.5 font-mono text-micro text-faint">
+                        {formatDateTime(e.createdAt)}
+                      </p>
+                      {actorLine(e.createdBy) ? (
+                        <p className="text-micro text-ink-2">
+                          {actorLine(e.createdBy)}
+                        </p>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </SectionCard>
+      ) : null}
 
-      <MessageOutcomesCard messages={messages} />
-
-      {/* Customer card + attach/detach (SPEC §5.3, §7.3) */}
-      <CustomerCard
-        trackId={track.id}
-        customer={
-          customer
-            ? {
-                id: customer.id,
-                clientCode: customer.clientCode,
-                fullName: customer.fullName,
-                phone: customer.phone,
-              }
-            : null
-        }
-      />
-
-      {/* Status change + delete */}
-      <TrackActions
-        trackId={track.id}
-        code={track.codeOriginal}
-        currentStatus={track.currentStatus}
-        customerId={track.customerId}
-        role={role}
-      />
-    </div>
+      {tab === 'messages' ? <MessageOutcomesCard messages={messages} /> : null}
+    </DetailShell>
   );
 }

@@ -132,10 +132,10 @@ export function StatusChangeDialog({
           // changes, and "who gets messaged" is the consequential half of this
           // dialog — a screen-reader user must hear it move, not re-read it.
           aria-live="polite"
-          className="flex items-start gap-2 rounded-lg border border-[#dfe4f2] bg-[#f3f5fb] px-3 py-2.5"
+          className="flex items-start gap-2 rounded-lg border border-signal/25 bg-signal-soft px-3 py-2.5"
         >
           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-          <p className="text-[13px] leading-snug text-slate-700">
+          <p className="text-small leading-snug text-ink-2">
             <b>{t('trackCount', { count: targets.length })}</b>
             {notifyCount > 0 ? (
               <>, {t('willNotify', { count: notifyCount })}</>

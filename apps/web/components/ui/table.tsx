@@ -12,10 +12,10 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="overflow-x-auto rounded-xl border border-border bg-white">
+  <div className="overflow-x-auto rounded-lg border border-border bg-surface">
     <table
       ref={ref}
-      className={cn('w-full border-collapse text-sm', className)}
+      className={cn('w-full border-collapse text-small', className)}
       {...props}
     />
   </div>
@@ -46,8 +46,8 @@ const TableRow = React.forwardRef<
     ref={ref}
     data-state={selected ? 'selected' : undefined}
     className={cn(
-      'border-b border-[#eef0f4] transition-colors last:border-0',
-      selected ? 'bg-[#f3f5fb]' : 'hover:bg-secondary/60',
+      'border-b border-rule-soft transition-colors last:border-0',
+      selected ? 'bg-signal-soft' : 'hover:bg-surface-alt',
       className,
     )}
     {...props}
@@ -67,9 +67,13 @@ const TableHead = React.forwardRef<
 ));
 TableHead.displayName = 'TableHead';
 
-/** The header row's shared band styling — apply to the `<tr>` inside `thead`. */
+/**
+ * The header row's shared band styling — apply to the `<tr>` inside `thead`.
+ * The same condensed uppercase mark that labels a value inside a card: a column
+ * head IS a field name, just turned sideways.
+ */
 const tableHeadRowClass =
-  'border-b border-border bg-secondary text-[11px] uppercase tracking-wide text-muted-foreground';
+  'border-b border-border bg-surface-alt font-display text-micro font-medium uppercase tracking-[0.08em] text-faint';
 
 const TableCell = React.forwardRef<
   HTMLTableCellElement,

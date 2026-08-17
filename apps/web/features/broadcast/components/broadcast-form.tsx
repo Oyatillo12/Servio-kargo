@@ -136,12 +136,12 @@ export function BroadcastForm({
         placeholder={t('placeholder')}
         aria-label={t('pageTitle')}
       />
-      <div className="flex items-center justify-between text-[12px] text-muted-foreground">
+      <div className="flex items-center justify-between text-micro text-muted-foreground">
         <span>{t('recipients', { count: recipientCount })}</span>
         <span
           className={cn(
             'font-mono tabular-nums',
-            text.length >= WARN_AT && 'font-semibold text-[#b3261e]',
+            text.length >= WARN_AT && 'font-semibold text-destructive',
           )}
         >
           {text.length}/{BROADCAST_MAX_CHARS}
@@ -159,7 +159,7 @@ export function BroadcastForm({
         {t('testSend')}
       </Button>
       {canTest ? null : (
-        <p className="-mt-1 text-[11.5px] text-muted-foreground">
+        <p className="-mt-1 text-micro text-muted-foreground">
           {t('testNoTelegram')}
         </p>
       )}
@@ -175,13 +175,13 @@ export function BroadcastForm({
       {/* The hold window (§5.8, D-008). Deliberately loud and deliberately
           in the way: this is the last moment the message is recallable. */}
       {held ? (
-        <div className="rounded-xl border border-primary/30 bg-accent px-3.5 py-3">
-          <p className="text-[13px] font-semibold text-foreground">
+        <div className="rounded-lg border border-primary/30 bg-accent px-3.5 py-3">
+          <p className="text-small font-semibold text-foreground">
             {secondsLeft > 0
               ? t('holdCountdown', { seconds: secondsLeft, count: held.count })
               : t('holdSending', { count: held.count })}
           </p>
-          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+          <p className="mt-0.5 text-micro text-muted-foreground">
             {secondsLeft > 0 ? t('holdHint') : t('stopHint')}
           </p>
           <div className="mt-2.5 flex gap-2">
@@ -215,7 +215,7 @@ export function BroadcastForm({
           </DialogHeader>
           {/* The exact text, re-read before it becomes unrecallable: once
               queued, a broadcast lands in every customer's chat. */}
-          <div className="max-h-52 overflow-y-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-3 text-[13px]">
+          <div className="max-h-52 overflow-y-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-3 text-small">
             {trimmed}
           </div>
           <DialogFooter>

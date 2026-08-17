@@ -151,15 +151,15 @@ export function TracksTable({
       ) : null}
 
       {/* Mobile: card rows */}
-      <div className="overflow-hidden rounded-xl border border-border bg-white md:hidden">
+      <div className="-mx-4 border-y border-rule bg-surface md:hidden">
         {view.map((r) => {
           const checked = selected.has(r.id);
           return (
             <div
               key={r.id}
               className={cn(
-                'flex gap-3 border-b border-[#eef0f4] px-4 py-3 transition-colors last:border-0',
-                checked && 'bg-[#f3f5fb]',
+                'flex gap-3 border-b border-rule-soft px-4 py-3 transition-colors last:border-0',
+                checked && 'bg-signal-soft',
               )}
             >
               <Checkbox
@@ -172,24 +172,24 @@ export function TracksTable({
                 <div className="flex items-center justify-between gap-2">
                   <Link
                     href={`/tracks/${r.id}`}
-                    className="truncate font-mono text-[13.5px] font-semibold text-foreground underline-offset-2 hover:underline"
+                    className="truncate font-mono text-small font-semibold text-foreground underline-offset-2 hover:underline"
                   >
                     {r.code}
                   </Link>
                   <StatusBadge status={r.status} />
                 </div>
-                <div className="mt-1 truncate text-[13px] text-slate-600">
+                <div className="mt-1 truncate text-small text-ink-2">
                   <CustomerCell
                     row={r}
                     canAssign={canAssign}
                     onAssign={() => setQuickTarget(r.id)}
                   />
                 </div>
-                <p className="mt-0.5 font-mono text-[12px] text-muted-foreground">
+                <p className="mt-0.5 font-mono text-micro text-faint">
                   {r.weightText} · {r.priceText} · {r.dateText}
                 </p>
                 {r.batchName ? (
-                  <p className="mt-0.5 text-[11.5px] text-primary">
+                  <p className="mt-0.5 text-micro text-signal-strong">
                     🚚 {r.batchName}
                   </p>
                 ) : null}
@@ -242,7 +242,7 @@ export function TracksTable({
                       {r.code}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-slate-700">
+                  <TableCell className="text-ink-2">
                     <CustomerCell
                       row={r}
                       canAssign={canAssign}
@@ -252,15 +252,15 @@ export function TracksTable({
                   <TableCell>
                     <StatusBadge status={r.status} />
                   </TableCell>
-                  <TableCell className="text-slate-700">
+                  <TableCell className="text-ink-2">
                     {r.batchName ?? (
-                      <span className="text-slate-400">{tCommon('dash')}</span>
+                      <span className="text-faint">{tCommon('dash')}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-slate-700">
+                  <TableCell className="text-right font-mono text-ink-2">
                     {r.weightText}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-slate-700">
+                  <TableCell className="text-right font-mono text-ink-2">
                     {r.priceText}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-right font-mono text-muted-foreground">
@@ -337,7 +337,7 @@ function CustomerCell({
 
   if (row.customerLabel) return <>{row.customerLabel}</>;
   if (!canAssign) {
-    return <span className="text-slate-400">{tCommon('unassigned')}</span>;
+    return <span className="text-faint">{tCommon('unassigned')}</span>;
   }
 
   return (
@@ -345,7 +345,7 @@ function CustomerCell({
       type="button"
       onClick={onAssign}
       aria-label={t('quickAssignRow', { code: row.code })}
-      className="inline-flex items-center gap-1 rounded-full border border-dashed border-input px-2 py-0.5 text-[12px] font-medium text-slate-500 transition-colors hover:border-primary hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex items-center gap-1 rounded-sm border border-dashed border-input px-2 py-0.5 text-micro font-medium text-faint transition-colors hover:border-signal hover:bg-signal-soft hover:text-signal-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Plus className="h-3 w-3 flex-none" strokeWidth={2} aria-hidden />
       {t('quickAssign')}
@@ -382,17 +382,21 @@ function BulkBar({
     <div
       role="toolbar"
       aria-label={t('selectedCount', { count })}
-      className="animate-fade-in-up sticky top-[60px] z-[5] mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary px-3 py-2.5 text-white shadow-lg shadow-primary/20 md:top-2"
+      /* Ink, not signal: this bar appears over a list the admin is reading, and
+         a full-width orange slab there fights the rows it is meant to act on.
+         Black reads as a tool that was pulled out and will be put away; the one
+         signal-coloured thing on it is the action that changes the parcels. */
+      className="animate-fade-in-up sticky top-[52px] z-[5] mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-ink px-3 py-2.5 text-white shadow-lg md:top-2"
     >
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onClear}
-          className="rounded text-sm font-medium text-white/80 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          className="rounded-sm text-small font-medium text-white/70 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
           {t('clearSelection')}
         </button>
-        <span className="text-sm font-semibold tabular-nums">
+        <span className="font-mono text-small font-semibold tabular-nums">
           {t('selectedCount', { count })}
         </span>
       </div>
@@ -402,7 +406,7 @@ function BulkBar({
             <Button
               variant="secondary"
               size="sm"
-              className="border-transparent bg-white/15 text-white hover:bg-white/25"
+              className="border-transparent bg-surface/15 text-white hover:bg-surface/25"
               onClick={onCustomer}
             >
               {t('bulkAssignCustomer')}
@@ -410,7 +414,7 @@ function BulkBar({
             <Button
               variant="secondary"
               size="sm"
-              className="border-transparent bg-white/15 text-white hover:bg-white/25"
+              className="border-transparent bg-surface/15 text-white hover:bg-surface/25"
               onClick={onBatch}
             >
               {t('bulkAssignBatch')}
@@ -420,7 +424,7 @@ function BulkBar({
         <Button
           variant="secondary"
           size="sm"
-          className="border-transparent bg-white text-primary hover:bg-white/90"
+          className="border-transparent bg-signal text-white hover:bg-signal-strong"
           onClick={onStatus}
         >
           {t('bulkChangeStatus')}

@@ -70,9 +70,14 @@ function NavRow({ item }: { item: NavItem }) {
         isActive={active}
         tooltip={label}
         className={cn(
-          'h-[34px] rounded-md px-2.5 text-[13px] font-medium text-muted-foreground',
-          'hover:bg-secondary hover:text-foreground',
-          'data-[active=true]:bg-accent data-[active=true]:font-semibold data-[active=true]:text-primary',
+          'h-[34px] rounded-sm px-2.5 text-small font-medium text-muted-foreground',
+          'hover:bg-surface-alt hover:text-foreground',
+          // The current section is marked by a signal bar down its inside edge
+          // as well as by the tint — an inset shadow rather than a border, so
+          // the label does not shift 2px when it becomes active. The bar is
+          // also the only marker left when the rail is collapsed to icons.
+          'data-[active=true]:bg-signal-soft data-[active=true]:font-semibold data-[active=true]:text-signal-strong',
+          'data-[active=true]:shadow-[inset_2px_0_0_var(--signal)]',
         )}
       >
         <Link href={item.href} aria-current={active ? 'page' : undefined}>
@@ -98,8 +103,8 @@ function CollapseButton() {
       title={collapsed ? t('sidebarExpand') : t('sidebarCollapse')}
       aria-label={collapsed ? t('sidebarExpand') : t('sidebarCollapse')}
       className={cn(
-        'flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] font-medium text-faint transition-colors',
-        'hover:bg-secondary hover:text-foreground',
+        'flex h-8 items-center gap-2.5 rounded-sm px-2.5 text-small font-medium text-faint transition-colors',
+        'hover:bg-surface-alt hover:text-foreground',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
       )}
     >

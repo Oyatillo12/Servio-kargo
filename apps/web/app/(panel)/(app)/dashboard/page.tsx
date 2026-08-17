@@ -4,8 +4,9 @@ import { getTranslations } from 'next-intl/server';
 import { DASHBOARD_PERIODS, can } from '@kargotrack/shared';
 import type { DashboardPeriod } from '@kargotrack/shared';
 
-import { cn } from '@/lib/utils';
-import { PanelSection, SectionStack } from '@/components/ui/panel-section';
+import { SectionStack } from '@/components/ui/panel-section';
+import { Segmented } from '@/components/ui/segmented';
+import { StatTile } from '@/components/ui/stat-tile';
 import { requireAdmin } from '@/lib/auth';
 import {
   countBlockedCustomers,
@@ -85,7 +86,7 @@ export default async function DashboardPage({
           right. On phones the actions live in the top bar instead — see
           `DashboardActions` — so this row stays a title and a toggle. */}
       <div className="mb-3 flex items-center gap-3 md:mb-4">
-        <h1 className="min-w-0 flex-none text-[20px] font-semibold text-foreground">
+        <h1 className="min-w-0 flex-none text-title font-semibold text-foreground">
           {t('pageTitle')}
         </h1>
         <PeriodToggle current={period} />
@@ -177,73 +178,19 @@ export default async function DashboardPage({
   );
 }
 
-/** One-number stat card (new customers, undelivered messages). */
-function StatTile({
-  label,
-  sublabel,
-  value,
-  alert,
-  className,
-}: {
-  label: string;
-  sublabel: string;
-  value: number;
-  alert?: boolean;
-  className?: string;
-}) {
-  return (
-    <PanelSection flush className={className}>
-      <div className="flex h-full items-center gap-3 px-4 py-3 md:py-4">
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-medium text-foreground">
-            {label}
-          </span>
-          <span className="block truncate text-[13px] text-faint">
-            {sublabel}
-          </span>
-        </span>
-        <span
-          className={cn(
-            'flex-none text-[18px] font-semibold md:text-[24px]',
-            value > 0 ? (alert ? 'text-[#92400e]' : 'text-foreground') : 'text-faint',
-          )}
-        >
-          {value}
-        </span>
-      </div>
-    </PanelSection>
-  );
-}
-
-/** Period segmented control (SPEC §5.10): one bordered box, no gaps. */
+/** Period segmented control (SPEC §5.10) — the shared link-based control. */
 async function PeriodToggle({ current }: { current: DashboardPeriod }) {
   const t = await getTranslations('dashboard');
 
   return (
-    <div
-      role="tablist"
-      className="flex flex-none overflow-hidden rounded-md border border-input bg-white"
-    >
-      {DASHBOARD_PERIODS.map((p, i) => {
-        const active = p === current;
-        return (
-          <Link
-            key={p}
-            role="tab"
-            aria-selected={active}
-            href={p === 'today' ? '/dashboard' : `/dashboard?p=${p}`}
-            className={cn(
-              'px-2.5 py-1.5 text-[13px] transition-colors md:px-3',
-              i > 0 && 'border-s border-n-200',
-              active
-                ? 'bg-primary font-semibold text-white'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-            )}
-          >
-            {t(PERIOD_KEY[p])}
-          </Link>
-        );
-      })}
-    </div>
+    <Segmented
+      label={t('periodLabel')}
+      active={current}
+      options={DASHBOARD_PERIODS.map((p) => ({
+        value: p,
+        label: t(PERIOD_KEY[p]),
+        href: p === 'today' ? '/dashboard' : `/dashboard?p=${p}`,
+      }))}
+    />
   );
 }

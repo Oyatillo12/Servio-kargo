@@ -115,7 +115,7 @@ export function ChangePasswordDialog({
             />
             <p
               id="new-password-hint"
-              className="text-[12px] text-muted-foreground"
+              className="text-micro text-muted-foreground"
             >
               {t('passwordHint', { min: MIN_PASSWORD_LENGTH })}
             </p>
@@ -134,7 +134,7 @@ export function ChangePasswordDialog({
 
           {/* Stated up front, not discovered afterwards: the other devices are
               signed out, and this one deliberately is not. */}
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-micro text-muted-foreground">
             {t('passwordRevokesSessions')}
           </p>
 

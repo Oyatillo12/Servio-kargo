@@ -3,141 +3,171 @@
 @tailwind utilities;
 
 /*
- * SERVIO Kargo admin theme — brand indigo (Indigo 800 · #2B2687) on a light
- * neutral surface, mapped onto shadcn/ui design tokens. The full brand palette
- * from apps/web/public/Colors.png is exposed as --brand-* variables below.
- * Admins work from phones (mobile-first).
+ * TERMINAL — the design system of the panel, the auth screens and the Mini App
+ * (SPEC 5.0, D-012).
+ *
+ * The vocabulary is freight: container markings, airport boards, waybills.
+ * Paper canvas, near-black ink, hairline rules, uppercase micro-labels, large
+ * tabular figures. Separation comes from 1px rules and background steps, never
+ * from shadows — those are reserved for floating layers (dropdowns, sheets,
+ * toasts).
+ *
+ * Colour is semantics, never decoration: signal = action and selection,
+ * red = debt, amber = needs attention, green = done. Because signal and amber
+ * sit close on the eye, an attention state NEVER relies on colour alone — it
+ * pairs with an icon and the `.hatch` fill.
+ *
+ * `:root` is the single source — since D-013 for the public landing too,
+ * which only adds marketing-scale devices in `.theme-landing` (below).
  */
 @layer base {
   :root {
     color-scheme: light;
 
-    /* --- SERVIO brand palette (hex, from Colors.png) --- */
-    --brand-indigo-950: #16143b; /* Tun */
-    --brand-indigo-800: #2b2687; /* Asosiy — primary */
-    --brand-indigo-600: #4640bf;
-    --brand-indigo-300: #a7a3ea;
-    --brand-indigo-50: #eeedfa;
-    --brand-copper: #c2691e; /* Mis · urg'u — accent, keep ≤ ~10% of surface */
-    --brand-copper-soft: #e0873a; /* Mis · to'q fonda */
-    --brand-black: #101014; /* Qora */
-    --brand-gray-700: #55555f;
-    --brand-gray-500: #8a8a96;
-    --brand-gray-300: #d5d5dc;
-    --brand-surface: #f2f2f6; /* Fon */
-    --brand-success: #1f8a4c; /* Muvaffaqiyat */
-    --brand-warning: #c77e10; /* Ogohlantirish */
-    --brand-error: #cc3d33; /* Xato */
-    --brand-info: #3b6fd4; /* Ma'lumot */
+    /* --- Ground -------------------------------------------------------- */
+    --paper: #f4f2ed; /* page canvas */
+    --surface: #ffffff; /* cards, rows, sheets */
+    --surface-2: #faf9f6; /* table heads, quiet fills */
+    --ink: #14171a;
+    --ink-2: #5a5f66;
+    --ink-3: #7c818a; /* placeholders, zero values, chevrons */
+    --rule: #dad6cc; /* hairline on paper: field and button outlines */
+    --rule-soft: #e9e6de; /* hairline inside a white card: row separators */
 
-    /* --- shadcn/ui tokens (HSL), mapped onto the brand palette --- */
-    --background: 240 17% 96%; /* Fon #F2F2F6 */
-    --foreground: 243 49% 15%; /* Indigo 950 #16143B */
+    /* --- Signal: the ONE action colour --------------------------------- */
+    --signal: #dc5a22;
+    --signal-strong: #b4441a; /* hover / pressed */
+    --signal-soft: #fbede5; /* selection tint */
+
+    /* --- Neutral ramp, by name (Tailwind `n-*`) ------------------------- */
+    --n-900: var(--ink);
+    --n-600: var(--ink-2);
+    --n-400: var(--ink-3);
+    --n-200: var(--rule);
+    --n-100: var(--surface-2);
+    --n-0: var(--surface);
+    --n-divider: var(--rule-soft);
+    --n-band: var(--paper);
+
+    /* --- Status colours (SPEC 2 pipeline) ------------------------------
+     * One hue per stage, warm enough to sit on paper. DELIVERED is
+     * deliberately neutral: it is the largest bucket and the one that needs
+     * no attention, so it must not shout beside a parcel that does. */
+    --st-created: #6c727c;
+    --st-created-bg: #f0eee9;
+    --st-china: #a9700f;
+    --st-china-bg: #f7efdd;
+    --st-transit: #1f5fa9;
+    --st-transit-bg: #e6edf7;
+    --st-tashkent: #3f4e9c;
+    --st-tashkent-bg: #e8eaf6;
+    --st-ready: #1f7a45;
+    --st-ready-bg: #e3f1e8;
+    --st-delivered: #5a5f66;
+    --st-delivered-bg: #efede7;
+    --st-lost: #b3261e;
+    --st-lost-bg: #fbe7e5;
+    --st-returned: #8a5a2b;
+    --st-returned-bg: #f4ebe0;
+
+    /* --- Type ----------------------------------------------------------
+     * Adaptive by design (SPEC 5.0): the same admin reads a desk browser in
+     * the office and a phone in the warehouse. Components name a step
+     * (`text-body`), never a pixel size, so both settings follow. */
+    --fs-micro: 11px;
+    --lh-micro: 14px;
+    --fs-small: 13px;
+    --lh-small: 18px;
+    --fs-body: 15px;
+    --lh-body: 21px;
+    --fs-lead: 17px;
+    --lh-lead: 24px;
+    --fs-title: 20px;
+    --lh-title: 26px;
+    --fs-display: 26px;
+    --lh-display: 30px;
+
+    /* Touch first: a warehouse thumb needs 44px, a mouse does not. */
+    --h-control: 44px;
+    --h-row: 56px;
+
+    /* --- shadcn/ui tokens (HSL triplets — `/40` opacity modifiers rely on
+     * the bare-triplet form) ------------------------------------------- */
+    --background: 43 24% 94%; /* paper */
+    --foreground: 210 13% 9%; /* ink */
 
     --card: 0 0% 100%;
-    --card-foreground: 243 49% 15%;
+    --card-foreground: 210 13% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 243 49% 15%;
+    --popover-foreground: 210 13% 9%;
 
-    --primary: 243 56% 34%; /* Indigo 800 #2B2687 */
+    --primary: 18 73% 50%; /* signal */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 243 56% 26%;
+    --primary-hover: 16 75% 40%;
 
-    --secondary: 240 14% 95%;
-    --secondary-foreground: 243 49% 15%;
+    --secondary: 45 29% 97%; /* surface-2 */
+    --secondary-foreground: 210 13% 9%;
 
-    --muted: 240 14% 95%;
-    --muted-foreground: 240 6% 35%; /* Kulrang 700 #55555F */
+    --muted: 45 29% 97%;
+    --muted-foreground: 215 6% 38%; /* ink-2 */
+    --faint: 219 6% 51%; /* ink-3 */
 
-    --accent: 245 57% 96%; /* Indigo 50 #EEEDFA */
-    --accent-foreground: 243 56% 34%;
+    --accent: 22 73% 94%; /* signal-soft — selected row, hovered menu item */
+    --accent-foreground: 16 75% 40%;
 
-    --destructive: 4 60% 50%; /* Xato #CC3D33 */
+    --destructive: 358 66% 45%;
     --destructive-foreground: 0 0% 100%;
-    --warning: 38 85% 42%; /* Ogohlantirish #C77E10 */
-    --success: 146 63% 33%; /* Muvaffaqiyat #1F8A4C */
-    --faint: 240 6% 56%; /* Kulrang 500 #8A8A96 */
+    --warning: 36 85% 42%;
+    --success: 145 63% 33%;
 
-    --border: 240 9% 85%; /* Kulrang 300 #D5D5DC */
-    --input: 240 9% 82%;
-    --ring: 243 56% 34%;
+    --border: 44 20% 89%; /* rule-soft */
+    --input: 43 16% 83%; /* rule — field outlines read stronger than rows */
+    --ring: 18 73% 50%;
 
-    --radius: 0.625rem; /* 10px */
+    /* Sharp, not round: 4px cards · 3px buttons · 2px fields. */
+    --radius: 0.25rem;
+
+    /* The rail sits on white, like the top bar — not on the canvas. */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 6% 38%;
+    --sidebar-primary: 18 73% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 22 73% 94%;
+    --sidebar-accent-foreground: 16 75% 40%;
+    --sidebar-border: 44 20% 89%;
+    --sidebar-ring: 18 73% 50%;
+  }
+
+  /* Desktop half of the density scale (SPEC 5.0). Only the steps change —
+   * no component knows this media query exists. */
+  @media (min-width: 768px) {
+    :root {
+      --fs-micro: 10.5px;
+      --lh-micro: 13px;
+      --fs-small: 12px;
+      --lh-small: 16px;
+      --fs-body: 13.5px;
+      --lh-body: 19px;
+      --fs-lead: 15px;
+      --lh-lead: 21px;
+      --fs-title: 18px;
+      --lh-title: 24px;
+      --fs-display: 24px;
+      --lh-display: 28px;
+      --h-control: 34px;
+      --h-row: 40px;
+    }
   }
 
   /*
-   * Admin-panel theme (Claude Design "SERVIO Kargo Dashboard", screen 1e).
-   *
-   * Scoped to a class rather than `:root` because the panel and the public
-   * landing page are separate root layouts sharing this stylesheet, and the
-   * landing keeps the older SERVIO indigo/copper brand. `lib/fonts.ts` puts
-   * `theme-panel` on the panel's <html>; nothing else opts in.
-   *
-   * The system is deliberately monochrome: separation comes from 1px n-200
-   * borders and background steps (n-0 / n-100), never from shadows — those are
-   * reserved for floating layers (dropdowns, sheets, toasts). Colour always
-   * means state: red = debt, amber = needs attention, green = done,
-   * indigo = action and selection.
+   * The panel/auth surface. It carries only the font mapping and the marker
+   * class other rules hang off — the palette above is already `:root`, which
+   * is what lets the Mini App inherit the same system without opting in.
    */
   .theme-panel {
-    /* Neutral ramp (hex, for the odd literal that is not a shadcn token) */
-    --n-900: #1a1d21;
-    --n-600: #5c6270;
-    --n-400: #8a909c;
-    --n-200: #e4e6ea;
-    --n-100: #f5f6f8;
-    --n-0: #ffffff;
-    /* Hairlines lighter than n-200: rows inside a card, list separators. */
-    --n-divider: #edeef1;
-    /* The 8px bands that separate full-bleed sections on phones. */
-    --n-band: #f2f3f5;
-
     --font-sans: var(--font-panel-sans);
-
-    --background: 210 14% 97%; /* canvas #F7F8F9 */
-    --foreground: 214 12% 12%; /* n-900 */
-
-    --card: 0 0% 100%;
-    --card-foreground: 214 12% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 214 12% 12%;
-
-    --primary: 235 51% 48%; /* accent-600 #3B45B8 */
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 235 54% 38%; /* #2C3494 */
-
-    --secondary: 220 18% 97%; /* n-100 */
-    --secondary-foreground: 214 12% 12%;
-
-    --muted: 220 18% 97%;
-    --muted-foreground: 222 10% 40%; /* n-600 */
-    /* n-400 — placeholders, zero values, chevrons. */
-    --faint: 220 8% 58%;
-
-    --accent: 230 55% 96%; /* selected nav row #EEF0FA */
-    --accent-foreground: 235 51% 48%;
-
-    --destructive: 4 77% 40%; /* red-600 #B42318 */
-    --destructive-foreground: 0 0% 100%;
-    --warning: 40 100% 30%; /* amber-600 #9A6700 */
-    --success: 145 64% 29%; /* green-600 #1B7A43 */
-
-    --border: 220 13% 91%; /* n-200 */
-    --input: 220 12% 86%; /* #D6D9DF — field/button outlines read stronger */
-    --ring: 235 51% 48%;
-
-    /* 8px cards (lg) · 6px buttons (md) · 4px fields (sm) */
-    --radius: 0.5rem;
-
-    /* The sidebar sits on white, like the header — not on the canvas. */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 10% 40%;
-    --sidebar-primary: 235 51% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 55% 96%;
-    --sidebar-accent-foreground: 235 51% 48%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 235 51% 48%;
+    --font-mono: var(--font-panel-mono);
+    --font-display: var(--font-panel-display);
   }
 }
 
@@ -151,23 +181,54 @@
       'rlig' 1,
       'calt' 1;
   }
-  /* Every figure in the panel is a quantity that gets compared down a column —
-   * counts, weights, som totals. Proportional digits make those columns jitter. */
+  /* The density scale is the DEFAULT, not an opt-in: text that names no step
+   * still shrinks on desktop and grows under a thumb. Scoped to the panel so
+   * the landing keeps the browser's 16px. */
+  .theme-panel body {
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+  }
+  /*
+   * Tightens the incidental digits in running text. It is NOT what keeps
+   * columns aligned: Golos Text ships an incomplete `tnum` table — measured in
+   * the browser, it snaps 1/4/7 to the tabular advance and leaves 2/3/5/6/8/9
+   * where they were, so a column of som totals still drifts by ~0.5px a digit.
+   * Anything compared down a column therefore goes in mono (SPEC 5.0), which
+   * is monospaced by construction rather than by a font feature.
+   */
   .theme-panel body {
     font-variant-numeric: tabular-nums;
   }
 }
 
 @layer components {
-  /* Empty segment of the cargo-flow bar: a stage with nothing in it reads as
-   * "no cargo here", not as a stage that does not exist. */
+  /*
+   * The uppercase micro-label that names a value: `VAZN`, `MIJOZ`, `REYS`.
+   * Condensed and tracked out, so it reads as a field name rather than as
+   * text — the one place the system shouts, and it shouts quietly.
+   */
+  .eyebrow {
+    font-family: var(--font-display), 'Oswald', sans-serif;
+    font-size: var(--fs-micro);
+    line-height: var(--lh-micro);
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: hsl(var(--faint));
+  }
+
+  /*
+   * "Nothing here" as a texture rather than as a colour: an empty segment of
+   * the cargo-flow bar, a stage with no cargo in it. Also the second channel
+   * every attention state uses, so amber is never carrying the meaning alone.
+   */
   .hatch {
     background-image: repeating-linear-gradient(
       135deg,
-      #e9ebef 0px,
-      #e9ebef 4px,
-      #f7f8fa 4px,
-      #f7f8fa 8px
+      #e6e2d8 0px,
+      #e6e2d8 4px,
+      #f4f2ed 4px,
+      #f4f2ed 8px
     );
   }
 }
@@ -203,23 +264,19 @@
 /* --- Public landing page (marketing root layouts) ------------------------ */
 
 /*
- * The landing wears the product's own colours — the same neutrals and indigo
- * as `.theme-panel` above. That is the point: the page is carried by real
- * screenshots of the panel and the bot, and a screenshot only looks like
- * evidence when the page around it shares its palette. On a tinted ground it
- * reads as a picture someone pasted in.
- *
- * Two earlier grounds are gone — the indigo dot-grid slab (the single most
- * common generated-SaaS texture there is) and the warm paper that followed it.
+ * TERMINAL at marketing scale (D-013). The landing inherits every colour and
+ * status token from `:root` — the page wears the product's own palette, which
+ * is what makes its screenshots read as evidence. This block only maps the
+ * three TERMINAL faces (the landing skips `.theme-panel` on purpose: that
+ * marker also brings the panel's adaptive density scale, and a sales page
+ * reads at 16px, not 13.5px) and carries the landing's few own devices.
  */
 .theme-landing {
-  --canvas: #ffffff;
-  --canvas-alt: #f7f8f9;
-  --rule: #e4e6ea;
-  --ink: #1a1d21;
-  --body: #5c6270;
-  --muted: #8a909c;
-  --accent: #3b45b8;
+  color-scheme: light;
+
+  --font-sans: var(--font-panel-sans);
+  --font-mono: var(--font-panel-mono);
+  --font-display: var(--font-panel-display);
 }
 
 /*
@@ -232,13 +289,35 @@
 .headline-mark {
   background-image: linear-gradient(
     to bottom,
-    transparent 70%,
-    rgb(59 69 184 / 0.2) 70%,
-    rgb(59 69 184 / 0.2) 92%,
-    transparent 92%
+    transparent 72%,
+    rgb(220 90 34 / 0.32) 72%,
+    rgb(220 90 34 / 0.32) 94%,
+    transparent 94%
   );
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
+}
+
+/*
+ * The hero's "now" dot on the pipeline board — the same state language as the
+ * panel's route rail: the current stage carries a pulsing signal dot.
+ */
+@keyframes board-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.board-now {
+  animation: board-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-now {
+    animation: none;
+  }
 }
 
 /* FAQ <details>: hide the native marker, rotate our plus icon when open. */

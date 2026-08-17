@@ -40,10 +40,12 @@ export interface DemoVideo {
 export const DEMO_VIDEO: DemoVideo | null = null;
 
 /**
- * Monthly subscription in whole so'm, or null while the number is still being
- * decided — the pricing section then says the price is agreed per company
- * instead of showing a figure.
+ * Monthly subscription in whole so'm per plan, or null while the number is
+ * still being decided — the pricing card then says the price is agreed per
+ * company instead of showing a figure. The two tiers mirror `tenants.plan`
+ * (packages/shared/services/plans.ts): premium adds the Mini App cabinet.
  *
- * TODO(owner): set this once the tariff is fixed, e.g. `500_000`.
+ * TODO(owner): set these once the tariffs are fixed, e.g. `500_000`.
  */
-export const PRICE_MONTHLY_SOM: number | null = null;
+export const PRICE_BASIC_SOM: number | null = null;
+export const PRICE_PREMIUM_SOM: number | null = null;

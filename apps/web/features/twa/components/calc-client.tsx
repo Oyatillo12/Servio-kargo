@@ -97,7 +97,7 @@ export function CalcClient({
                 haptic();
                 setTariffId(tf.id);
               }}
-              className="twa-press rounded-full px-3.5 py-2 text-[13px] font-semibold"
+              className="twa-press rounded-full px-3.5 py-2 text-small font-semibold"
               style={
                 tf.id === tariff.id
                   ? { background: 'var(--twa-brand)', color: 'var(--twa-on-brand)' }
@@ -115,7 +115,7 @@ export function CalcClient({
       ) : null}
 
       <div className="twa-card twa-rise px-4 py-4" style={{ '--twa-i': 1 } as React.CSSProperties}>
-        <label htmlFor="kg" className="twa-hint mb-1.5 block text-[12.5px] font-medium">
+        <label htmlFor="kg" className="twa-hint mb-1.5 block text-micro font-medium">
           {t('calcKg')}
         </label>
         <input
@@ -130,7 +130,7 @@ export function CalcClient({
 
         {dimsOpen ? (
           <div className="mt-3">
-            <p className="twa-hint mb-1.5 text-[12.5px] font-medium">
+            <p className="twa-hint mb-1.5 text-micro font-medium">
               {t('calcDims')}
             </p>
             <div className="flex items-center gap-1.5">
@@ -155,7 +155,7 @@ export function CalcClient({
                   />
                 </div>
               ))}
-              <span className="twa-hint text-[12.5px]">{tCommon('cm')}</span>
+              <span className="twa-hint text-micro">{tCommon('cm')}</span>
             </div>
           </div>
         ) : (
@@ -165,7 +165,7 @@ export function CalcClient({
               haptic();
               setDimsOpen(true);
             }}
-            className="twa-press mt-2.5 text-[13px] font-semibold"
+            className="twa-press mt-2.5 text-small font-semibold"
             style={{ color: 'var(--twa-brand)' }}
           >
             + {t('calcDimsAdd')}
@@ -182,12 +182,12 @@ export function CalcClient({
         </p>
       ) : priced ? (
         <div className="twa-card twa-rise px-4 py-5 text-center">
-          <p className="twa-hint text-[12.5px]">{t('calcResult')}</p>
+          <p className="twa-hint text-micro">{t('calcResult')}</p>
           {/* §7.16: a bigger number than the customer typed always arrives with
               its reason — the same line the bot and the track card use. */}
           {charged?.basis === 'volumetric' ? (
             <p
-              className="mt-1 text-[12.5px] font-semibold"
+              className="mt-1 text-micro font-semibold"
               style={{ color: 'var(--twa-brand)' }}
             >
               {t('calcVolumetric', {

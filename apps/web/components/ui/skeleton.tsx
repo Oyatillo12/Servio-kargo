@@ -8,7 +8,7 @@ function Skeleton({
   return (
     <div
       className={cn(
-        'rounded-md bg-[linear-gradient(90deg,#eef0f4_25%,#e4e7ee_50%,#eef0f4_75%)] bg-[length:600px_100%] [animation:sk_1.3s_infinite_linear]',
+        'rounded-sm bg-[linear-gradient(90deg,#efede7_25%,#e2ded2_50%,#efede7_75%)] bg-[length:600px_100%] [animation:sk_1.3s_infinite_linear]',
         className,
       )}
       {...props}

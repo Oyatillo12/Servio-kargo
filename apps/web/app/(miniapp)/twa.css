@@ -1,64 +1,83 @@
 /*
- * Mini App design tokens (tasks.md B / SPEC §10.3).
+ * Mini App design tokens (SPEC §10.4, D-012).
  *
- * Two layers:
+ * Two layers, and the split is the point:
  *  1. SURFACES follow Telegram — the ThemeBridge copies the live
  *     `themeParams` into --tg-* vars and stamps data-twa-theme, so the app
- *     reads as a continuation of the chat it was opened from.
- *  2. IDENTITY stays SERVIO — indigo (#2B2687) for actions, copper
- *     (#C2691E) as the single moving accent (the parcel "in motion"),
- *     status colors from the brand palette. Both flip for dark.
+ *     reads as a continuation of the chat it was opened from, and is dark
+ *     whenever that chat is.
+ *  2. IDENTITY is TERMINAL and does NOT flip with the host: signal orange for
+ *     every action, the pipeline's own colours for state — the same hues the
+ *     panel prints on a status chip, so a customer and the office looking at
+ *     the same parcel see the same mark.
  *
- * Fallbacks below render correctly even before/without the bridge.
+ * Fallbacks below render correctly even before/without the bridge — the app
+ * must not flash the wrong colours while Telegram is still handing them over.
  */
 
 :root {
-  --twa-page: var(--tg-theme-secondary-bg-color, #f2f2f6);
+  --twa-page: var(--tg-theme-secondary-bg-color, #f4f2ed);
   --twa-card: var(--tg-theme-bg-color, #ffffff);
-  --twa-text: var(--tg-theme-text-color, #16143b);
-  --twa-hint: var(--tg-theme-hint-color, #8a8a96);
-  --twa-border: rgba(22, 20, 59, 0.08);
+  --twa-text: var(--tg-theme-text-color, #14171a);
+  --twa-hint: var(--tg-theme-hint-color, #7c818a);
+  --twa-border: rgba(20, 23, 26, 0.1);
 
-  --twa-brand: #2b2687;
-  --twa-brand-ink: #2b2687; /* brand as TEXT on card */
-  --twa-brand-soft: #eeedfa;
+  /* Signal — the one action colour, shared with the panel. */
+  --twa-brand: #dc5a22;
+  --twa-brand-ink: #b4441a; /* signal as TEXT on a card */
+  --twa-brand-soft: #fbede5;
   --twa-on-brand: #ffffff;
-  --twa-copper: #c2691e;
-  --twa-copper-soft: rgba(194, 105, 30, 0.12);
 
-  --twa-success: #1f8a4c;
-  --twa-success-soft: rgba(31, 138, 76, 0.12);
-  --twa-info: #3b6fd4;
-  --twa-info-soft: rgba(59, 111, 212, 0.12);
-  --twa-warning: #c77e10;
-  --twa-warning-soft: rgba(199, 126, 16, 0.14);
-  --twa-error: #cc3d33;
-  --twa-error-soft: rgba(204, 61, 51, 0.12);
+  /* Pipeline stages — the panel's `--st-*` hues. */
+  --twa-china: #a9700f;
+  --twa-china-soft: rgba(169, 112, 15, 0.14);
+  --twa-transit: #1f5fa9;
+  --twa-transit-soft: rgba(31, 95, 169, 0.14);
+  --twa-tashkent: #3f4e9c;
+  --twa-tashkent-soft: rgba(63, 78, 156, 0.14);
 
-  --twa-radius: 16px;
+  --twa-success: #1f7a45;
+  --twa-success-soft: rgba(31, 122, 69, 0.12);
+  --twa-info: #1f5fa9;
+  --twa-info-soft: rgba(31, 95, 169, 0.12);
+  --twa-warning: #a9700f;
+  --twa-warning-soft: rgba(169, 112, 15, 0.14);
+  --twa-error: #b3261e;
+  --twa-error-soft: rgba(179, 38, 30, 0.12);
+
+  /* Sharper than a chat bubble, softer than the panel's 4px: this is a
+     document inside someone else's rounded UI. */
+  --twa-radius: 10px;
 }
 
 [data-twa-theme='dark'] {
-  --twa-page: var(--tg-theme-secondary-bg-color, #0f0f14);
-  --twa-card: var(--tg-theme-bg-color, #1b1b24);
-  --twa-text: var(--tg-theme-text-color, #f2f2f6);
-  --twa-hint: var(--tg-theme-hint-color, #8f8f9c);
-  --twa-border: rgba(255, 255, 255, 0.09);
+  --twa-page: var(--tg-theme-secondary-bg-color, #101114);
+  --twa-card: var(--tg-theme-bg-color, #1b1d21);
+  --twa-text: var(--tg-theme-text-color, #f2f1ec);
+  --twa-hint: var(--tg-theme-hint-color, #9298a1);
+  --twa-border: rgba(255, 255, 255, 0.1);
 
-  --twa-brand: #5b54d6;
-  --twa-brand-ink: #a7a3ea;
-  --twa-brand-soft: rgba(167, 163, 234, 0.14);
-  --twa-copper: #e0873a;
-  --twa-copper-soft: rgba(224, 135, 58, 0.16);
+  /* Only the LIGHTNESS moves for dark, never the hue: the parcel's stage has
+     to be the same colour in both themes or the two surfaces disagree. */
+  --twa-brand: #e26a35;
+  --twa-brand-ink: #f0946a;
+  --twa-brand-soft: rgba(226, 106, 53, 0.18);
 
-  --twa-success: #3dbb72;
-  --twa-success-soft: rgba(61, 187, 114, 0.14);
-  --twa-info: #6d97e8;
-  --twa-info-soft: rgba(109, 151, 232, 0.14);
-  --twa-warning: #e0a13a;
-  --twa-warning-soft: rgba(224, 161, 58, 0.16);
-  --twa-error: #e0564b;
-  --twa-error-soft: rgba(224, 86, 75, 0.14);
+  --twa-china: #d9a03c;
+  --twa-china-soft: rgba(217, 160, 60, 0.18);
+  --twa-transit: #6d9ede;
+  --twa-transit-soft: rgba(109, 158, 222, 0.18);
+  --twa-tashkent: #8e97dd;
+  --twa-tashkent-soft: rgba(142, 151, 221, 0.18);
+
+  --twa-success: #47b877;
+  --twa-success-soft: rgba(71, 184, 119, 0.16);
+  --twa-info: #6d9ede;
+  --twa-info-soft: rgba(109, 158, 222, 0.16);
+  --twa-warning: #d9a03c;
+  --twa-warning-soft: rgba(217, 160, 60, 0.18);
+  --twa-error: #e06258;
+  --twa-error-soft: rgba(224, 98, 88, 0.16);
 }
 
 /* --- Base ------------------------------------------------------------- */
@@ -139,8 +158,11 @@
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  border-radius: 999px;
-  padding: 3px 9px;
+  /* Rectangular, with a stripe down the left edge — the same mark the panel
+     stamps on a track row, so the customer and the office read one language. */
+  border-radius: 3px;
+  border-left: 3px solid currentColor;
+  padding: 3px 8px 3px 7px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -150,16 +172,16 @@
   color: var(--twa-hint);
 }
 .twa-pill--CHINA_WAREHOUSE {
-  background: var(--twa-info-soft);
-  color: var(--twa-info);
+  background: var(--twa-china-soft);
+  color: var(--twa-china);
 }
 .twa-pill--IN_TRANSIT {
-  background: var(--twa-copper-soft);
-  color: var(--twa-copper);
+  background: var(--twa-transit-soft);
+  color: var(--twa-transit);
 }
 .twa-pill--TASHKENT_WAREHOUSE {
-  background: var(--twa-brand-soft);
-  color: var(--twa-brand-ink);
+  background: var(--twa-tashkent-soft);
+  color: var(--twa-tashkent);
 }
 .twa-pill--READY_FOR_PICKUP {
   background: var(--twa-success-soft);
@@ -185,7 +207,7 @@
 .twa-pipe__dot {
   width: 10px;
   height: 10px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: var(--twa-border);
   flex: none;
 }
@@ -193,8 +215,8 @@
   background: var(--twa-brand-ink);
 }
 .twa-pipe__dot--now {
-  background: var(--twa-copper);
-  box-shadow: 0 0 0 4px var(--twa-copper-soft);
+  background: var(--twa-brand);
+  box-shadow: 0 0 0 4px var(--twa-brand-soft);
   animation: twa-pulse 2.2s ease-in-out infinite;
 }
 .twa-pipe__line {
@@ -211,7 +233,7 @@
   height: 5px;
 }
 .twa-pipe--mini .twa-pipe__dot--now {
-  box-shadow: 0 0 0 2px var(--twa-copper-soft);
+  box-shadow: 0 0 0 2px var(--twa-brand-soft);
   animation: none;
 }
 .twa-pipe--mini .twa-pipe__line {
@@ -222,7 +244,7 @@
 @keyframes twa-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 4px var(--twa-copper-soft);
+    box-shadow: 0 0 0 4px var(--twa-brand-soft);
   }
   50% {
     box-shadow: 0 0 0 7px transparent;

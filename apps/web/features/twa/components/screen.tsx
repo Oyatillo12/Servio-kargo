@@ -30,13 +30,16 @@ export function Screen({
           {backHref && backLabel ? (
             <Link
               href={backHref}
-              className="twa-hint -ml-1 mb-0.5 inline-flex items-center gap-0.5 text-[12.5px]"
+              className="twa-hint -ml-1 mb-0.5 inline-flex items-center gap-0.5 text-micro"
             >
               <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
               {backLabel}
             </Link>
           ) : null}
-          <h1 className="truncate text-[19px] font-extrabold leading-tight">
+          {/* The system's display face, but NOT its uppercase voice: the panel
+              shouts field names at an operator, the cabinet talks to a customer
+              about their own parcel. */}
+          <h1 className="truncate font-display text-title font-semibold leading-tight">
             {title}
           </h1>
         </div>

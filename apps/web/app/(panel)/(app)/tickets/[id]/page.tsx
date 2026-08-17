@@ -66,17 +66,17 @@ export default async function TicketDetailPage({
       </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-[18px] font-semibold text-foreground">
+        <h1 className="text-lead font-semibold text-foreground">
           {cat.emoji} {cat[locale]}
         </h1>
-        <span className="text-[13px] font-semibold">
+        <span className="text-small font-semibold">
           {st.emoji} {st[locale]}
         </span>
       </div>
 
       {/* Who + which parcel */}
       <SectionCard>
-        <div className="flex items-center justify-between gap-3 text-[13.5px]">
+        <div className="flex items-center justify-between gap-3 text-small">
           <Link
             href={`/customers/${customer.id}`}
             className="min-w-0 truncate font-semibold text-primary underline-offset-2 hover:underline"
@@ -87,18 +87,18 @@ export default async function TicketDetailPage({
           {track ? (
             <Link
               href={`/tracks/${track.id}`}
-              className="flex-none font-mono text-[12.5px] text-primary underline-offset-2 hover:underline"
+              className="flex-none font-mono text-micro text-primary underline-offset-2 hover:underline"
             >
               {track.codeOriginal}
             </Link>
           ) : null}
         </div>
         {customer.phone ? (
-          <p className="mt-1 font-mono text-[12px] text-muted-foreground">
+          <p className="mt-1 font-mono text-micro text-muted-foreground">
             {customer.phone}
           </p>
         ) : null}
-        <div className="mt-3 border-t border-[#eef0f4] pt-3">
+        <div className="mt-3 border-t border-rule-soft pt-3">
           <TicketControls
             ticketId={ticket.id}
             status={ticket.status}
@@ -125,7 +125,7 @@ export default async function TicketDetailPage({
             >
               <div
                 className={cn(
-                  'inline-block whitespace-pre-wrap break-words rounded-xl px-3 py-2 text-left text-[13.5px]',
+                  'inline-block whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-left text-small',
                   m.author === 'staff'
                     ? 'rounded-br-sm bg-primary text-white'
                     : 'rounded-bl-sm bg-secondary text-foreground',
@@ -133,7 +133,7 @@ export default async function TicketDetailPage({
               >
                 {m.text}
               </div>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
+              <p className="mt-0.5 text-micro text-muted-foreground">
                 {m.author === 'staff'
                   ? (m.authorName ?? t('staffFallback'))
                   : (customer.fullName ?? customer.clientCode)}
@@ -147,7 +147,7 @@ export default async function TicketDetailPage({
                         m.delivery === 'sent' && 'text-emerald-700',
                         (m.delivery === 'dropped' ||
                           m.delivery === 'failed') &&
-                          'text-[#b3261e]',
+                          'text-destructive',
                       )}
                     >
                       {m.delivery
@@ -160,7 +160,7 @@ export default async function TicketDetailPage({
             </li>
           ))}
         </ol>
-        <p className="mt-3 text-[11.5px] text-muted-foreground">
+        <p className="mt-3 text-micro text-muted-foreground">
           {t('openedAt')}{' '}
           <span className="font-mono">{formatDateTime(ticket.createdAt)}</span>
         </p>
