@@ -37,14 +37,13 @@ export async function landingMetadata(locale: Lang): Promise<Metadata> {
       // Static file, not a generated route. It used to be an ImageResponse at
       // app/og/route.tsx rendered by satori at build time, which meant one
       // unsupported CSS value there failed the whole production build — and it
-      // did. The card is locale-neutral and changes about never, so it is
-      // checked in as public/og.png instead.
+      // did. The card changes about never (uz copy on both locales — uz is
+      // the default surface), so it is checked in as public/og.png instead.
       //
-      // To restyle it: recover that route from git history (last present in
-      // e90bc5d), render it once, replace the PNG, and delete the route again.
-      // Note the archived copy is the BROKEN version — satori accepts only
-      // `solid` and `dashed` borders, so its `borderTop: '4px dotted ...'`
-      // must become `dashed`, and every div needs an explicit `display`.
+      // To restyle it: edit scripts/og-card/og.html (TERMINAL tokens, D-013)
+      // and re-render with `node scripts/og-card/render.mjs` — headless
+      // Chrome over raw CDP, no dependencies; needs the dev server up for
+      // the favicon and internet for the Google-hosted fonts.
       images: [{ url: '/og.png', width: 1200, height: 630, alt: t('ogAlt') }],
     },
     twitter: {
@@ -67,5 +66,6 @@ export async function landingMetadata(locale: Lang): Promise<Metadata> {
 export const landingViewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#2B2687',
+  // TERMINAL ink (D-013) — the browser chrome matches the pipeline board.
+  themeColor: '#14171A',
 };

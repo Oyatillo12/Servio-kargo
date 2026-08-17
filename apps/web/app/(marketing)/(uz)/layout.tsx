@@ -15,7 +15,7 @@ export const viewport = landingViewport;
  * which keeps them statically rendered. No NextIntlClientProvider — the
  * landing tree is RSC and client leaves receive translated strings as props.
  *
- * `theme-landing` carries the product palette (see globals.css); the body sets
+ * `theme-landing` maps the TERMINAL faces (see globals.css); the body sets
  * the ground colour directly so it also paints the overscroll area.
  */
 export default function UzMarketingLayout({
@@ -25,7 +25,9 @@ export default function UzMarketingLayout({
 }) {
   return (
     <html lang="uz" className={`${fontVariables} theme-landing`}>
-      <body className="bg-white font-sans">{children}</body>
+      <body className="bg-paper font-sans text-ink antialiased">
+        {children}
+      </body>
     </html>
   );
 }

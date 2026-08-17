@@ -450,6 +450,19 @@ tegmaydi. Har bosqich oxirida `pnpm typecheck && lint && test`.
       temasidan (SPEC 10.4); 9 ta ekran.
 - [x] **N9 · Bot** — emoji intizomi (SPEC 4), `keyboards.ts` tugma tartibi va
       menyu ierarxiyasi, uzun flow'lar o'rniga TWA deep-link tugmalari.
+- [x] **N10 · Landing TERMINAL-marketing** ✅ (2026-08-17, D-013) — D-012
+      "landing tashqarida" sharti yechildi: skrinshotlar TERMINAL panelidan
+      har ikki tilda qayta olindi (`public/images/panel-*-{uz,ru}.png`,
+      headless CDP 1600×900 @2x), `.theme-landing` endi `:root` tokenlari +
+      faqat shrift-mapping; sahifa qayta qurildi: waybill-hero (marshrut
+      qatori + 3 fakt), pipeline-tablo (STATUS_META'dan), 3 qadam, bot
+      ekranlari + Mini App callout, tarozi bo'limi (Xitoyda Telegram yo'q —
+      asosiy differensiator), imkoniyatlar dl (tickets/QR/undo qo'shildi),
+      2-tarifli narx (premium'da REJADA shtamplari: referal, viloyat
+      yetkazish), 6 FAQ, TERMINAL og.png. Lead-form/throttle/SEO va statik
+      render tegilmadi. Ochiq: bot skrinshotlari bitta nusxada (uz sahifada
+      ruscha kadrlar bor) — yangi bot kadri tushganda `images.ts` da almashadi;
+      `DEMO_VIDEO` (P2) va `PRICE_*_SOM` hali bo'sh.
 
 ---
 

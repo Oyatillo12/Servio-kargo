@@ -17,9 +17,8 @@
  * sit close on the eye, an attention state NEVER relies on colour alone — it
  * pairs with an icon and the `.hatch` fill.
  *
- * `:root` is the single source. `.theme-landing` (below) is the one documented
- * exception: the public landing keeps the older SERVIO indigo until its
- * screenshots are re-shot, so it re-declares every token it consumes.
+ * `:root` is the single source — since D-013 for the public landing too,
+ * which only adds marketing-scale devices in `.theme-landing` (below).
  */
 @layer base {
   :root {
@@ -265,62 +264,19 @@
 /* --- Public landing page (marketing root layouts) ------------------------ */
 
 /*
- * FROZEN (D-012). The landing is carried by real screenshots of the panel and
- * the bot, and a screenshot only looks like evidence when the page around it
- * shares its palette — so this page cannot move to TERMINAL until those shots
- * are re-taken. Until then it re-declares every token it consumes, which is
- * what keeps the redesign of `:root` from touching it at all.
- *
- * `theme-landing` sits on the same <html> element as `:root`, at equal
- * specificity: it wins because it is declared later. Do not move it above.
+ * TERMINAL at marketing scale (D-013). The landing inherits every colour and
+ * status token from `:root` — the page wears the product's own palette, which
+ * is what makes its screenshots read as evidence. This block only maps the
+ * three TERMINAL faces (the landing skips `.theme-panel` on purpose: that
+ * marker also brings the panel's adaptive density scale, and a sales page
+ * reads at 16px, not 13.5px) and carries the landing's few own devices.
  */
 .theme-landing {
   color-scheme: light;
 
-  /* Verbatim the token values this page rendered with before D-012 — the old
-   * SERVIO indigo `:root`. Copied rather than referenced on purpose: the point
-   * of the block is that nothing here moves when `:root` does. */
-  --background: 240 17% 96%;
-  --foreground: 243 49% 15%;
-
-  --card: 0 0% 100%;
-  --card-foreground: 243 49% 15%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 243 49% 15%;
-
-  --primary: 243 56% 34%;
-  --primary-foreground: 0 0% 100%;
-  --primary-hover: 243 56% 26%;
-
-  --secondary: 240 14% 95%;
-  --secondary-foreground: 243 49% 15%;
-
-  --muted: 240 14% 95%;
-  --muted-foreground: 240 6% 35%;
-
-  --accent: 245 57% 96%;
-  --accent-foreground: 243 56% 34%;
-
-  --destructive: 4 60% 50%;
-  --destructive-foreground: 0 0% 100%;
-  --warning: 38 85% 42%;
-  --success: 146 63% 33%;
-  --faint: 240 6% 56%;
-
-  --border: 240 9% 85%;
-  --input: 240 9% 82%;
-  --ring: 243 56% 34%;
-
-  --radius: 0.625rem; /* 10px — the landing's rounded-lg */
-
-  /* The landing's own names, used by its hand-written gradients below. */
-  --canvas: #ffffff;
-  --canvas-alt: #f7f8f9;
-  --rule: #e4e6ea;
-  --ink: #1a1d21;
-  --body: #5c6270;
-  --muted: #8a909c;
-  --accent: #3b45b8;
+  --font-sans: var(--font-panel-sans);
+  --font-mono: var(--font-panel-mono);
+  --font-display: var(--font-panel-display);
 }
 
 /*
@@ -333,13 +289,35 @@
 .headline-mark {
   background-image: linear-gradient(
     to bottom,
-    transparent 70%,
-    rgb(59 69 184 / 0.2) 70%,
-    rgb(59 69 184 / 0.2) 92%,
-    transparent 92%
+    transparent 72%,
+    rgb(220 90 34 / 0.32) 72%,
+    rgb(220 90 34 / 0.32) 94%,
+    transparent 94%
   );
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
+}
+
+/*
+ * The hero's "now" dot on the pipeline board — the same state language as the
+ * panel's route rail: the current stage carries a pulsing signal dot.
+ */
+@keyframes board-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.board-now {
+  animation: board-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-now {
+    animation: none;
+  }
 }
 
 /* FAQ <details>: hide the native marker, rotate our plus icon when open. */

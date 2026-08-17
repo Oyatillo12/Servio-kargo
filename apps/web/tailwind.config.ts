@@ -143,8 +143,7 @@ const config: Config = {
       borderRadius: {
         /* Sharp on purpose — freight paperwork, not a consumer app: 4px cards,
          * 2px controls, square fields. Kept as shadcn's `--radius` arithmetic
-         * rather than literal pixels so the frozen landing, which sets its own
-         * 10px `--radius`, keeps the corners it was drawn with. */
+         * so every surface (landing included, since D-013) follows `:root`. */
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',

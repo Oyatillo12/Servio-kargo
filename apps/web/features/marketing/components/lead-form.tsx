@@ -30,7 +30,7 @@ function SubmitButton({ labels }: { labels: LeadFormLabels }) {
     <button
       type="submit"
       disabled={pending}
-      className="h-12 w-full rounded-lg bg-[#1A1D21] text-[15px] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#3B45B8] disabled:opacity-60"
+      className="h-12 w-full rounded-[3px] bg-signal font-display text-[14px] font-medium uppercase tracking-[0.08em] text-white transition-colors hover:bg-signal-strong disabled:opacity-60"
     >
       {pending ? labels.submitting : labels.submit}
     </button>
@@ -52,16 +52,18 @@ export function LeadForm({
   if (state.status === 'success') {
     return (
       <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 text-center">
-        <CheckCircle2 className="h-10 w-10 text-[#1F8A4C]" aria-hidden />
-        <p className="max-w-[26ch] text-[15px] font-semibold text-[#1A1D21]">
+        <CheckCircle2 className="h-10 w-10 text-success" aria-hidden />
+        <p className="max-w-[26ch] text-[15px] font-semibold text-ink">
           {state.message ?? labels.success}
         </p>
       </div>
     );
   }
 
+  const labelCls =
+    'mb-1.5 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2';
   const inputCls =
-    'h-12 w-full rounded-lg border border-[#E4E6EA] bg-white px-3.5 text-[15px] text-[#101014] outline-none transition-colors placeholder:text-[#8A909C] focus:border-[#3B45B8] focus:ring-2 focus:ring-[#3B45B8]/20';
+    'h-12 w-full rounded-[2px] border border-rule bg-surface px-3.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-3 focus:border-signal focus:ring-2 focus:ring-primary/20';
 
   return (
     <form action={formAction} className="space-y-4">
@@ -76,10 +78,7 @@ export function LeadForm({
       </div>
 
       <div>
-        <label
-          htmlFor="lead-name"
-          className="mb-1.5 block text-[12.5px] font-semibold text-[#5C6270]"
-        >
+        <label htmlFor="lead-name" className={labelCls}>
           {labels.name}
         </label>
         <input
@@ -87,18 +86,14 @@ export function LeadForm({
           name="name"
           type="text"
           required
-          minLength={2}
-          maxLength={80}
+          maxLength={120}
           placeholder={labels.namePlaceholder}
           className={inputCls}
         />
       </div>
 
       <div>
-        <label
-          htmlFor="lead-phone"
-          className="mb-1.5 block text-[12.5px] font-semibold text-[#5C6270]"
-        >
+        <label htmlFor="lead-phone" className={labelCls}>
           {labels.phone}
         </label>
         <input
@@ -113,10 +108,7 @@ export function LeadForm({
       </div>
 
       <div>
-        <label
-          htmlFor="lead-company"
-          className="mb-1.5 block text-[12.5px] font-semibold text-[#5C6270]"
-        >
+        <label htmlFor="lead-company" className={labelCls}>
           {labels.company}
         </label>
         <input
@@ -130,7 +122,7 @@ export function LeadForm({
       </div>
 
       {state.status === 'error' && state.message ? (
-        <p role="alert" className="text-[13px] font-medium text-[#CC3D33]">
+        <p role="alert" className="text-[13px] font-medium text-destructive">
           {state.message}
         </p>
       ) : null}

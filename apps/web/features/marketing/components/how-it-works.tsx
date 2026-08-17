@@ -6,50 +6,72 @@ import type { ShotKey } from '../images';
 import { Screenshot } from './screenshot';
 import { SectionHeading } from './section-heading';
 
-/**
- * The three steps that carry the pitch, each one shown rather than claimed.
- *
- * All three are wide panel captures under their text — a 1920px screen in a
- * half column turns the table into texture, and these screens are only
- * persuasive if the reader can actually read the track codes and the sums.
- */
-const STEPS: { key: string; shot: ShotKey }[] = [
-  { key: 'how1', shot: 'importer' },
-  { key: 'how2', shot: 'tracks' },
-  { key: 'how3', shot: 'debtors' },
+interface Step {
+  key: 'how1' | 'how2' | 'how3';
+  shot: ShotKey;
+  caption: string;
+}
+
+/** The owner's day in three numbered fields: import → one action → debt. */
+const STEPS: Step[] = [
+  { key: 'how1', shot: 'importer', caption: '/import' },
+  { key: 'how2', shot: 'tracks', caption: '/tracks' },
+  { key: 'how3', shot: 'debtors', caption: '/debtors' },
 ];
 
+/**
+ * What the owner does, told with three panel captures. The spine of the page:
+ * each claim in the copy is made by the screenshot next to it, not asserted
+ * by an icon grid.
+ */
 export async function HowItWorks({ locale }: { locale: Lang }) {
   const t = await getTranslations({ locale, namespace: 'landing' });
 
   return (
-    <section className="border-t border-[#E4E6EA] bg-[#F7F8F9] py-16 sm:py-24">
-      <div className="mx-auto w-full max-w-5xl px-5 sm:px-6">
-        <SectionHeading title={t('howTitle')} />
+    <section className="border-t border-rule bg-paper py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-6xl px-5 sm:px-6">
+        <SectionHeading
+          index="01"
+          kicker={t('howKicker')}
+          title={t('howTitle')}
+        />
 
-        <ol className="mt-12 space-y-14 sm:space-y-20">
-          {STEPS.map(({ key, shot }, i) => (
-            <li key={key} className="border-t border-[#E4E6EA] pt-8">
-              <div className="max-w-2xl">
-                <p className="text-[13px] font-semibold tabular-nums text-[#3B45B8]">
-                  0{i + 1}
+        <div className="mt-12 space-y-14 sm:mt-16 sm:space-y-20">
+          {STEPS.map((step, i) => (
+            <div
+              key={step.key}
+              className="grid items-center gap-7 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14"
+            >
+              <div className={i % 2 === 1 ? 'lg:order-2' : undefined}>
+                {/* Stencilled step number on a hairline — the waybill field
+                    marker this section's heading promises. */}
+                <p
+                  aria-hidden
+                  className="flex items-baseline gap-3 border-b border-rule pb-3 font-display text-[15px] font-medium text-ink-3"
+                >
+                  <span className="text-signal">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.16em]">
+                    {t(`${step.key}Kicker`)}
+                  </span>
                 </p>
-                <h3 className="mt-2 text-[21px] font-bold tracking-tight text-[#1A1D21] sm:text-[25px]">
-                  {t(`${key}Title`)}
+                <h3 className="mt-4 font-display text-[24px] font-semibold uppercase leading-[1.1] tracking-[0.01em] text-ink sm:text-[30px]">
+                  {t(`${step.key}Title`)}
                 </h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-[#5C6270]">
-                  {t(`${key}Desc`)}
+                <p className="mt-3.5 max-w-md text-[15.5px] leading-relaxed text-ink-2">
+                  {t(`${step.key}Desc`)}
                 </p>
               </div>
+
               <Screenshot
-                shot={shot}
+                shot={step.shot}
                 locale={locale}
-                alt={t(`${key}Alt`)}
-                className="mt-7"
+                alt={t(`${step.key}Alt`)}
+                caption={step.caption}
+                className={i % 2 === 1 ? 'lg:order-1' : undefined}
               />
-            </li>
+            </div>
           ))}
-        </ol>
+        </div>
       </div>
     </section>
   );

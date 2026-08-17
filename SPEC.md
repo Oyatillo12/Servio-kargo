@@ -413,9 +413,13 @@ two copies would drift the moment one side is edited.
 ### 5.0 Design system — TERMINAL (D-012)
 
 One token set in `apps/web/app/globals.css` serves the panel, the auth screens
-and the Mini App. `.theme-landing` is the single documented exception: the
-public landing keeps its own block and its own indigo, untouched by this
-system (D-012).
+and the Mini App — and, since D-013, the public landing too. The landing wears
+the same palette, faces and semantics but at *marketing scale*: larger type,
+more air, a sales-page reading rhythm. `.theme-landing` therefore no longer
+freezes an old palette; it only carries the landing's scale additions on top
+of `:root`. The landing's evidence rule is unchanged: real screenshots of the
+real product, re-shot from the TERMINAL panel in the page's own locale, never
+mockups (D-013).
 
 **Ground.** The vocabulary of freight — container markings, airport boards,
 waybills: paper canvas, near-black ink, hairline rules, uppercase micro-labels,

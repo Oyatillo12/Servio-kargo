@@ -497,3 +497,53 @@ yig'ish; (c) yangi brend tili + to'liq redesign (panel, TWA, bot).
   yashil = bajarilgan.
 - Redesign **hech qanday biznes qoidasini o'zgartirmaydi** — SPEC'ning 7-qismi
   (biznes qoidalari) bu qarordan mutlaqo ta'sirlanmaydi.
+
+---
+
+## D-013 · Landing TERMINAL'ga o'tadi — marketing varianti — 2026-08-17 (egasi)
+
+**Kontekst.** D-012 landing'ni ataylab tashqarida qoldirgan edi: sahifa panel
+skrinshotlari bilan tirik, skrinshotlar esa eski indigo paneldan. N1–N9
+bajarildi — panel endi TERMINAL'da, ya'ni landing'dagi "dalil" (iyul
+skrinshotlari) mahsulotga o'xshamay qoldi. Demo video sloti bo'sh, ba'zi
+rasmlar ruscha bo'lib o'zbek sahifasida turibdi. D-012 "Oqibatlar"da bu
+qadam alohida qaror bilan kelishi yozilgan — bu o'sha qaror.
+
+**Variantlar.** (a) indigo qoladi, faqat skrinshot almashadi; (b) landing
+panel bilan AYNAN bir tizimga o'tadi (bir xil zichlik, bir xil masshtab);
+(c) TERMINAL asosi — o'sha tokenlar, shriftlar, semantika — lekin marketing
+masshtabida: kattaroq tip, ko'proq havo, sahifa o'qish ritmi sotuv sahifasi
+kabi.
+
+**Qaror (egasi).** (c) — TERMINAL-marketing.
+
+- **Tokenlar `:root`dan olinadi**, `.theme-landing` endi to'liq muzlatilgan
+  nusxa emas — faqat landing'ga xos qo'shimchalar (masshtab, hero fon
+  effektlari) qoladi. Shriftlar panelniki: Oswald / Golos Text / JetBrains
+  Mono (Manrope + IBM Plex Mono chiqadi).
+- **Skrinshotlar qayta olinadi** — TERMINAL panelidan, har ikki tilda
+  (uz sahifada uz panel, ru sahifada ru panel). "Faqat real skrinshot,
+  hech qachon mockup" qoidasi o'zgarmaydi.
+- **Narx — ikki tarif:** basic va premium (`tenants.plan` haqiqati).
+  Raqamlar hali kelishilmagan — `PRICE` konfiglari null bo'lsa "hajmga
+  qarab kelishamiz" ko'rinadi. Premium ustuni Mini App kabinetni ko'rsatadi.
+- **Roadmap halol:** bugun bor narsa "bor" sifatida (Mini App, QR karta,
+  tarozi rejimi, murojaatlar, import undo); rejadagilar — onlayn to'lov
+  (C), referral (D3), viloyat yetkazish (E) — aniq "rejada" belgisi bilan,
+  sana va'dasisiz. Egasi tanlovi: referral + yetkazish ko'rsatiladi.
+- **Demo video sloti saqlanadi** (`DEMO_VIDEO` konfigi) — egasi yozuvni
+  beradi (P2), sahifa o'zi o'ynatadi.
+- **O'zgarmaydiganlar:** statik render (locale prop orqali, cookie
+  o'qilmaydi — uchta root layout tuzilishi), lead-form + throttle + Server
+  Action, metadata/JSON-LD/sitemap, `#demo` yakori.
+
+**Oqibatlar.**
+
+- SPEC 5.0 dagi ".theme-landing — yagona istisno" bandi yangilanadi:
+  istisno endi "boshqa palitra" emas, "boshqa masshtab" (marketing
+  zichligi panelnikiga ergashmaydi).
+- Iyul skrinshotlari (`public/images/`) yangilariga almashadi; eski fayllar
+  o'chiriladi.
+- Landing endi `:root` tokenlariga bog'liq — panel palitrasi o'zgarsa
+  landing ham ergashadi. Bu endi xato emas, maqsad: sahifa mahsulotning
+  o'zini kiyadi.
